@@ -3,31 +3,37 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Shinu — AI Interface</title>
+    <title>Shinu — High-End AI Workspace</title>
     <style>
         :root {
-            --bg-color: #030106;
-            --panel-border: rgba(180, 130, 255, 0.15);
+            --bg-color: #030107;
+            --panel-bg: rgba(14, 10, 24, 0.75);
+            --panel-border: rgba(196, 150, 255, 0.18);
             --accent-purple: #c496ff;
-            --text-main: #f0e6ff;
-            --text-muted: #8a7a9e;
+            --accent-glow: rgba(196, 150, 255, 0.35);
+            --text-main: #f4ecff;
+            --text-muted: #8d7b9e;
         }
 
-        /* Amber Theme */
+        /* Amber Theme 100x */
         body.theme-amber {
-            --bg-color: #060403;
-            --panel-border: rgba(255, 170, 80, 0.2);
+            --bg-color: #070402;
+            --panel-bg: rgba(22, 14, 10, 0.75);
+            --panel-border: rgba(255, 170, 80, 0.22);
             --accent-purple: #ffaa50;
-            --text-main: #fffaec;
-            --text-muted: #9e8a7a;
+            --accent-glow: rgba(255, 170, 80, 0.35);
+            --text-main: #fff5ec;
+            --text-muted: #9e8c7a;
         }
 
-        /* Neon Pink Theme */
+        /* Neon Pink Theme 100x */
         body.theme-pink {
-            --bg-color: #060205;
-            --panel-border: rgba(255, 105, 180, 0.2);
+            --bg-color: #070206;
+            --panel-bg: rgba(22, 10, 18, 0.75);
+            --panel-border: rgba(255, 105, 180, 0.22);
             --accent-purple: #ff69b4;
-            --text-main: #ffeeff;
+            --accent-glow: rgba(255, 105, 180, 0.35);
+            --text-main: #ffecfa;
             --text-muted: #9e7a8e;
         }
 
@@ -40,12 +46,11 @@
             height: 100vh;
             display: flex;
             flex-direction: column;
-            justify-content: space-between;
             align-items: center;
             overflow: hidden;
             position: relative;
             padding: 16px;
-            transition: background-color 0.3s ease;
+            transition: background-color 0.4s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         #bgCanvas {
@@ -61,115 +66,123 @@
         header {
             width: 100%;
             max-width: 480px;
+            height: 52px;
             display: flex;
             align-items: center;
             justify-content: flex-start;
             z-index: 10;
-            padding-top: 5px;
+            flex-shrink: 0;
         }
 
         .menu-btn {
-            background: transparent;
-            border: none;
+            background: var(--panel-bg);
+            border: 1px solid var(--panel-border);
+            backdrop-filter: blur(12px);
             cursor: pointer;
             display: flex;
             flex-direction: column;
-            gap: 6px;
+            justify-content: center;
+            gap: 5px;
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
             padding: 10px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.4);
+            transition: transform 0.2s, border-color 0.2s;
         }
+        .menu-btn:hover { transform: scale(1.05); border-color: var(--accent-purple); }
 
         .menu-btn span {
             display: block;
-            width: 24px;
+            width: 18px;
             height: 2px;
             background-color: var(--text-main);
             border-radius: 2px;
             transition: background-color 0.3s;
         }
 
-        /* Sliding Drawer */
+        /* Sliding Drawer (100x Glassmorphic Style) */
         .drawer {
             position: fixed;
             top: 0;
-            left: -320px;
-            width: 320px;
+            left: -340px;
+            width: 340px;
             height: 100vh;
-            background: rgba(12, 8, 20, 0.96);
+            background: rgba(8, 6, 14, 0.92);
             border-right: 1px solid var(--panel-border);
-            backdrop-filter: blur(20px);
-            transition: left 0.3s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.3s;
+            backdrop-filter: blur(30px);
+            -webkit-backdrop-filter: blur(30px);
+            transition: left 0.4s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.4s;
             z-index: 50;
-            padding: 30px 20px;
+            padding: 32px 24px;
             display: flex;
             flex-direction: column;
-            gap: 20px;
+            gap: 24px;
+            box-shadow: 20px 0 60px rgba(0,0,0,0.8);
         }
-        body.theme-amber .drawer { background: rgba(20, 14, 10, 0.96); }
-        body.theme-pink .drawer { background: rgba(20, 10, 16, 0.96); }
+        body.theme-amber .drawer { background: rgba(14, 10, 8, 0.92); }
+        body.theme-pink .drawer { background: rgba(14, 6, 11, 0.92); }
         .drawer.open { left: 0; }
         
         .drawer-section-title { 
             font-size: 11px; 
-            font-weight: 600; 
-            color: var(--text-muted); 
-            letter-spacing: 1.5px; 
+            font-weight: 700; 
+            color: var(--accent-purple); 
+            letter-spacing: 2px; 
             text-transform: uppercase; 
-            margin-bottom: 8px; 
+            margin-bottom: 10px; 
         }
 
         .drawer-item {
-            padding: 12px 14px;
-            background: rgba(180, 130, 255, 0.04);
+            padding: 14px 16px;
+            background: rgba(255, 255, 255, 0.03);
             border: 1px solid var(--panel-border);
-            border-radius: 10px;
+            border-radius: 12px;
             font-size: 14px;
+            font-weight: 500;
             color: var(--text-main);
             cursor: pointer;
-            transition: background 0.2s;
+            transition: all 0.2s;
             margin-bottom: 8px;
             display: flex;
             justify-content: space-between;
             align-items: center;
         }
-        .drawer-item:hover { background: rgba(180, 130, 255, 0.1); }
-        body.theme-amber .drawer-item { background: rgba(255, 170, 80, 0.04); }
-        body.theme-amber .drawer-item:hover { background: rgba(255, 170, 80, 0.1); }
-        body.theme-pink .drawer-item { background: rgba(255, 105, 180, 0.04); }
-        body.theme-pink .drawer-item:hover { background: rgba(255, 105, 180, 0.1); }
+        .drawer-item:hover { background: rgba(255, 255, 255, 0.07); transform: translateX(4px); }
 
         .theme-submenu {
             display: flex;
             flex-direction: column;
             gap: 6px;
             margin-top: 4px;
-            padding-left: 10px;
+            padding-left: 12px;
             border-left: 2px solid var(--panel-border);
         }
         .theme-sub-item {
-            padding: 8px 12px;
+            padding: 10px 14px;
             background: transparent;
             border: 1px solid transparent;
-            border-radius: 8px;
-            font-size: 13px;
+            border-radius: 10px;
+            font-size: 13.5px;
             color: var(--text-muted);
             cursor: pointer;
             transition: all 0.2s;
             text-align: left;
         }
-        .theme-sub-item:hover { color: var(--text-main); background: rgba(180, 130, 255, 0.06); }
-        .theme-sub-item.active { color: var(--accent-purple); border-color: var(--panel-border); font-weight: 500; }
+        .theme-sub-item:hover { color: var(--text-main); background: rgba(255, 255, 255, 0.04); }
+        .theme-sub-item.active { color: var(--accent-purple); border-color: var(--panel-border); background: rgba(255, 255, 255, 0.06); font-weight: 600; }
         
         .chat-history-list {
             flex: 1;
             overflow-y: auto;
             display: flex;
             flex-direction: column;
-            gap: 8px;
+            gap: 10px;
             max-height: 35vh;
         }
         .history-item {
-            padding: 10px 14px;
-            background: rgba(180, 130, 255, 0.04);
+            padding: 12px 14px;
+            background: rgba(255, 255, 255, 0.03);
             border: 1px solid var(--panel-border);
             border-radius: 10px;
             font-size: 13.5px;
@@ -182,19 +195,19 @@
             left: 0;
             width: 100vw;
             height: 100vh;
-            background: rgba(0,0,0,0.6);
-            backdrop-filter: blur(3px);
+            background: rgba(0,0,0,0.65);
+            backdrop-filter: blur(6px);
             opacity: 0;
             pointer-events: none;
-            transition: opacity 0.3s;
+            transition: opacity 0.4s;
             z-index: 40;
         }
         .backdrop.active { opacity: 1; pointer-events: auto; }
 
-        /* Central Stage: Pure Opacity Fade (No Upward Movement) */
+        /* Central Stage: High-End Floating Motif */
         .center-stage {
             position: absolute;
-            top: 38%;
+            top: 42%;
             left: 50%;
             transform: translate(-50%, -50%);
             z-index: 10;
@@ -203,7 +216,7 @@
             align-items: center;
             text-align: center;
             opacity: 1;
-            transition: opacity 0.8s ease-in-out;
+            transition: opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1);
             pointer-events: auto;
         }
 
@@ -213,31 +226,27 @@
         }
 
         .eye-container {
-            width: 110px;
-            height: 55px;
-            margin-bottom: 18px;
-            filter: drop-shadow(0 0 15px rgba(196, 150, 255, 0.4));
-            animation: eyeBlink 4s infinite ease-in-out;
+            width: 120px;
+            height: 60px;
+            margin-bottom: 22px;
+            filter: drop-shadow(0 0 25px var(--accent-glow));
+            animation: eyeBlink 4.5s infinite ease-in-out;
         }
-        body.theme-amber .eye-container { filter: drop-shadow(0 0 15px rgba(255, 170, 80, 0.4)); }
-        body.theme-pink .eye-container { filter: drop-shadow(0 0 15px rgba(255, 105, 180, 0.4)); }
 
         @keyframes eyeBlink {
             0%, 46%, 54%, 100% { transform: scaleY(1); }
-            50% { transform: scaleY(0.08); }
+            50% { transform: scaleY(0.06); }
         }
 
         .brand-title {
-            font-size: 32px;
-            letter-spacing: 10px;
+            font-size: 36px;
+            letter-spacing: 14px;
             color: var(--text-main);
             font-weight: 300;
-            margin-bottom: 10px;
-            text-shadow: 0 0 20px rgba(196, 150, 255, 0.3);
-            margin-left: 10px;
+            margin-bottom: 12px;
+            text-shadow: 0 0 30px var(--accent-glow);
+            margin-left: 14px;
         }
-        body.theme-amber .brand-title { text-shadow: 0 0 20px rgba(255, 170, 80, 0.3); }
-        body.theme-pink .brand-title { text-shadow: 0 0 20px rgba(255, 105, 180, 0.3); }
 
         .brand-divider {
             display: flex;
@@ -245,123 +254,121 @@
             gap: 15px;
             color: var(--accent-purple);
             opacity: 0.8;
-            margin-bottom: 15px;
+            margin-bottom: 18px;
         }
 
         .brand-divider::before, .brand-divider::after {
             content: '';
-            width: 60px;
+            width: 70px;
             height: 1px;
             background: linear-gradient(90deg, transparent, var(--accent-purple), transparent);
         }
 
         .open-greeting {
-            font-size: 16px;
+            font-size: 16.5px;
             color: var(--text-muted);
             font-weight: 400;
-            letter-spacing: 0.5px;
-            text-shadow: 0 0 10px rgba(196, 150, 255, 0.2);
+            letter-spacing: 0.8px;
+            text-shadow: 0 0 15px var(--accent-glow);
         }
 
-        /* Chat Stream Container (Fixed height to prevent cutoff) */
+        /* Chat Stream Container (100x Quality Flow) */
         .chat-container {
-            position: absolute;
-            top: 60px;
-            bottom: 85px;
+            flex: 1;
             width: 100%;
             max-width: 480px;
             z-index: 5;
             overflow-y: auto;
             display: flex;
             flex-direction: column;
-            gap: 12px;
-            padding: 10px 16px;
+            gap: 14px;
+            padding: 10px 4px;
             scroll-behavior: smooth;
             opacity: 0;
-            transition: opacity 0.5s ease;
+            transition: opacity 0.6s ease;
+            margin-bottom: 12px;
         }
         .chat-container.active { opacity: 1; }
         
         .chat-container::-webkit-scrollbar { width: 4px; }
-        .chat-container::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 4px; }
+        .chat-container::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 4px; }
 
         .message-bubble {
-            max-width: 80%;
-            padding: 12px 16px;
-            border-radius: 18px;
-            font-size: 14px;
-            line-height: 1.4;
+            max-width: 82%;
+            padding: 14px 18px;
+            border-radius: 20px;
+            font-size: 14.5px;
+            line-height: 1.5;
             word-wrap: break-word;
-            animation: fadeInBubble 0.3s ease forwards;
+            animation: fadeInBubble 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
         }
 
         @keyframes fadeInBubble {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
+            from { opacity: 0; transform: translateY(15px) scale(0.98); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
         }
 
         .message-bubble.user {
             background: var(--accent-purple);
-            color: #0b0614;
+            color: #050308;
             align-self: flex-end;
-            border-bottom-right-radius: 4px;
-            font-weight: 500;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            border-bottom-right-radius: 6px;
+            font-weight: 600;
+            box-shadow: 0 8px 30px var(--accent-glow);
         }
 
         .message-bubble.bot {
-            background: rgba(180, 130, 255, 0.08);
+            background: var(--panel-bg);
             border: 1px solid var(--panel-border);
+            backdrop-filter: blur(16px);
             color: var(--text-main);
             align-self: flex-start;
-            border-bottom-left-radius: 4px;
+            border-bottom-left-radius: 6px;
         }
-        body.theme-amber .message-bubble.bot { background: rgba(255, 170, 80, 0.08); }
-        body.theme-pink .message-bubble.bot { background: rgba(255, 105, 180, 0.08); }
 
-        /* Input Dock */
+        /* Input Dock (100x Polished Glassmorphism) */
         .input-dock {
-            position: absolute;
-            bottom: 12px;
+            width: 100%;
+            max-width: 480px;
             z-index: 10;
-            width: calc(100% - 32px);
-            max-width: 420px;
-            background: rgba(12, 8, 20, 0.9);
+            background: var(--panel-bg);
             border: 1px solid var(--panel-border);
-            border-radius: 30px;
-            padding: 8px 8px 8px 16px;
+            border-radius: 34px;
+            padding: 8px 8px 8px 18px;
             display: flex;
             align-items: center;
-            gap: 10px;
-            backdrop-filter: blur(15px);
-            box-shadow: 0 10px 30px rgba(0,0,0,0.6);
-            transition: background-color 0.3s;
+            gap: 12px;
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.6);
+            flex-shrink: 0;
+            transition: border-color 0.3s;
         }
-        body.theme-amber .input-dock { background: rgba(20, 14, 10, 0.9); }
-        body.theme-pink .input-dock { background: rgba(20, 10, 16, 0.9); }
+        .input-dock:focus-within { border-color: var(--accent-purple); }
 
         .action-icon-btn {
-            background: rgba(180, 130, 255, 0.08);
+            background: rgba(255, 255, 255, 0.04);
             border: 1px solid var(--panel-border);
             color: var(--accent-purple);
-            width: 38px;
-            height: 38px;
+            width: 40px;
+            height: 40px;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 20px;
+            font-size: 22px;
             cursor: pointer;
-            transition: background 0.2s, color 0.3s;
+            transition: all 0.2s;
         }
-        .action-icon-btn:hover { background: rgba(180, 130, 255, 0.18); }
+        .action-icon-btn:hover { background: rgba(255, 255, 255, 0.09); transform: scale(1.05); }
 
         .input-dock input {
             flex: 1;
             background: transparent;
             border: none;
             color: var(--text-main);
-            font-size: 14px;
+            font-size: 14.5px;
             outline: none;
         }
         .input-dock input::placeholder { color: var(--text-muted); }
@@ -369,18 +376,19 @@
         .send-icon-btn {
             background: var(--accent-purple);
             border: none;
-            color: #0b0614;
-            width: 38px;
-            height: 38px;
+            color: #050308;
+            width: 40px;
+            height: 40px;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
             cursor: pointer;
-            box-shadow: 0 0 15px rgba(196, 150, 255, 0.4);
-            transition: transform 0.1s, background-color 0.3s;
+            box-shadow: 0 0 20px var(--accent-glow);
+            transition: transform 0.2s, filter 0.2s;
         }
-        .send-icon-btn:active { transform: scale(0.95); }
+        .send-icon-btn:hover { filter: brightness(1.1); }
+        .send-icon-btn:active { transform: scale(0.92); }
         .send-icon-btn svg { width: 16px; height: 16px; fill: currentColor; }
     </style>
 </head>
@@ -409,7 +417,7 @@
         <div>
             <div class="drawer-section-title">2. History</div>
             <div class="chat-history-list" id="historyList">
-                <div style="font-size: 13px; color: var(--text-muted);">No prompts typed yet.</div>
+                <div style="font-size: 13.5px; color: var(--text-muted);">No prompts typed yet.</div>
             </div>
         </div>
         <div>
@@ -419,12 +427,12 @@
     </div>
     <div class="backdrop" id="drawerBackdrop"></div>
 
-    <!-- Central Stage: Pure slow opacity fade -->
+    <!-- Central Stage -->
     <div class="center-stage" id="centerStage">
         <div class="eye-container">
             <svg viewBox="0 0 120 60" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--accent-purple);">
                 <path d="M5 30C30 10 90 10 115 30C90 50 30 50 5 30Z" />
-                <circle cx="60" cy="30" r="12" fill="currentColor" opacity="0.8" />
+                <circle cx="60" cy="30" r="12" fill="currentColor" opacity="0.85" />
                 <circle cx="60" cy="30" r="5" fill="#ffffff" />
             </svg>
         </div>
@@ -516,18 +524,18 @@
         }
     });
 
-    // Shinu Reply & Response Intelligence Engine
+    // Shinu Reply Intelligence Engine
     function shinuReply(inputMessage) {
         const query = inputMessage.toLowerCase().trim();
 
         if (query.includes('hello') || query.includes('hi') || query.includes('hey')) {
-            return "Hello! Shinu engine is active. What are we building or exploring today?";
+            return "Hello! Shinu Engine 100x is fully operational. What are we building or exploring today?";
         } else if (query.includes('who are you') || query.includes('what is shinu')) {
-            return "I am Shinu, your high-end procedural media and developer workspace engine.";
+            return "I am Shinu, your high-end procedural AI interface and developer workspace engine.";
         } else if (query.includes('version') || query.includes('v1')) {
-            return "Shinu Engine v1.0 Pro is currently deployed and online via Vercel.";
+            return "Shinu Engine v1.0 Pro (100x Quality Build) is live and online via Vercel.";
         } else if (query.includes('help') || query.includes('options')) {
-            return "You can use the 3-lines menu to switch themes (Purple, Amber, Pink) or check your typed history!";
+            return "You can use the 3-lines menu to switch themes (Cosmic Purple, Neon Amber, Neon Pink) or review your typed history!";
         } else if (query.includes('time')) {
             return "Current system local time is " + new Date().toLocaleTimeString() + ".";
         } else {
@@ -535,7 +543,6 @@
         }
     }
 
-    // Handle Sending & Reply Simulation
     function handleSend() {
         const text = userInput.value.trim();
         if(!text) return;
@@ -571,7 +578,7 @@
     document.getElementById('sendBtn').onclick = handleSend;
     userInput.onkeypress = (e) => { if(e.key === 'Enter') handleSend(); };
 
-    // Background Particle Canvas
+    // 100x High-Precision Background Particle & Aura Canvas
     const canvas = document.getElementById('bgCanvas');
     const ctx = canvas.getContext('2d');
 
@@ -584,55 +591,60 @@
 
     let waveOffset = 0;
     const particles = [];
-    for(let i = 0; i < 25; i++) {
+    for(let i = 0; i < 35; i++) {
         particles.push({
             x: Math.random() * canvas.width,
             y: Math.random() * canvas.height,
-            radius: Math.random() * 1.5 + 0.5,
-            speedY: (Math.random() - 0.5) * 0.3,
-            speedX: (Math.random() - 0.5) * 0.3,
-            alpha: Math.random() * 0.5 + 0.2
+            radius: Math.random() * 1.8 + 0.6,
+            speedY: (Math.random() - 0.5) * 0.25,
+            speedX: (Math.random() - 0.5) * 0.25,
+            alpha: Math.random() * 0.6 + 0.2
         });
     }
 
     function drawBackground() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-        ctx.lineWidth = 1.2;
 
         const isAmber = document.body.classList.contains('theme-amber');
         const isPink = document.body.classList.contains('theme-pink');
         
-        let strokeColor = 'rgba(196, 150, 255, 0.12)';
+        let strokeColor = 'rgba(196, 150, 255, 0.14)';
         let strokeColor2 = 'rgba(210, 180, 255, 0.08)';
         let particleColor = '210, 180, 255';
+        let glowColor = 'rgba(196, 150, 255, 0.15)';
 
         if(isAmber) {
-            strokeColor = 'rgba(255, 170, 80, 0.12)';
+            strokeColor = 'rgba(255, 170, 80, 0.14)';
             strokeColor2 = 'rgba(255, 200, 120, 0.08)';
             particleColor = '255, 200, 120';
+            glowColor = 'rgba(255, 170, 80, 0.15)';
         } else if(isPink) {
-            strokeColor = 'rgba(255, 105, 180, 0.12)';
+            strokeColor = 'rgba(255, 105, 180, 0.14)';
             strokeColor2 = 'rgba(255, 160, 210, 0.08)';
             particleColor = '255, 160, 210';
+            glowColor = 'rgba(255, 105, 180, 0.15)';
         }
 
+        // Multi-layered Orbital Arcs
+        ctx.lineWidth = 1.2;
         ctx.strokeStyle = strokeColor;
         ctx.beginPath();
-        ctx.arc(canvas.width + 50, -50, 450, Math.PI * 0.75, Math.PI * 1.35);
+        ctx.arc(canvas.width + 50, -50, 480, Math.PI * 0.75, Math.PI * 1.35);
         ctx.stroke();
 
         ctx.strokeStyle = strokeColor2;
         ctx.beginPath();
-        ctx.arc(canvas.width + 50, -50, 320, Math.PI * 0.8, Math.PI * 1.3);
+        ctx.arc(canvas.width + 50, -50, 340, Math.PI * 0.8, Math.PI * 1.3);
         ctx.stroke();
 
         ctx.strokeStyle = strokeColor;
         ctx.beginPath();
-        ctx.arc(-50, canvas.height + 50, 500, Math.PI * 1.7, Math.PI * 2.15);
+        ctx.arc(-50, canvas.height + 50, 520, Math.PI * 1.7, Math.PI * 2.15);
         ctx.stroke();
 
-        waveOffset += 0.4;
+        waveOffset += 0.35;
 
+        // Render High-Precision Floating Particles with Glow
         particles.forEach(p => {
             p.y += p.speedY;
             p.x += p.speedX;
@@ -643,9 +655,12 @@
             if(p.x > canvas.width) p.x = 0;
 
             ctx.fillStyle = `rgba(${particleColor}, ${p.alpha})`;
+            ctx.shadowColor = glowColor;
+            ctx.shadowBlur = 12;
             ctx.beginPath();
             ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
             ctx.fill();
+            ctx.shadowBlur = 0;
         });
 
         requestAnimationFrame(drawBackground);
