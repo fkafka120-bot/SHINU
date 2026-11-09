@@ -44,7 +44,7 @@
             max-width: 480px;
             display: flex;
             align-items: center;
-            justify-content: flex-start;
+            justify-content: space-between;
             z-index: 10;
             padding-top: 10px;
         }
@@ -67,13 +67,25 @@
             border-radius: 2px;
         }
 
+        .history-btn {
+            background: rgba(180, 130, 255, 0.08);
+            border: 1px solid var(--panel-border);
+            color: var(--accent-purple);
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .history-btn:hover { background: rgba(180, 130, 255, 0.18); }
+
         .drawer {
             position: fixed;
             top: 0;
-            left: -280px;
-            width: 280px;
+            left: -320px;
+            width: 320px;
             height: 100vh;
-            background: rgba(12, 8, 20, 0.95);
+            background: rgba(12, 8, 20, 0.96);
             border-right: 1px solid var(--panel-border);
             backdrop-filter: blur(20px);
             transition: left 0.3s cubic-bezier(0.16, 1, 0.3, 1);
@@ -81,12 +93,26 @@
             padding: 30px 20px;
             display: flex;
             flex-direction: column;
-            gap: 20px;
+            gap: 15px;
         }
         .drawer.open { left: 0; }
-        .drawer-title { font-size: 12px; font-weight: 600; color: var(--text-muted); letter-spacing: 1.5px; text-transform: uppercase; }
-        .drawer-item { padding: 12px 16px; border-radius: 10px; background: rgba(180,130,255,0.04); border: 1px solid var(--panel-border); cursor: pointer; font-size: 14px; color: var(--text-main); transition: background 0.2s; }
-        .drawer-item:hover { background: rgba(180,130,255,0.1); }
+        .drawer-title { font-size: 12px; font-weight: 600; color: var(--text-muted); letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 5px; }
+        
+        .chat-history-list {
+            flex: 1;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .history-item {
+            padding: 10px 14px;
+            background: rgba(180, 130, 255, 0.04);
+            border: 1px solid var(--panel-border);
+            border-radius: 10px;
+            font-size: 13.5px;
+            color: var(--text-main);
+        }
 
         .backdrop {
             position: fixed;
@@ -103,7 +129,6 @@
         }
         .backdrop.active { opacity: 1; pointer-events: auto; }
 
-        /* Central Stage with Dissolve Transition */
         .center-stage {
             position: relative;
             z-index: 10;
@@ -111,7 +136,7 @@
             flex-direction: column;
             align-items: center;
             text-align: center;
-            margin-top: -20px;
+            margin-top: -30px;
             transition: opacity 0.4s ease, transform 0.4s ease;
         }
 
@@ -124,7 +149,7 @@
         .eye-container {
             width: 110px;
             height: 55px;
-            margin-bottom: 20px;
+            margin-bottom: 18px;
             filter: drop-shadow(0 0 15px rgba(196, 150, 255, 0.4));
         }
 
@@ -133,7 +158,7 @@
             letter-spacing: 10px;
             color: var(--text-main);
             font-weight: 300;
-            margin-bottom: 12px;
+            margin-bottom: 10px;
             text-shadow: 0 0 20px rgba(196, 150, 255, 0.3);
             margin-left: 10px;
         }
@@ -144,59 +169,30 @@
             gap: 15px;
             color: var(--accent-purple);
             opacity: 0.8;
+            margin-bottom: 15px;
         }
 
         .brand-divider::before, .brand-divider::after {
             content: '';
-            width: 80px;
+            width: 60px;
             height: 1px;
             background: linear-gradient(90deg, transparent, var(--accent-purple), transparent);
         }
 
-        /* Greeting Bubble with Dissolve Transition */
-        .greeting-bubble {
-            position: relative;
-            z-index: 10;
-            width: 100%;
-            max-width: 420px;
-            background: rgba(12, 8, 20, 0.85);
-            border: 1px solid var(--panel-border);
-            border-radius: 24px;
-            padding: 20px 24px;
-            backdrop-filter: blur(15px);
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-            display: flex;
-            align-items: flex-start;
-            gap: 16px;
+        .open-greeting {
+            font-size: 16px;
+            color: var(--text-muted);
+            font-weight: 400;
+            letter-spacing: 0.5px;
+            text-shadow: 0 0 10px rgba(196, 150, 255, 0.2);
             transition: opacity 0.4s ease, transform 0.4s ease;
         }
-
-        .greeting-bubble.dissolved {
+        .open-greeting.dissolved {
             opacity: 0;
-            transform: translateY(-20px);
+            transform: translateY(-15px);
             pointer-events: none;
         }
 
-        .bubble-star {
-            color: var(--accent-purple);
-            font-size: 18px;
-            margin-top: 2px;
-            text-shadow: 0 0 10px var(--accent-purple);
-        }
-
-        .bubble-content h3 {
-            font-size: 15px;
-            font-weight: 500;
-            color: var(--text-main);
-            margin-bottom: 4px;
-        }
-
-        .bubble-content p {
-            font-size: 14px;
-            color: var(--text-muted);
-        }
-
-        /* Input Dock */
         .input-dock {
             position: relative;
             z-index: 10;
@@ -211,7 +207,7 @@
             gap: 10px;
             backdrop-filter: blur(15px);
             box-shadow: 0 10px 30px rgba(0,0,0,0.6);
-            margin-bottom: 10px;
+            margin-bottom: 80px;
             transition: transform 0.3s ease;
         }
 
@@ -269,13 +265,14 @@
             <span></span>
             <span></span>
         </button>
+        <button class="history-btn" id="historyToggle">History</button>
     </header>
 
     <div class="drawer" id="sideDrawer">
-        <div class="drawer-title">Navigation</div>
-        <div class="drawer-item">Engine Studio</div>
-        <div class="drawer-item">Saved Prompts</div>
-        <div class="drawer-item">Copyright & Control</div>
+        <div class="drawer-title">Typed History</div>
+        <div class="chat-history-list" id="historyList">
+            <div style="font-size: 13px; color: var(--text-muted);">No prompts typed yet.</div>
+        </div>
     </div>
     <div class="backdrop" id="drawerBackdrop"></div>
 
@@ -288,15 +285,8 @@
             </svg>
         </div>
         <h1 class="brand-title">SHINU</h1>
-        <div class="brand-divider">✦</div>
-    </div>
-
-    <div class="greeting-bubble" id="greetingBubble">
-        <div class="bubble-star">✦</div>
-        <div class="bubble-content">
-            <h3>Hello!</h3>
-            <p>How can I help you today?</p>
-        </div>
+        <div class="brand-divider">·</div>
+        <div class="open-greeting" id="openGreeting">Good morning!</div>
     </div>
 
     <div class="input-dock" id="inputDock">
@@ -310,13 +300,30 @@
     </div>
 
 <script>
+    // Set Time-Aware Greeting automatically
+    const hour = new Date().getHours();
+    const greetingEl = document.getElementById('openGreeting');
+    if (hour >= 5 && hour < 12) {
+        greetingEl.textContent = "Good morning!";
+    } else if (hour >= 12 && hour < 17) {
+        greetingEl.textContent = "Good afternoon!";
+    } else if (hour >= 17 && hour < 21) {
+        greetingEl.textContent = "Good evening!";
+    } else if (hour >= 21 && hour < 24) {
+        greetingEl.textContent = "Good night!";
+    } else {
+        greetingEl.textContent = "Staying up late?";
+    }
+
     const menuToggle = document.getElementById('menuToggle');
+    const historyToggle = document.getElementById('historyToggle');
     const sideDrawer = document.getElementById('sideDrawer');
     const drawerBackdrop = document.getElementById('drawerBackdrop');
     const centerStage = document.getElementById('centerStage');
-    const greetingBubble = document.getElementById('greetingBubble');
+    const openGreeting = document.getElementById('openGreeting');
     const userInput = document.getElementById('userInput');
     const inputDock = document.getElementById('inputDock');
+    const historyList = document.getElementById('historyList');
 
     function toggleDrawer() {
         sideDrawer.classList.toggle('open');
@@ -324,24 +331,39 @@
     }
 
     menuToggle.onclick = toggleDrawer;
+    historyToggle.onclick = toggleDrawer;
     drawerBackdrop.onclick = toggleDrawer;
 
-    // Reliable focus/blur handling for mobile keyboards and dissolving UI
     userInput.addEventListener('focus', () => {
         centerStage.classList.add('dissolved');
-        greetingBubble.classList.add('dissolved');
-        inputDock.style.transform = 'translateY(-10px)';
+        openGreeting.classList.add('dissolved');
+        inputDock.style.transform = 'translateY(-20px)';
     });
 
     userInput.addEventListener('blur', () => {
         if(userInput.value.trim() === '') {
             centerStage.classList.remove('dissolved');
-            greetingBubble.classList.remove('dissolved');
+            openGreeting.classList.remove('dissolved');
             inputDock.style.transform = 'translateY(0)';
         }
     });
 
-    // Rich Corsive Background Canvas (Dynamic Glowing Curves & Stars)
+    function handleSend() {
+        const text = userInput.value.trim();
+        if(!text) return;
+
+        if(historyList.innerHTML.includes('No prompts typed yet')) {
+            historyList.innerHTML = '';
+        }
+        historyList.innerHTML += `<div class="history-item">${text}</div>`;
+
+        userInput.value = '';
+        userInput.blur();
+    }
+
+    document.getElementById('sendBtn').onclick = handleSend;
+    userInput.onkeypress = (e) => { if(e.key === 'Enter') handleSend(); };
+
     const canvas = document.getElementById('bgCanvas');
     const ctx = canvas.getContext('2d');
 
@@ -356,29 +378,23 @@
 
     function drawBackground() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-        // Multiple corsive / curved glowing thematic lines
         ctx.lineWidth = 1.2;
 
-        // Curve 1 Top Right
         ctx.strokeStyle = 'rgba(196, 150, 255, 0.12)';
         ctx.beginPath();
         ctx.arc(canvas.width + 50, -50, 450, Math.PI * 0.75, Math.PI * 1.35);
         ctx.stroke();
 
-        // Curve 2 Inner Top Right
         ctx.strokeStyle = 'rgba(210, 180, 255, 0.08)';
         ctx.beginPath();
         ctx.arc(canvas.width + 50, -50, 320, Math.PI * 0.8, Math.PI * 1.3);
         ctx.stroke();
 
-        // Curve 3 Bottom Left
         ctx.strokeStyle = 'rgba(180, 120, 255, 0.12)';
         ctx.beginPath();
         ctx.arc(-50, canvas.height + 50, 500, Math.PI * 1.7, Math.PI * 2.15);
         ctx.stroke();
 
-        // Dynamic flowing sine wave corsive line across space
         ctx.strokeStyle = 'rgba(196, 150, 255, 0.06)';
         ctx.beginPath();
         for (let x = 0; x < canvas.width; x += 15) {
@@ -390,7 +406,6 @@
 
         waveOffset += 0.5;
 
-        // Sparkling thematic star nodes
         const stars = [
             {x: canvas.width * 0.82, y: 120, size: 2.2, alpha: 0.8},
             {x: canvas.width * 0.88, y: 100, size: 1.2, alpha: 0.5},
@@ -412,17 +427,6 @@
         requestAnimationFrame(drawBackground);
     }
     drawBackground();
-
-    document.getElementById('sendBtn').onclick = handleSend;
-    userInput.onkeypress = (e) => { if(e.key === 'Enter') handleSend(); };
-
-    function handleSend() {
-        const text = userInput.value.trim();
-        if(!text) return;
-        alert(`Prompt sent to Shinu engine: "${text}"`);
-        userInput.value = '';
-        userInput.blur();
-    }
 </script>
 
 </body>
