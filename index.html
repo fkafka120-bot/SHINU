@@ -13,13 +13,22 @@
             --text-muted: #8a7a9e;
         }
 
-        /* Amber Theme Override */
+        /* Amber Theme */
         body.theme-amber {
             --bg-color: #060403;
             --panel-border: rgba(255, 170, 80, 0.2);
             --accent-purple: #ffaa50;
             --text-main: #fffaec;
             --text-muted: #9e8a7a;
+        }
+
+        /* Neon Pink Theme */
+        body.theme-pink {
+            --bg-color: #060205;
+            --panel-border: rgba(255, 105, 180, 0.2);
+            --accent-purple: #ff69b4;
+            --text-main: #ffeeff;
+            --text-muted: #9e7a8e;
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
@@ -54,7 +63,7 @@
             max-width: 480px;
             display: flex;
             align-items: center;
-            justify-content: space-between;
+            justify-content: flex-start;
             z-index: 10;
             padding-top: 10px;
         }
@@ -96,6 +105,7 @@
             gap: 20px;
         }
         body.theme-amber .drawer { background: rgba(20, 14, 10, 0.96); }
+        body.theme-pink .drawer { background: rgba(20, 10, 16, 0.96); }
         .drawer.open { left: 0; }
         
         .drawer-section-title { 
@@ -124,6 +134,31 @@
         .drawer-item:hover { background: rgba(180, 130, 255, 0.1); }
         body.theme-amber .drawer-item { background: rgba(255, 170, 80, 0.04); }
         body.theme-amber .drawer-item:hover { background: rgba(255, 170, 80, 0.1); }
+        body.theme-pink .drawer-item { background: rgba(255, 105, 180, 0.04); }
+        body.theme-pink .drawer-item:hover { background: rgba(255, 105, 180, 0.1); }
+
+        /* Theme Sub-Screen Options */
+        .theme-submenu {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            margin-top: 4px;
+            padding-left: 10px;
+            border-left: 2px solid var(--panel-border);
+        }
+        .theme-sub-item {
+            padding: 8px 12px;
+            background: transparent;
+            border: 1px solid transparent;
+            border-radius: 8px;
+            font-size: 13px;
+            color: var(--text-muted);
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: left;
+        }
+        .theme-sub-item:hover { color: var(--text-main); background: rgba(180, 130, 255, 0.06); }
+        .theme-sub-item.active { color: var(--accent-purple); border-color: var(--panel-border); font-weight: 500; }
         
         .chat-history-list {
             flex: 1;
@@ -131,7 +166,7 @@
             display: flex;
             flex-direction: column;
             gap: 8px;
-            max-height: 40vh;
+            max-height: 35vh;
         }
         .history-item {
             padding: 10px 14px;
@@ -172,7 +207,7 @@
             opacity: 0;
             transform: translateY(-25px);
             pointer-events: none;
-            display: none; /* Removes it entirely once interaction starts */
+            display: none;
         }
 
         .eye-container {
@@ -183,6 +218,7 @@
             animation: eyeBlink 4s infinite ease-in-out;
         }
         body.theme-amber .eye-container { filter: drop-shadow(0 0 15px rgba(255, 170, 80, 0.4)); }
+        body.theme-pink .eye-container { filter: drop-shadow(0 0 15px rgba(255, 105, 180, 0.4)); }
 
         @keyframes eyeBlink {
             0%, 46%, 54%, 100% { transform: scaleY(1); }
@@ -199,6 +235,7 @@
             margin-left: 10px;
         }
         body.theme-amber .brand-title { text-shadow: 0 0 20px rgba(255, 170, 80, 0.3); }
+        body.theme-pink .brand-title { text-shadow: 0 0 20px rgba(255, 105, 180, 0.3); }
 
         .brand-divider {
             display: flex;
@@ -243,6 +280,7 @@
             transition: transform 0.3s ease, background-color 0.3s;
         }
         body.theme-amber .input-dock { background: rgba(20, 14, 10, 0.9); }
+        body.theme-pink .input-dock { background: rgba(20, 10, 16, 0.9); }
 
         .action-icon-btn {
             background: rgba(180, 130, 255, 0.08);
@@ -300,13 +338,14 @@
         </button>
     </header>
 
-    <!-- Sliding Menu Drawer with Theme, History, Account Settings -->
+    <!-- Sliding Menu Drawer with Theme Sub-screen, History, Account Setting -->
     <div class="drawer" id="sideDrawer">
         <div>
-            <div class="drawer-section-title">1. Theme</div>
-            <div class="drawer-item" id="themeToggleBtn">
-                <span>Switch Theme</span>
-                <span id="themeIndicator" style="font-size: 12px; color: var(--accent-purple);">Cosmic Purple</span>
+            <div class="drawer-section-title">1. Theme Options</div>
+            <div class="theme-submenu">
+                <button class="theme-sub-item active" data-theme="purple">Cosmic Purple</button>
+                <button class="theme-sub-item" data-theme="amber">Neon Amber</button>
+                <button class="theme-sub-item" data-theme="pink">Neon Pink</button>
             </div>
         </div>
         <div>
@@ -347,6 +386,38 @@
     </div>
 
 <script>
+    // Load saved theme from localStorage on startup
+    const savedTheme = localStorage.getItem('shinu_theme') || 'purple';
+    applyTheme(savedTheme);
+
+    function applyTheme(themeName) {
+        document.body.classList.remove('theme-amber', 'theme-pink');
+        if(themeName === 'amber') {
+            document.body.classList.add('theme-amber');
+        } else if(themeName === 'pink') {
+            document.body.classList.add('theme-pink');
+        }
+        
+        // Update active class on sub-screen buttons
+        document.querySelectorAll('.theme-sub-item').forEach(btn => {
+            if(btn.getAttribute('data-theme') === themeName) {
+                btn.classList.add('active');
+            } else {
+                btn.classList.remove('active');
+            }
+        });
+
+        localStorage.setItem('shinu_theme', themeName);
+    }
+
+    // Theme Sub-screen button click handlers
+    document.querySelectorAll('.theme-sub-item').forEach(btn => {
+        btn.onclick = () => {
+            const chosenTheme = btn.getAttribute('data-theme');
+            applyTheme(chosenTheme);
+        };
+    });
+
     // Dynamic Greeting based on time
     const hour = new Date().getHours();
     const greetingEl = document.getElementById('openGreeting');
@@ -367,8 +438,6 @@
     const userInput = document.getElementById('userInput');
     const inputDock = document.getElementById('inputDock');
     const historyList = document.getElementById('historyList');
-    const themeToggleBtn = document.getElementById('themeToggleBtn');
-    const themeIndicator = document.getElementById('themeIndicator');
 
     function toggleDrawer() {
         sideDrawer.classList.toggle('open');
@@ -377,16 +446,6 @@
 
     menuToggle.onclick = toggleDrawer;
     drawerBackdrop.onclick = toggleDrawer;
-
-    // Theme Switcher Logic
-    themeToggleBtn.onclick = () => {
-        document.body.classList.toggle('theme-amber');
-        if(document.body.classList.contains('theme-amber')) {
-            themeIndicator.textContent = "Neon Amber";
-        } else {
-            themeIndicator.textContent = "Cosmic Purple";
-        }
-    };
 
     // Dissolve and remove eye motif permanently for the session upon focusing/typing
     let chatStarted = false;
@@ -453,9 +512,21 @@
         ctx.lineWidth = 1.2;
 
         const isAmber = document.body.classList.contains('theme-amber');
-        const strokeColor = isAmber ? 'rgba(255, 170, 80, 0.12)' : 'rgba(196, 150, 255, 0.12)';
-        const strokeColor2 = isAmber ? 'rgba(255, 200, 120, 0.08)' : 'rgba(210, 180, 255, 0.08)';
-        const particleColor = isAmber ? '255, 200, 120' : '210, 180, 255';
+        const isPink = document.body.classList.contains('theme-pink');
+        
+        let strokeColor = 'rgba(196, 150, 255, 0.12)';
+        let strokeColor2 = 'rgba(210, 180, 255, 0.08)';
+        let particleColor = '210, 180, 255';
+
+        if(isAmber) {
+            strokeColor = 'rgba(255, 170, 80, 0.12)';
+            strokeColor2 = 'rgba(255, 200, 120, 0.08)';
+            particleColor = '255, 200, 120';
+        } else if(isPink) {
+            strokeColor = 'rgba(255, 105, 180, 0.12)';
+            strokeColor2 = 'rgba(255, 160, 210, 0.08)';
+            particleColor = '255, 160, 210';
+        }
 
         ctx.strokeStyle = strokeColor;
         ctx.beginPath();
