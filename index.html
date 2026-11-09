@@ -44,7 +44,7 @@
             max-width: 480px;
             display: flex;
             align-items: center;
-            justify-content: space-between;
+            justify-content: flex-start;
             z-index: 10;
             padding-top: 10px;
         }
@@ -67,18 +67,7 @@
             border-radius: 2px;
         }
 
-        .history-btn {
-            background: rgba(180, 130, 255, 0.08);
-            border: 1px solid var(--panel-border);
-            color: var(--accent-purple);
-            padding: 6px 12px;
-            border-radius: 20px;
-            font-size: 12px;
-            cursor: pointer;
-            transition: background 0.2s;
-        }
-        .history-btn:hover { background: rgba(180, 130, 255, 0.18); }
-
+        /* Sliding Drawer (Now contains History & Options) */
         .drawer {
             position: fixed;
             top: 0;
@@ -93,17 +82,26 @@
             padding: 30px 20px;
             display: flex;
             flex-direction: column;
-            gap: 15px;
+            gap: 20px;
         }
         .drawer.open { left: 0; }
-        .drawer-title { font-size: 12px; font-weight: 600; color: var(--text-muted); letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 5px; }
+        
+        .drawer-section-title { 
+            font-size: 11px; 
+            font-weight: 600; 
+            color: var(--text-muted); 
+            letter-spacing: 1.5px; 
+            text-transform: uppercase; 
+            margin-bottom: 8px; 
+        }
         
         .chat-history-list {
             flex: 1;
             overflow-y: auto;
             display: flex;
             flex-direction: column;
-            gap: 10px;
+            gap: 8px;
+            max-height: 50vh;
         }
         .history-item {
             padding: 10px 14px;
@@ -146,11 +144,18 @@
             pointer-events: none;
         }
 
+        /* Blinking Eye Animation Container */
         .eye-container {
             width: 110px;
             height: 55px;
             margin-bottom: 18px;
             filter: drop-shadow(0 0 15px rgba(196, 150, 255, 0.4));
+            animation: eyeBlink 4s infinite ease-in-out;
+        }
+
+        @keyframes eyeBlink {
+            0%, 46%, 54%, 100% { transform: scaleY(1); }
+            50% { transform: scaleY(0.08); }
         }
 
         .brand-title {
@@ -265,13 +270,19 @@
             <span></span>
             <span></span>
         </button>
-        <button class="history-btn" id="historyToggle">History</button>
     </header>
 
+    <!-- Sliding Menu Drawer Containing History -->
     <div class="drawer" id="sideDrawer">
-        <div class="drawer-title">Typed History</div>
-        <div class="chat-history-list" id="historyList">
-            <div style="font-size: 13px; color: var(--text-muted);">No prompts typed yet.</div>
+        <div>
+            <div class="drawer-section-title">Navigation</div>
+            <div style="padding: 10px 14px; background: rgba(180,130,255,0.06); border-radius: 8px; font-size: 13.5px; cursor: pointer; margin-bottom: 15px;">Engine Studio</div>
+        </div>
+        <div>
+            <div class="drawer-section-title">Typed History</div>
+            <div class="chat-history-list" id="historyList">
+                <div style="font-size: 13px; color: var(--text-muted);">No prompts typed yet.</div>
+            </div>
         </div>
     </div>
     <div class="backdrop" id="drawerBackdrop"></div>
@@ -300,23 +311,20 @@
     </div>
 
 <script>
-    // Set Time-Aware Greeting automatically
+    // Time-Aware Greeting logic with "Late night hustle?" for midnight hours
     const hour = new Date().getHours();
     const greetingEl = document.getElementById('openGreeting');
     if (hour >= 5 && hour < 12) {
         greetingEl.textContent = "Good morning!";
     } else if (hour >= 12 && hour < 17) {
         greetingEl.textContent = "Good afternoon!";
-    } else if (hour >= 17 && hour < 21) {
+    } else if (hour >= 17 && hour < 22) {
         greetingEl.textContent = "Good evening!";
-    } else if (hour >= 21 && hour < 24) {
-        greetingEl.textContent = "Good night!";
     } else {
-        greetingEl.textContent = "Staying up late?";
+        greetingEl.textContent = "Late night hustle?";
     }
 
     const menuToggle = document.getElementById('menuToggle');
-    const historyToggle = document.getElementById('historyToggle');
     const sideDrawer = document.getElementById('sideDrawer');
     const drawerBackdrop = document.getElementById('drawerBackdrop');
     const centerStage = document.getElementById('centerStage');
@@ -331,7 +339,6 @@
     }
 
     menuToggle.onclick = toggleDrawer;
-    historyToggle.onclick = toggleDrawer;
     drawerBackdrop.onclick = toggleDrawer;
 
     userInput.addEventListener('focus', () => {
@@ -364,6 +371,7 @@
     document.getElementById('sendBtn').onclick = handleSend;
     userInput.onkeypress = (e) => { if(e.key === 'Enter') handleSend(); };
 
+    // Canvas Background with Corsive Curves & Floating Particles
     const canvas = document.getElementById('bgCanvas');
     const ctx = canvas.getContext('2d');
 
@@ -376,10 +384,24 @@
 
     let waveOffset = 0;
 
+    // Generate floating background particles
+    const particles = [];
+    for(let i = 0; i < 25; i++) {
+        particles.push({
+            x: Math.random() * canvas.width,
+            y: Math.random() * canvas.height,
+            radius: Math.random() * 1.5 + 0.5,
+            speedY: (Math.random() - 0.5) * 0.3,
+            speedX: (Math.random() - 0.5) * 0.3,
+            alpha: Math.random() * 0.5 + 0.2
+        });
+    }
+
     function drawBackground() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         ctx.lineWidth = 1.2;
 
+        // Background Orbital Arcs
         ctx.strokeStyle = 'rgba(196, 150, 255, 0.12)';
         ctx.beginPath();
         ctx.arc(canvas.width + 50, -50, 450, Math.PI * 0.75, Math.PI * 1.35);
@@ -395,6 +417,7 @@
         ctx.arc(-50, canvas.height + 50, 500, Math.PI * 1.7, Math.PI * 2.15);
         ctx.stroke();
 
+        // Flowing Sine Wave
         ctx.strokeStyle = 'rgba(196, 150, 255, 0.06)';
         ctx.beginPath();
         for (let x = 0; x < canvas.width; x += 15) {
@@ -404,22 +427,23 @@
         }
         ctx.stroke();
 
-        waveOffset += 0.5;
+        waveOffset += 0.4;
 
-        const stars = [
-            {x: canvas.width * 0.82, y: 120, size: 2.2, alpha: 0.8},
-            {x: canvas.width * 0.88, y: 100, size: 1.2, alpha: 0.5},
-            {x: canvas.width * 0.12, y: canvas.height * 0.7, size: 1.8, alpha: 0.7},
-            {x: canvas.width * 0.22, y: canvas.height * 0.78, size: 1, alpha: 0.4},
-            {x: canvas.width * 0.48, y: canvas.height * 0.25, size: 1.5, alpha: 0.6}
-        ];
+        // Render & Update Floating Particles (BGM Animation)
+        particles.forEach(p => {
+            p.y += p.speedY;
+            p.x += p.speedX;
 
-        stars.forEach(s => {
-            ctx.fillStyle = `rgba(220, 190, 255, ${s.alpha})`;
-            ctx.shadowColor = 'rgba(196, 150, 255, 0.9)';
-            ctx.shadowBlur = 10;
+            if(p.y < 0) p.y = canvas.height;
+            if(p.y > canvas.height) p.y = 0;
+            if(p.x < 0) p.x = canvas.width;
+            if(p.x > canvas.width) p.x = 0;
+
+            ctx.fillStyle = `rgba(210, 180, 255, ${p.alpha})`;
+            ctx.shadowColor = 'rgba(196, 150, 255, 0.8)';
+            ctx.shadowBlur = 8;
             ctx.beginPath();
-            ctx.arc(s.x, s.y, s.size, 0, Math.PI * 2);
+            ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
             ctx.fill();
             ctx.shadowBlur = 0;
         });
