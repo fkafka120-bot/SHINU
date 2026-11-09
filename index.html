@@ -117,7 +117,7 @@
 
         .center-stage.dissolved {
             opacity: 0;
-            transform: translateY(-20px);
+            transform: translateY(-25px);
             pointer-events: none;
         }
 
@@ -173,7 +173,7 @@
 
         .greeting-bubble.dissolved {
             opacity: 0;
-            transform: translateY(-15px);
+            transform: translateY(-20px);
             pointer-events: none;
         }
 
@@ -196,7 +196,7 @@
             color: var(--text-muted);
         }
 
-        /* Input Dock that shifts smoothly above mobile keyboards */
+        /* Input Dock */
         .input-dock {
             position: relative;
             z-index: 10;
@@ -316,6 +316,7 @@
     const centerStage = document.getElementById('centerStage');
     const greetingBubble = document.getElementById('greetingBubble');
     const userInput = document.getElementById('userInput');
+    const inputDock = document.getElementById('inputDock');
 
     function toggleDrawer() {
         sideDrawer.classList.toggle('open');
@@ -325,20 +326,22 @@
     menuToggle.onclick = toggleDrawer;
     drawerBackdrop.onclick = toggleDrawer;
 
-    // Dissolve and keyboard shift behavior on focus/typing
-    userInput.onfocus = () => {
+    // Reliable focus/blur handling for mobile keyboards and dissolving UI
+    userInput.addEventListener('focus', () => {
         centerStage.classList.add('dissolved');
         greetingBubble.classList.add('dissolved');
-    };
+        inputDock.style.transform = 'translateY(-10px)';
+    });
 
-    userInput.onblur = () => {
+    userInput.addEventListener('blur', () => {
         if(userInput.value.trim() === '') {
             centerStage.classList.remove('dissolved');
             greetingBubble.classList.remove('dissolved');
+            inputDock.style.transform = 'translateY(0)';
         }
-    };
+    });
 
-    // Canvas Background Starfield
+    // Rich Corsive Background Canvas (Dynamic Glowing Curves & Stars)
     const canvas = document.getElementById('bgCanvas');
     const ctx = canvas.getContext('2d');
 
@@ -349,31 +352,57 @@
     window.onresize = resizeCanvas;
     resizeCanvas();
 
+    let waveOffset = 0;
+
     function drawBackground() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-        ctx.strokeStyle = 'rgba(180, 130, 255, 0.08)';
-        ctx.lineWidth = 1;
-        
+        // Multiple corsive / curved glowing thematic lines
+        ctx.lineWidth = 1.2;
+
+        // Curve 1 Top Right
+        ctx.strokeStyle = 'rgba(196, 150, 255, 0.12)';
         ctx.beginPath();
-        ctx.arc(canvas.width + 100, -50, 400, Math.PI * 0.8, Math.PI * 1.3);
+        ctx.arc(canvas.width + 50, -50, 450, Math.PI * 0.75, Math.PI * 1.35);
         ctx.stroke();
 
+        // Curve 2 Inner Top Right
+        ctx.strokeStyle = 'rgba(210, 180, 255, 0.08)';
         ctx.beginPath();
-        ctx.arc(-50, canvas.height + 100, 500, Math.PI * 1.7, Math.PI * 2.1);
+        ctx.arc(canvas.width + 50, -50, 320, Math.PI * 0.8, Math.PI * 1.3);
         ctx.stroke();
 
+        // Curve 3 Bottom Left
+        ctx.strokeStyle = 'rgba(180, 120, 255, 0.12)';
+        ctx.beginPath();
+        ctx.arc(-50, canvas.height + 50, 500, Math.PI * 1.7, Math.PI * 2.15);
+        ctx.stroke();
+
+        // Dynamic flowing sine wave corsive line across space
+        ctx.strokeStyle = 'rgba(196, 150, 255, 0.06)';
+        ctx.beginPath();
+        for (let x = 0; x < canvas.width; x += 15) {
+            let y = (canvas.height * 0.5) + Math.sin((x + waveOffset) * 0.008) * 80 + Math.cos((x - waveOffset) * 0.004) * 40;
+            if (x === 0) ctx.moveTo(x, y);
+            else ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+
+        waveOffset += 0.5;
+
+        // Sparkling thematic star nodes
         const stars = [
-            {x: canvas.width * 0.8, y: 100, size: 2},
-            {x: canvas.width * 0.85, y: 90, size: 1},
-            {x: canvas.width * 0.15, y: canvas.height * 0.75, size: 1.5},
-            {x: canvas.width * 0.5, y: canvas.height * 0.3, size: 1}
+            {x: canvas.width * 0.82, y: 120, size: 2.2, alpha: 0.8},
+            {x: canvas.width * 0.88, y: 100, size: 1.2, alpha: 0.5},
+            {x: canvas.width * 0.12, y: canvas.height * 0.7, size: 1.8, alpha: 0.7},
+            {x: canvas.width * 0.22, y: canvas.height * 0.78, size: 1, alpha: 0.4},
+            {x: canvas.width * 0.48, y: canvas.height * 0.25, size: 1.5, alpha: 0.6}
         ];
 
         stars.forEach(s => {
-            ctx.fillStyle = 'rgba(210, 180, 255, 0.6)';
-            ctx.shadowColor = 'rgba(196, 150, 255, 0.8)';
-            ctx.shadowBlur = 8;
+            ctx.fillStyle = `rgba(220, 190, 255, ${s.alpha})`;
+            ctx.shadowColor = 'rgba(196, 150, 255, 0.9)';
+            ctx.shadowBlur = 10;
             ctx.beginPath();
             ctx.arc(s.x, s.y, s.size, 0, Math.PI * 2);
             ctx.fill();
