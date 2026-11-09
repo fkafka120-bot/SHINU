@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Shinu — Procedural Media Engine</title>
+    <title>Shinu — Media Engine</title>
     <style>
         :root {
             --bg-base: #060609;
-            --panel-bg: rgba(12, 12, 18, 0.75);
-            --panel-border: rgba(255, 255, 255, 0.06);
+            --panel-bg: rgba(12, 12, 18, 0.85);
+            --panel-border: rgba(255, 255, 255, 0.08);
             --accent: #ff9933;
             --accent-glow: rgba(255, 153, 51, 0.2);
             --text-main: #ededf2;
@@ -25,196 +25,181 @@
             display: flex;
             flex-direction: column;
             overflow: hidden;
+            position: relative;
         }
 
-        /* Minimalist Header */
+        /* Minimalist Header with Sidebar Toggle */
         header {
-            height: 54px;
+            height: 60px;
             border-bottom: 1px solid var(--panel-border);
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 0 24px;
+            padding: 0 20px;
             background: var(--panel-bg);
             backdrop-filter: blur(16px);
-            z-index: 10;
+            z-index: 20;
         }
 
-        .logo-area { display: flex; align-items: center; gap: 10px; }
-        .logo { font-weight: 700; font-size: 14px; letter-spacing: 3px; color: var(--text-main); }
-        .badge { font-size: 10px; font-weight: 600; background: var(--accent-glow); color: var(--accent); padding: 3px 8px; border-radius: 20px; letter-spacing: 0.5px; border: 1px solid rgba(255,153,51,0.3); }
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
 
-        /* Main Workspace Split */
-        .workspace {
+        /* Sliding Window Pane Toggle Button */
+        .menu-btn {
+            background: transparent;
+            border: 1px solid var(--panel-border);
+            color: var(--text-main);
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: background 0.2s, border-color 0.2s;
+        }
+
+        .menu-btn:hover { background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.2); }
+        .menu-btn svg { width: 18px; height: 18px; fill: currentColor; }
+
+        .logo { font-weight: 700; font-size: 15px; letter-spacing: 3px; color: var(--text-main); }
+
+        /* Sliding Pane Drawer */
+        .drawer {
+            position: fixed;
+            top: 60px;
+            left: -280px;
+            width: 280px;
+            height: calc(100vh - 60px);
+            background: var(--panel-bg);
+            border-right: 1px solid var(--panel-border);
+            backdrop-filter: blur(20px);
+            transition: left 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            z-index: 30;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .drawer.open { left: 0; }
+        .drawer-title { font-size: 12px; font-weight: 600; color: var(--text-muted); letter-spacing: 1px; text-transform: uppercase; }
+        .drawer-item { padding: 10px 14px; border-radius: 8px; background: rgba(255,255,255,0.03); border: 1px solid var(--panel-border); cursor: pointer; font-size: 13.5px; transition: background 0.2s; }
+        .drawer-item:hover { background: rgba(255,255,255,0.08); }
+
+        /* Main Stage & Input Layout */
+        .main-container {
             flex: 1;
             display: flex;
-            position: relative;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+            padding: 20px;
+            background: radial-gradient(circle at center, #11111d 0%, #06060a 100%);
             overflow: hidden;
         }
 
-        /* Chat Sidebar */
-        .chat-sidebar {
-            width: 360px;
-            background: var(--panel-bg);
-            border-right: 1px solid var(--panel-border);
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            padding: 20px;
-            backdrop-filter: blur(12px);
-        }
-
-        .chat-messages {
-            flex: 1;
-            overflow-y: auto;
-            display: flex;
-            flex-direction: column;
-            gap: 14px;
-            font-size: 13.5px;
-            padding-right: 4px;
-        }
-
-        .chat-messages::-webkit-scrollbar { width: 4px; }
-        .chat-messages::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 4px; }
-
-        .message {
-            padding: 12px 16px;
-            border-radius: 12px;
-            line-height: 1.5;
-            max-width: 90%;
-        }
-
-        .message.bot { background: rgba(255,255,255,0.03); border: 1px solid var(--panel-border); color: var(--text-main); align-self: flex-start; }
-        .message.user { background: var(--accent); color: #050508; align-self: flex-end; font-weight: 600; box-shadow: 0 4px 20px var(--accent-glow); }
-
-        .chat-input-box {
-            display: flex;
-            gap: 10px;
-            margin-top: 16px;
-            background: rgba(0, 0, 0, 0.4);
-            border: 1px solid var(--panel-border);
-            border-radius: 12px;
-            padding: 6px 6px 6px 14px;
-            transition: border-color 0.2s;
-        }
-
-        .chat-input-box:focus-within { border-color: var(--accent); }
-
-        input {
-            flex: 1;
-            background: transparent;
-            border: none;
-            color: #fff;
-            font-size: 13.5px;
-            outline: none;
-        }
-
-        input::placeholder { color: var(--text-muted); }
-
-        button.send-btn {
-            background: var(--accent);
-            border: none;
-            width: 34px;
-            height: 34px;
-            border-radius: 8px;
-            font-weight: bold;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #000;
-            transition: transform 0.1s;
-        }
-
-        button.send-btn:active { transform: scale(0.95); }
-
-        /* Canvas Stage Area */
-        .stage {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            background: radial-gradient(circle at center, #11111d 0%, #06060a 100%);
-            position: relative;
-            padding: 20px;
-        }
-
         canvas {
-            height: 72vh;
+            height: 62vh;
             aspect-ratio: 9 / 16;
             border-radius: 14px;
             box-shadow: 0 30px 80px rgba(0,0,0,0.8), 0 0 0 1px var(--panel-border);
             background: #000;
         }
 
-        .stage-controls {
-            margin-top: 18px;
+        /* Clean Search Input Bar */
+        .search-dock {
+            width: 100%;
+            max-width: 500px;
             display: flex;
-            gap: 14px;
-            align-items: center;
+            gap: 10px;
             background: var(--panel-bg);
-            padding: 8px 16px;
-            border-radius: 30px;
             border: 1px solid var(--panel-border);
-            backdrop-filter: blur(10px);
+            border-radius: 14px;
+            padding: 8px 8px 8px 16px;
+            backdrop-filter: blur(12px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
         }
 
-        #statusText { font-size: 12px; color: var(--text-muted); font-weight: 500; }
-
-        button.action-btn {
+        input {
+            flex: 1;
             background: transparent;
-            border: 1px solid var(--panel-border);
-            color: var(--text-main);
-            padding: 7px 16px;
-            border-radius: 20px;
-            font-size: 12.5px;
-            font-weight: 500;
+            border: none;
+            color: #fff;
+            font-size: 14px;
+            outline: none;
+        }
+
+        input::placeholder { color: var(--text-muted); }
+
+        button.search-btn {
+            background: var(--accent);
+            border: none;
+            color: #000;
+            font-weight: 600;
+            padding: 10px 20px;
+            border-radius: 10px;
+            font-size: 13.5px;
             cursor: pointer;
-            transition: all 0.2s;
+            box-shadow: 0 4px 15px var(--accent-glow);
+            transition: transform 0.1s;
         }
 
-        button.action-btn:hover { background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.15); }
-        button.action-btn.primary { background: var(--accent); color: #000; font-weight: 600; border: none; box-shadow: 0 4px 15px var(--accent-glow); }
+        button.search-btn:active { transform: scale(0.96); }
 
-        /* Responsive Mobile Handling */
-        @media (max-width: 768px) {
-            .workspace { flex-direction: column-reverse; }
-            .chat-sidebar { width: 100%; height: 38vh; padding: 14px; }
-            .stage { height: 62vh; padding: 10px; }
-            canvas { height: 42vh; }
+        /* Overlay Backdrop when drawer is open */
+        .backdrop {
+            position: fixed;
+            top: 60px;
+            left: 0;
+            width: 100vw;
+            height: calc(100vh - 60px);
+            background: rgba(0,0,0,0.5);
+            backdrop-filter: blur(2px);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s;
+            z-index: 25;
         }
+        .backdrop.active { opacity: 1; pointer-events: auto; }
     </style>
 </head>
 <body>
 
+    <!-- Header -->
     <header>
-        <div class="logo-area">
+        <div class="header-left">
+            <!-- Sliding Window Pane Button -->
+            <button class="menu-btn" id="menuToggle" title="Options">
+                <svg viewBox="0 0 24 24">
+                    <path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/>
+                </svg>
+            </button>
             <div class="logo">SHINU</div>
-            <div class="badge">PROD</div>
         </div>
-        <div style="font-size: 12px; color: var(--text-muted);">Engine v1.0</div>
+        <div style="font-size: 11px; color: var(--text-muted);">v1.0 Pro</div>
     </header>
 
-    <div class="workspace">
-        <!-- Chat Panel -->
-        <div class="chat-sidebar">
-            <div class="chat-messages" id="chatMessages">
-                <div class="message bot">Shinu engine initialized. Ready for procedural rendering workflows.</div>
-            </div>
-            <div class="chat-input-box">
-                <input type="text" id="userInput" placeholder="Prompt Shinu for visual instructions..." />
-                <button class="send-btn" id="sendBtn">↑</button>
-            </div>
-        </div>
+    <!-- Sliding Window Pane Drawer -->
+    <div class="drawer" id="sideDrawer">
+        <div class="drawer-title">Engine Options</div>
+        <div class="drawer-item" id="exportOption">Export Current Frame (MP4)</div>
+        <div class="drawer-item">Rendering Presets</div>
+        <div class="drawer-item">Copyright & Licensing</div>
+    </div>
+    <div class="backdrop" id="drawerBackdrop"></div>
 
-        <!-- Render Stage -->
-        <div class="stage">
-            <canvas id="engineCanvas" width="1080" height="1920"></canvas>
-            <div class="stage-controls">
-                <span id="statusText">Ready</span>
-                <button class="action-btn primary" id="renderBtn">Export MP4</button>
-            </div>
+    <!-- Main Workspace -->
+    <div class="main-container">
+        <canvas id="engineCanvas" width="1080" height="1920"></canvas>
+
+        <!-- Search Input Bar & Button -->
+        <div class="search-dock">
+            <input type="text" id="searchInput" placeholder="Search or prompt visual engine..." />
+            <button class="search-btn" id="searchBtn">Search</button>
         </div>
     </div>
 
@@ -225,6 +210,20 @@
     let frame = 0;
     const totalFrames = 150; 
 
+    // Sliding Drawer Logic
+    const menuToggle = document.getElementById('menuToggle');
+    const sideDrawer = document.getElementById('sideDrawer');
+    const drawerBackdrop = document.getElementById('drawerBackdrop');
+
+    function toggleDrawer() {
+        sideDrawer.classList.toggle('open');
+        drawerBackdrop.classList.toggle('active');
+    }
+
+    menuToggle.onclick = toggleDrawer;
+    drawerBackdrop.onclick = toggleDrawer;
+
+    // Procedural Renderer Animation Loop
     function renderShadedFrame(f) {
         let width = canvas.width;
         let height = canvas.height;
@@ -286,28 +285,19 @@
     }
     loop();
 
-    document.getElementById('sendBtn').onclick = handleUserPrompt;
-    document.getElementById('userInput').onkeypress = (e) => { if(e.key === 'Enter') handleUserPrompt(); };
+    // Search Trigger
+    document.getElementById('searchBtn').onclick = handleSearch;
+    document.getElementById('searchInput').onkeypress = (e) => { if(e.key === 'Enter') handleSearch(); };
 
-    function handleUserPrompt() {
-        const input = document.getElementById('userInput');
-        const text = input.value.trim();
-        if(!text) return;
-
-        const messages = document.getElementById('chatMessages');
-        messages.innerHTML += `<div class="message user">${text}</div>`;
-        input.value = '';
-
-        setTimeout(() => {
-            messages.innerHTML += `<div class="message bot">Pipeline compiled for: "${text}". Frame parameters re-weighted.</div>`;
-            messages.scrollTop = messages.scrollHeight;
-        }, 400);
+    function handleSearch() {
+        const query = document.getElementById('searchInput').value.trim();
+        if(!query) return;
+        alert(`Searching / Executing prompt: "${query}"`);
     }
 
-    document.getElementById('renderBtn').onclick = () => {
-        const statusText = document.getElementById('statusText');
-        statusText.innerText = "Encoding...";
-        
+    // Export Trigger from Drawer Menu
+    document.getElementById('exportOption').onclick = () => {
+        toggleDrawer();
         const stream = canvas.captureStream(25);
         let options = { mimeType: 'video/webm; codecs=vp9' };
         if (!MediaRecorder.isTypeSupported(options.mimeType)) options = { mimeType: 'video/webm' };
@@ -323,7 +313,6 @@
             a.href = url;
             a.download = 'shinu_render.webm';
             a.click();
-            statusText.innerText = "Ready";
         };
 
         recorder.start();
