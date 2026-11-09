@@ -13,6 +13,15 @@
             --text-muted: #8a7a9e;
         }
 
+        /* Amber Theme Override */
+        body.theme-amber {
+            --bg-color: #060403;
+            --panel-border: rgba(255, 170, 80, 0.2);
+            --accent-purple: #ffaa50;
+            --text-main: #fffaec;
+            --text-muted: #9e8a7a;
+        }
+
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
         
         body {
@@ -27,6 +36,7 @@
             overflow: hidden;
             position: relative;
             padding: 20px;
+            transition: background-color 0.3s ease;
         }
 
         #bgCanvas {
@@ -44,7 +54,7 @@
             max-width: 480px;
             display: flex;
             align-items: center;
-            justify-content: flex-start;
+            justify-content: space-between;
             z-index: 10;
             padding-top: 10px;
         }
@@ -65,9 +75,10 @@
             height: 2px;
             background-color: var(--text-main);
             border-radius: 2px;
+            transition: background-color 0.3s;
         }
 
-        /* Sliding Drawer (Now contains History & Options) */
+        /* Sliding Drawer */
         .drawer {
             position: fixed;
             top: 0;
@@ -77,13 +88,14 @@
             background: rgba(12, 8, 20, 0.96);
             border-right: 1px solid var(--panel-border);
             backdrop-filter: blur(20px);
-            transition: left 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            transition: left 0.3s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.3s;
             z-index: 50;
             padding: 30px 20px;
             display: flex;
             flex-direction: column;
             gap: 20px;
         }
+        body.theme-amber .drawer { background: rgba(20, 14, 10, 0.96); }
         .drawer.open { left: 0; }
         
         .drawer-section-title { 
@@ -94,6 +106,24 @@
             text-transform: uppercase; 
             margin-bottom: 8px; 
         }
+
+        .drawer-item {
+            padding: 12px 14px;
+            background: rgba(180, 130, 255, 0.04);
+            border: 1px solid var(--panel-border);
+            border-radius: 10px;
+            font-size: 14px;
+            color: var(--text-main);
+            cursor: pointer;
+            transition: background 0.2s;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .drawer-item:hover { background: rgba(180, 130, 255, 0.1); }
+        body.theme-amber .drawer-item { background: rgba(255, 170, 80, 0.04); }
+        body.theme-amber .drawer-item:hover { background: rgba(255, 170, 80, 0.1); }
         
         .chat-history-list {
             flex: 1;
@@ -101,7 +131,7 @@
             display: flex;
             flex-direction: column;
             gap: 8px;
-            max-height: 50vh;
+            max-height: 40vh;
         }
         .history-item {
             padding: 10px 14px;
@@ -142,9 +172,9 @@
             opacity: 0;
             transform: translateY(-25px);
             pointer-events: none;
+            display: none; /* Removes it entirely once interaction starts */
         }
 
-        /* Blinking Eye Animation Container */
         .eye-container {
             width: 110px;
             height: 55px;
@@ -152,6 +182,7 @@
             filter: drop-shadow(0 0 15px rgba(196, 150, 255, 0.4));
             animation: eyeBlink 4s infinite ease-in-out;
         }
+        body.theme-amber .eye-container { filter: drop-shadow(0 0 15px rgba(255, 170, 80, 0.4)); }
 
         @keyframes eyeBlink {
             0%, 46%, 54%, 100% { transform: scaleY(1); }
@@ -167,6 +198,7 @@
             text-shadow: 0 0 20px rgba(196, 150, 255, 0.3);
             margin-left: 10px;
         }
+        body.theme-amber .brand-title { text-shadow: 0 0 20px rgba(255, 170, 80, 0.3); }
 
         .brand-divider {
             display: flex;
@@ -192,11 +224,6 @@
             text-shadow: 0 0 10px rgba(196, 150, 255, 0.2);
             transition: opacity 0.4s ease, transform 0.4s ease;
         }
-        .open-greeting.dissolved {
-            opacity: 0;
-            transform: translateY(-15px);
-            pointer-events: none;
-        }
 
         .input-dock {
             position: relative;
@@ -213,8 +240,9 @@
             backdrop-filter: blur(15px);
             box-shadow: 0 10px 30px rgba(0,0,0,0.6);
             margin-bottom: 80px;
-            transition: transform 0.3s ease;
+            transition: transform 0.3s ease, background-color 0.3s;
         }
+        body.theme-amber .input-dock { background: rgba(20, 14, 10, 0.9); }
 
         .action-icon-btn {
             background: rgba(180, 130, 255, 0.08);
@@ -228,7 +256,7 @@
             justify-content: center;
             font-size: 20px;
             cursor: pointer;
-            transition: background 0.2s;
+            transition: background 0.2s, color 0.3s;
         }
         .action-icon-btn:hover { background: rgba(180, 130, 255, 0.18); }
 
@@ -254,7 +282,7 @@
             justify-content: center;
             cursor: pointer;
             box-shadow: 0 0 15px rgba(196, 150, 255, 0.4);
-            transition: transform 0.1s;
+            transition: transform 0.1s, background-color 0.3s;
         }
         .send-icon-btn:active { transform: scale(0.95); }
         .send-icon-btn svg { width: 16px; height: 16px; fill: currentColor; }
@@ -272,21 +300,29 @@
         </button>
     </header>
 
-    <!-- Sliding Menu Drawer Containing History -->
+    <!-- Sliding Menu Drawer with Theme, History, Account Settings -->
     <div class="drawer" id="sideDrawer">
         <div>
-            <div class="drawer-section-title">Navigation</div>
-            <div style="padding: 10px 14px; background: rgba(180,130,255,0.06); border-radius: 8px; font-size: 13.5px; cursor: pointer; margin-bottom: 15px;">Engine Studio</div>
+            <div class="drawer-section-title">1. Theme</div>
+            <div class="drawer-item" id="themeToggleBtn">
+                <span>Switch Theme</span>
+                <span id="themeIndicator" style="font-size: 12px; color: var(--accent-purple);">Cosmic Purple</span>
+            </div>
         </div>
         <div>
-            <div class="drawer-section-title">Typed History</div>
+            <div class="drawer-section-title">2. History</div>
             <div class="chat-history-list" id="historyList">
                 <div style="font-size: 13px; color: var(--text-muted);">No prompts typed yet.</div>
             </div>
         </div>
+        <div>
+            <div class="drawer-section-title">3. Account Setting</div>
+            <div class="drawer-item">Configure Profile</div>
+        </div>
     </div>
     <div class="backdrop" id="drawerBackdrop"></div>
 
+    <!-- Central Stage: Appears ONLY at start of a new chat -->
     <div class="center-stage" id="centerStage">
         <div class="eye-container">
             <svg viewBox="0 0 120 60" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--accent-purple);">
@@ -311,7 +347,7 @@
     </div>
 
 <script>
-    // Time-Aware Greeting logic with "Late night hustle?" for midnight hours
+    // Dynamic Greeting based on time
     const hour = new Date().getHours();
     const greetingEl = document.getElementById('openGreeting');
     if (hour >= 5 && hour < 12) {
@@ -328,10 +364,11 @@
     const sideDrawer = document.getElementById('sideDrawer');
     const drawerBackdrop = document.getElementById('drawerBackdrop');
     const centerStage = document.getElementById('centerStage');
-    const openGreeting = document.getElementById('openGreeting');
     const userInput = document.getElementById('userInput');
     const inputDock = document.getElementById('inputDock');
     const historyList = document.getElementById('historyList');
+    const themeToggleBtn = document.getElementById('themeToggleBtn');
+    const themeIndicator = document.getElementById('themeIndicator');
 
     function toggleDrawer() {
         sideDrawer.classList.toggle('open');
@@ -341,23 +378,39 @@
     menuToggle.onclick = toggleDrawer;
     drawerBackdrop.onclick = toggleDrawer;
 
+    // Theme Switcher Logic
+    themeToggleBtn.onclick = () => {
+        document.body.classList.toggle('theme-amber');
+        if(document.body.classList.contains('theme-amber')) {
+            themeIndicator.textContent = "Neon Amber";
+        } else {
+            themeIndicator.textContent = "Cosmic Purple";
+        }
+    };
+
+    // Dissolve and remove eye motif permanently for the session upon focusing/typing
+    let chatStarted = false;
     userInput.addEventListener('focus', () => {
-        centerStage.classList.add('dissolved');
-        openGreeting.classList.add('dissolved');
+        if(!chatStarted) {
+            centerStage.classList.add('dissolved');
+            chatStarted = true;
+        }
         inputDock.style.transform = 'translateY(-20px)';
     });
 
     userInput.addEventListener('blur', () => {
-        if(userInput.value.trim() === '') {
-            centerStage.classList.remove('dissolved');
-            openGreeting.classList.remove('dissolved');
-            inputDock.style.transform = 'translateY(0)';
-        }
+        inputDock.style.transform = 'translateY(0)';
     });
 
+    // Handle Sending & History tracking
     function handleSend() {
         const text = userInput.value.trim();
         if(!text) return;
+
+        if(!chatStarted) {
+            centerStage.classList.add('dissolved');
+            chatStarted = true;
+        }
 
         if(historyList.innerHTML.includes('No prompts typed yet')) {
             historyList.innerHTML = '';
@@ -371,7 +424,7 @@
     document.getElementById('sendBtn').onclick = handleSend;
     userInput.onkeypress = (e) => { if(e.key === 'Enter') handleSend(); };
 
-    // Canvas Background with Corsive Curves & Floating Particles
+    // Canvas Particle & Orbit Background
     const canvas = document.getElementById('bgCanvas');
     const ctx = canvas.getContext('2d');
 
@@ -383,8 +436,6 @@
     resizeCanvas();
 
     let waveOffset = 0;
-
-    // Generate floating background particles
     const particles = [];
     for(let i = 0; i < 25; i++) {
         particles.push({
@@ -401,35 +452,28 @@
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         ctx.lineWidth = 1.2;
 
-        // Background Orbital Arcs
-        ctx.strokeStyle = 'rgba(196, 150, 255, 0.12)';
+        const isAmber = document.body.classList.contains('theme-amber');
+        const strokeColor = isAmber ? 'rgba(255, 170, 80, 0.12)' : 'rgba(196, 150, 255, 0.12)';
+        const strokeColor2 = isAmber ? 'rgba(255, 200, 120, 0.08)' : 'rgba(210, 180, 255, 0.08)';
+        const particleColor = isAmber ? '255, 200, 120' : '210, 180, 255';
+
+        ctx.strokeStyle = strokeColor;
         ctx.beginPath();
         ctx.arc(canvas.width + 50, -50, 450, Math.PI * 0.75, Math.PI * 1.35);
         ctx.stroke();
 
-        ctx.strokeStyle = 'rgba(210, 180, 255, 0.08)';
+        ctx.strokeStyle = strokeColor2;
         ctx.beginPath();
         ctx.arc(canvas.width + 50, -50, 320, Math.PI * 0.8, Math.PI * 1.3);
         ctx.stroke();
 
-        ctx.strokeStyle = 'rgba(180, 120, 255, 0.12)';
+        ctx.strokeStyle = strokeColor;
         ctx.beginPath();
         ctx.arc(-50, canvas.height + 50, 500, Math.PI * 1.7, Math.PI * 2.15);
         ctx.stroke();
 
-        // Flowing Sine Wave
-        ctx.strokeStyle = 'rgba(196, 150, 255, 0.06)';
-        ctx.beginPath();
-        for (let x = 0; x < canvas.width; x += 15) {
-            let y = (canvas.height * 0.5) + Math.sin((x + waveOffset) * 0.008) * 80 + Math.cos((x - waveOffset) * 0.004) * 40;
-            if (x === 0) ctx.moveTo(x, y);
-            else ctx.lineTo(x, y);
-        }
-        ctx.stroke();
-
         waveOffset += 0.4;
 
-        // Render & Update Floating Particles (BGM Animation)
         particles.forEach(p => {
             p.y += p.speedY;
             p.x += p.speedX;
@@ -439,13 +483,10 @@
             if(p.x < 0) p.x = canvas.width;
             if(p.x > canvas.width) p.x = 0;
 
-            ctx.fillStyle = `rgba(210, 180, 255, ${p.alpha})`;
-            ctx.shadowColor = 'rgba(196, 150, 255, 0.8)';
-            ctx.shadowBlur = 8;
+            ctx.fillStyle = `rgba(${particleColor}, ${p.alpha})`;
             ctx.beginPath();
             ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
             ctx.fill();
-            ctx.shadowBlur = 0;
         });
 
         requestAnimationFrame(drawBackground);
