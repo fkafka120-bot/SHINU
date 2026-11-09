@@ -6,18 +6,19 @@
     <title>Shinu — Procedural Media Engine</title>
     <style>
         :root {
-            --bg-color: #08080c;
-            --panel-bg: rgba(18, 18, 28, 0.85);
+            --bg-base: #060609;
+            --panel-bg: rgba(12, 12, 18, 0.75);
+            --panel-border: rgba(255, 255, 255, 0.06);
             --accent: #ff9933;
-            --text-main: #f0f0f5;
-            --text-muted: #8888a0;
-            --border: rgba(255, 255, 255, 0.08);
+            --accent-glow: rgba(255, 153, 51, 0.2);
+            --text-main: #ededf2;
+            --text-muted: #787890;
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
         
         body {
-            background-color: var(--bg-color);
+            background-color: var(--bg-base);
             color: var(--text-main);
             width: 100vw;
             height: 100vh;
@@ -28,18 +29,20 @@
 
         /* Minimalist Header */
         header {
-            height: 50px;
-            border-bottom: 1px solid var(--border);
+            height: 54px;
+            border-bottom: 1px solid var(--panel-border);
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 0 20px;
+            padding: 0 24px;
             background: var(--panel-bg);
-            backdrop-filter: blur(10px);
+            backdrop-filter: blur(16px);
+            z-index: 10;
         }
 
-        .logo { font-weight: 700; font-size: 15px; letter-spacing: 2px; color: var(--accent); }
-        .badge { font-size: 11px; background: rgba(255,153,51,0.15); color: var(--accent); padding: 4px 8px; border-radius: 12px; }
+        .logo-area { display: flex; align-items: center; gap: 10px; }
+        .logo { font-weight: 700; font-size: 14px; letter-spacing: 3px; color: var(--text-main); }
+        .badge { font-size: 10px; font-weight: 600; background: var(--accent-glow); color: var(--accent); padding: 3px 8px; border-radius: 20px; letter-spacing: 0.5px; border: 1px solid rgba(255,153,51,0.3); }
 
         /* Main Workspace Split */
         .workspace {
@@ -51,13 +54,14 @@
 
         /* Chat Sidebar */
         .chat-sidebar {
-            width: 320px;
+            width: 360px;
             background: var(--panel-bg);
-            border-right: 1px solid var(--border);
+            border-right: 1px solid var(--panel-border);
             display: flex;
             flex-direction: column;
             justify-content: space-between;
             padding: 20px;
+            backdrop-filter: blur(12px);
         }
 
         .chat-messages {
@@ -65,46 +69,64 @@
             overflow-y: auto;
             display: flex;
             flex-direction: column;
-            gap: 12px;
-            font-size: 14px;
+            gap: 14px;
+            font-size: 13.5px;
+            padding-right: 4px;
         }
+
+        .chat-messages::-webkit-scrollbar { width: 4px; }
+        .chat-messages::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 4px; }
 
         .message {
-            padding: 10px 14px;
-            border-radius: 10px;
-            line-height: 1.4;
+            padding: 12px 16px;
+            border-radius: 12px;
+            line-height: 1.5;
+            max-width: 90%;
         }
 
-        .message.bot { background: rgba(255,255,255,0.04); border: 1px solid var(--border); color: var(--text-main); }
-        .message.user { background: var(--accent); color: #000; align-self: flex-end; font-weight: 500; }
+        .message.bot { background: rgba(255,255,255,0.03); border: 1px solid var(--panel-border); color: var(--text-main); align-self: flex-start; }
+        .message.user { background: var(--accent); color: #050508; align-self: flex-end; font-weight: 600; box-shadow: 0 4px 20px var(--accent-glow); }
 
         .chat-input-box {
             display: flex;
-            gap: 8px;
-            margin-top: 15px;
+            gap: 10px;
+            margin-top: 16px;
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid var(--panel-border);
+            border-radius: 12px;
+            padding: 6px 6px 6px 14px;
+            transition: border-color 0.2s;
         }
+
+        .chat-input-box:focus-within { border-color: var(--accent); }
 
         input {
             flex: 1;
-            background: rgba(0,0,0,0.3);
-            border: 1px solid var(--border);
-            padding: 10px 14px;
-            border-radius: 8px;
+            background: transparent;
+            border: none;
             color: #fff;
-            font-size: 14px;
+            font-size: 13.5px;
             outline: none;
         }
 
-        input:focus { border-color: var(--accent); }
+        input::placeholder { color: var(--text-muted); }
 
         button.send-btn {
             background: var(--accent);
             border: none;
-            padding: 0 16px;
+            width: 34px;
+            height: 34px;
             border-radius: 8px;
-            font-weight: 600;
+            font-weight: bold;
             cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #000;
+            transition: transform 0.1s;
         }
+
+        button.send-btn:active { transform: scale(0.95); }
 
         /* Canvas Stage Area */
         .stage {
@@ -113,64 +135,76 @@
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            background: radial-gradient(circle at center, #12121f 0%, #050508 100%);
+            background: radial-gradient(circle at center, #11111d 0%, #06060a 100%);
             position: relative;
+            padding: 20px;
         }
 
         canvas {
-            height: 75vh;
+            height: 72vh;
             aspect-ratio: 9 / 16;
-            border-radius: 12px;
-            box-shadow: 0 25px 60px rgba(0,0,0,0.9);
+            border-radius: 14px;
+            box-shadow: 0 30px 80px rgba(0,0,0,0.8), 0 0 0 1px var(--panel-border);
             background: #000;
         }
 
         .stage-controls {
-            margin-top: 15px;
+            margin-top: 18px;
             display: flex;
-            gap: 12px;
+            gap: 14px;
             align-items: center;
+            background: var(--panel-bg);
+            padding: 8px 16px;
+            border-radius: 30px;
+            border: 1px solid var(--panel-border);
+            backdrop-filter: blur(10px);
         }
+
+        #statusText { font-size: 12px; color: var(--text-muted); font-weight: 500; }
 
         button.action-btn {
-            background: rgba(255,255,255,0.08);
-            border: 1px solid var(--border);
-            color: #fff;
-            padding: 8px 16px;
-            border-radius: 6px;
-            font-size: 13px;
+            background: transparent;
+            border: 1px solid var(--panel-border);
+            color: var(--text-main);
+            padding: 7px 16px;
+            border-radius: 20px;
+            font-size: 12.5px;
+            font-weight: 500;
             cursor: pointer;
-            transition: background 0.2s;
+            transition: all 0.2s;
         }
 
-        button.action-btn:hover { background: rgba(255,255,255,0.15); }
-        button.action-btn.primary { background: var(--accent); color: #000; font-weight: 600; border: none; }
+        button.action-btn:hover { background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.15); }
+        button.action-btn.primary { background: var(--accent); color: #000; font-weight: 600; border: none; box-shadow: 0 4px 15px var(--accent-glow); }
 
         /* Responsive Mobile Handling */
         @media (max-width: 768px) {
             .workspace { flex-direction: column-reverse; }
-            .chat-sidebar { width: 100%; height: 40vh; }
-            .stage { height: 60vh; }
-            canvas { height: 45vh; }
+            .chat-sidebar { width: 100%; height: 38vh; padding: 14px; }
+            .stage { height: 62vh; padding: 10px; }
+            canvas { height: 42vh; }
         }
     </style>
 </head>
 <body>
 
     <header>
-        <div class="logo">SHINU</div>
-        <div class="badge">Training Tier (₹0)</div>
+        <div class="logo-area">
+            <div class="logo">SHINU</div>
+            <div class="badge">PROD</div>
+        </div>
+        <div style="font-size: 12px; color: var(--text-muted);">Engine v1.0</div>
     </header>
 
     <div class="workspace">
         <!-- Chat Panel -->
         <div class="chat-sidebar">
             <div class="chat-messages" id="chatMessages">
-                <div class="message bot">Welcome to Shinu. I am your procedural code engine. Type a prompt below to render high-end graphics instantly.</div>
+                <div class="message bot">Shinu engine initialized. Ready for procedural rendering workflows.</div>
             </div>
             <div class="chat-input-box">
-                <input type="text" id="userInput" placeholder="Ask Shinu for a motion graphic..." />
-                <button class="send-btn" id="sendBtn">→</button>
+                <input type="text" id="userInput" placeholder="Prompt Shinu for visual instructions..." />
+                <button class="send-btn" id="sendBtn">↑</button>
             </div>
         </div>
 
@@ -178,8 +212,8 @@
         <div class="stage">
             <canvas id="engineCanvas" width="1080" height="1920"></canvas>
             <div class="stage-controls">
-                <span id="statusText" style="font-size: 12px; color: var(--text-muted);">Engine Ready</span>
-                <button class="action-btn primary" id="renderBtn">Render & Export MP4</button>
+                <span id="statusText">Ready</span>
+                <button class="action-btn primary" id="renderBtn">Export MP4</button>
             </div>
         </div>
     </div>
@@ -191,20 +225,17 @@
     let frame = 0;
     const totalFrames = 150; 
 
-    // High-End Shaded Procedural Renderer (Dense line hatching & gradients)
     function renderShadedFrame(f) {
         let width = canvas.width;
         let height = canvas.height;
 
-        // Rich Contrasting Background Gradient
         let bgGrad = ctx.createRadialGradient(width/2, height/2, 50, width/2, height/2, width * 0.9);
-        bgGrad.addColorStop(0, '#2e0821');  
-        bgGrad.addColorStop(0.5, '#0d0514'); 
+        bgGrad.addColorStop(0, '#28071e');  
+        bgGrad.addColorStop(0.5, '#0b0412'); 
         bgGrad.addColorStop(1, '#020205');  
         ctx.fillStyle = bgGrad;
         ctx.fillRect(0, 0, width, height);
 
-        // Multi-Layered Overlapping Line Hatching for Depth & Shading
         ctx.save();
         ctx.translate(width / 2, height / 2);
         
@@ -225,7 +256,6 @@
         }
         ctx.restore();
 
-        // Additive Blending Core Glow
         ctx.globalCompositeOperation = 'screen';
         let coreGlow = ctx.createRadialGradient(width/2, height/2, 20, width/2, height/2, 400);
         coreGlow.addColorStop(0, 'rgba(255, 200, 50, 0.7)');
@@ -235,10 +265,9 @@
         ctx.fillRect(0, 0, width, height);
         ctx.globalCompositeOperation = 'source-over';
 
-        // Edge-to-Edge Typography
         ctx.save();
         ctx.textAlign = 'center';
-        ctx.fillStyle = '#a0a0c0';
+        ctx.fillStyle = '#8e8ea0';
         ctx.font = '500 36px sans-serif';
         ctx.fillText("POWERED BY SHINU ENGINE", width / 2, 750);
 
@@ -250,7 +279,6 @@
         ctx.restore();
     }
 
-    // Animation Loop
     function loop() {
         renderShadedFrame(frame);
         frame = (frame + 1) % totalFrames;
@@ -258,7 +286,6 @@
     }
     loop();
 
-    // Chat Interaction
     document.getElementById('sendBtn').onclick = handleUserPrompt;
     document.getElementById('userInput').onkeypress = (e) => { if(e.key === 'Enter') handleUserPrompt(); };
 
@@ -272,15 +299,14 @@
         input.value = '';
 
         setTimeout(() => {
-            messages.innerHTML += `<div class="message bot">Shinu processed prompt: "${text}". Rendering parameters adjusted successfully!</div>`;
+            messages.innerHTML += `<div class="message bot">Pipeline compiled for: "${text}". Frame parameters re-weighted.</div>`;
             messages.scrollTop = messages.scrollHeight;
-        }, 500);
+        }, 400);
     }
 
-    // Client-Side Video Recording
     document.getElementById('renderBtn').onclick = () => {
         const statusText = document.getElementById('statusText');
-        statusText.innerText = "Encoding Video Buffer...";
+        statusText.innerText = "Encoding...";
         
         const stream = canvas.captureStream(25);
         let options = { mimeType: 'video/webm; codecs=vp9' };
@@ -297,7 +323,7 @@
             a.href = url;
             a.download = 'shinu_render.webm';
             a.click();
-            statusText.innerText = "Export Complete!";
+            statusText.innerText = "Ready";
         };
 
         recorder.start();
