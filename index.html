@@ -3,217 +3,319 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Shinu — Media Engine</title>
+    <title>Shinu — AI Interface</title>
     <style>
         :root {
-            --bg-base: #060609;
-            --panel-bg: rgba(12, 12, 18, 0.85);
-            --panel-border: rgba(255, 255, 255, 0.08);
-            --accent: #ff9933;
-            --accent-glow: rgba(255, 153, 51, 0.2);
-            --text-main: #ededf2;
-            --text-muted: #787890;
+            --bg-color: #030106;
+            --panel-border: rgba(180, 130, 255, 0.15);
+            --accent-purple: #c496ff;
+            --text-main: #f0e6ff;
+            --text-muted: #8a7a9e;
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
         
         body {
-            background-color: var(--bg-base);
+            background-color: var(--bg-color);
             color: var(--text-main);
             width: 100vw;
             height: 100vh;
             display: flex;
             flex-direction: column;
+            justify-content: space-between;
+            align-items: center;
             overflow: hidden;
             position: relative;
+            padding: 20px;
         }
 
-        /* Minimalist Header with Sidebar Toggle */
+        #bgCanvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 1;
+            pointer-events: none;
+        }
+
         header {
-            height: 60px;
-            border-bottom: 1px solid var(--panel-border);
+            width: 100%;
+            max-width: 480px;
             display: flex;
             align-items: center;
-            justify-content: space-between;
-            padding: 0 20px;
-            background: var(--panel-bg);
-            backdrop-filter: blur(16px);
-            z-index: 20;
+            justify-content: flex-start;
+            z-index: 10;
+            padding-top: 10px;
         }
 
-        .header-left {
-            display: flex;
-            align-items: center;
-            gap: 14px;
-        }
-
-        /* Sliding Window Pane Toggle Button */
         .menu-btn {
             background: transparent;
-            border: 1px solid var(--panel-border);
-            color: var(--text-main);
-            width: 36px;
-            height: 36px;
-            border-radius: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            border: none;
             cursor: pointer;
-            transition: background 0.2s, border-color 0.2s;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            padding: 10px;
         }
 
-        .menu-btn:hover { background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.2); }
-        .menu-btn svg { width: 18px; height: 18px; fill: currentColor; }
+        .menu-btn span {
+            display: block;
+            width: 24px;
+            height: 2px;
+            background-color: var(--text-main);
+            border-radius: 2px;
+        }
 
-        .logo { font-weight: 700; font-size: 15px; letter-spacing: 3px; color: var(--text-main); }
-
-        /* Sliding Pane Drawer */
         .drawer {
             position: fixed;
-            top: 60px;
+            top: 0;
             left: -280px;
             width: 280px;
-            height: calc(100vh - 60px);
-            background: var(--panel-bg);
+            height: 100vh;
+            background: rgba(12, 8, 20, 0.95);
             border-right: 1px solid var(--panel-border);
             backdrop-filter: blur(20px);
             transition: left 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-            z-index: 30;
-            padding: 24px;
+            z-index: 50;
+            padding: 30px 20px;
             display: flex;
             flex-direction: column;
             gap: 20px;
         }
-
         .drawer.open { left: 0; }
-        .drawer-title { font-size: 12px; font-weight: 600; color: var(--text-muted); letter-spacing: 1px; text-transform: uppercase; }
-        .drawer-item { padding: 10px 14px; border-radius: 8px; background: rgba(255,255,255,0.03); border: 1px solid var(--panel-border); cursor: pointer; font-size: 13.5px; transition: background 0.2s; }
-        .drawer-item:hover { background: rgba(255,255,255,0.08); }
+        .drawer-title { font-size: 12px; font-weight: 600; color: var(--text-muted); letter-spacing: 1.5px; text-transform: uppercase; }
+        .drawer-item { padding: 12px 16px; border-radius: 10px; background: rgba(180,130,255,0.04); border: 1px solid var(--panel-border); cursor: pointer; font-size: 14px; color: var(--text-main); transition: background 0.2s; }
+        .drawer-item:hover { background: rgba(180,130,255,0.1); }
 
-        /* Main Stage & Input Layout */
-        .main-container {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: space-between;
-            padding: 20px;
-            background: radial-gradient(circle at center, #11111d 0%, #06060a 100%);
-            overflow: hidden;
-        }
-
-        canvas {
-            height: 62vh;
-            aspect-ratio: 9 / 16;
-            border-radius: 14px;
-            box-shadow: 0 30px 80px rgba(0,0,0,0.8), 0 0 0 1px var(--panel-border);
-            background: #000;
-        }
-
-        /* Clean Search Input Bar */
-        .search-dock {
-            width: 100%;
-            max-width: 500px;
-            display: flex;
-            gap: 10px;
-            background: var(--panel-bg);
-            border: 1px solid var(--panel-border);
-            border-radius: 14px;
-            padding: 8px 8px 8px 16px;
-            backdrop-filter: blur(12px);
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-        }
-
-        input {
-            flex: 1;
-            background: transparent;
-            border: none;
-            color: #fff;
-            font-size: 14px;
-            outline: none;
-        }
-
-        input::placeholder { color: var(--text-muted); }
-
-        button.search-btn {
-            background: var(--accent);
-            border: none;
-            color: #000;
-            font-weight: 600;
-            padding: 10px 20px;
-            border-radius: 10px;
-            font-size: 13.5px;
-            cursor: pointer;
-            box-shadow: 0 4px 15px var(--accent-glow);
-            transition: transform 0.1s;
-        }
-
-        button.search-btn:active { transform: scale(0.96); }
-
-        /* Overlay Backdrop when drawer is open */
         .backdrop {
             position: fixed;
-            top: 60px;
+            top: 0;
             left: 0;
             width: 100vw;
-            height: calc(100vh - 60px);
-            background: rgba(0,0,0,0.5);
-            backdrop-filter: blur(2px);
+            height: 100vh;
+            background: rgba(0,0,0,0.6);
+            backdrop-filter: blur(3px);
             opacity: 0;
             pointer-events: none;
             transition: opacity 0.3s;
-            z-index: 25;
+            z-index: 40;
         }
         .backdrop.active { opacity: 1; pointer-events: auto; }
+
+        /* Central Stage with Dissolve Transition */
+        .center-stage {
+            position: relative;
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            margin-top: -20px;
+            transition: opacity 0.4s ease, transform 0.4s ease;
+        }
+
+        .center-stage.dissolved {
+            opacity: 0;
+            transform: translateY(-20px);
+            pointer-events: none;
+        }
+
+        .eye-container {
+            width: 110px;
+            height: 55px;
+            margin-bottom: 20px;
+            filter: drop-shadow(0 0 15px rgba(196, 150, 255, 0.4));
+        }
+
+        .brand-title {
+            font-size: 32px;
+            letter-spacing: 10px;
+            color: var(--text-main);
+            font-weight: 300;
+            margin-bottom: 12px;
+            text-shadow: 0 0 20px rgba(196, 150, 255, 0.3);
+            margin-left: 10px;
+        }
+
+        .brand-divider {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            color: var(--accent-purple);
+            opacity: 0.8;
+        }
+
+        .brand-divider::before, .brand-divider::after {
+            content: '';
+            width: 80px;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--accent-purple), transparent);
+        }
+
+        /* Greeting Bubble with Dissolve Transition */
+        .greeting-bubble {
+            position: relative;
+            z-index: 10;
+            width: 100%;
+            max-width: 420px;
+            background: rgba(12, 8, 20, 0.85);
+            border: 1px solid var(--panel-border);
+            border-radius: 24px;
+            padding: 20px 24px;
+            backdrop-filter: blur(15px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            display: flex;
+            align-items: flex-start;
+            gap: 16px;
+            transition: opacity 0.4s ease, transform 0.4s ease;
+        }
+
+        .greeting-bubble.dissolved {
+            opacity: 0;
+            transform: translateY(-15px);
+            pointer-events: none;
+        }
+
+        .bubble-star {
+            color: var(--accent-purple);
+            font-size: 18px;
+            margin-top: 2px;
+            text-shadow: 0 0 10px var(--accent-purple);
+        }
+
+        .bubble-content h3 {
+            font-size: 15px;
+            font-weight: 500;
+            color: var(--text-main);
+            margin-bottom: 4px;
+        }
+
+        .bubble-content p {
+            font-size: 14px;
+            color: var(--text-muted);
+        }
+
+        /* Input Dock that shifts smoothly above mobile keyboards */
+        .input-dock {
+            position: relative;
+            z-index: 10;
+            width: 100%;
+            max-width: 420px;
+            background: rgba(12, 8, 20, 0.9);
+            border: 1px solid var(--panel-border);
+            border-radius: 30px;
+            padding: 8px 8px 8px 16px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            backdrop-filter: blur(15px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+            margin-bottom: 10px;
+            transition: transform 0.3s ease;
+        }
+
+        .action-icon-btn {
+            background: rgba(180, 130, 255, 0.08);
+            border: 1px solid var(--panel-border);
+            color: var(--accent-purple);
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .action-icon-btn:hover { background: rgba(180, 130, 255, 0.18); }
+
+        .input-dock input {
+            flex: 1;
+            background: transparent;
+            border: none;
+            color: var(--text-main);
+            font-size: 14px;
+            outline: none;
+        }
+        .input-dock input::placeholder { color: var(--text-muted); }
+
+        .send-icon-btn {
+            background: var(--accent-purple);
+            border: none;
+            color: #0b0614;
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 0 15px rgba(196, 150, 255, 0.4);
+            transition: transform 0.1s;
+        }
+        .send-icon-btn:active { transform: scale(0.95); }
+        .send-icon-btn svg { width: 16px; height: 16px; fill: currentColor; }
     </style>
 </head>
 <body>
 
-    <!-- Header -->
+    <canvas id="bgCanvas"></canvas>
+
     <header>
-        <div class="header-left">
-            <!-- Sliding Window Pane Button -->
-            <button class="menu-btn" id="menuToggle" title="Options">
-                <svg viewBox="0 0 24 24">
-                    <path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/>
-                </svg>
-            </button>
-            <div class="logo">SHINU</div>
-        </div>
-        <div style="font-size: 11px; color: var(--text-muted);">v1.0 Pro</div>
+        <button class="menu-btn" id="menuToggle" title="Menu">
+            <span></span>
+            <span></span>
+            <span></span>
+        </button>
     </header>
 
-    <!-- Sliding Window Pane Drawer -->
     <div class="drawer" id="sideDrawer">
-        <div class="drawer-title">Engine Options</div>
-        <div class="drawer-item" id="exportOption">Export Current Frame (MP4)</div>
-        <div class="drawer-item">Rendering Presets</div>
-        <div class="drawer-item">Copyright & Licensing</div>
+        <div class="drawer-title">Navigation</div>
+        <div class="drawer-item">Engine Studio</div>
+        <div class="drawer-item">Saved Prompts</div>
+        <div class="drawer-item">Copyright & Control</div>
     </div>
     <div class="backdrop" id="drawerBackdrop"></div>
 
-    <!-- Main Workspace -->
-    <div class="main-container">
-        <canvas id="engineCanvas" width="1080" height="1920"></canvas>
+    <div class="center-stage" id="centerStage">
+        <div class="eye-container">
+            <svg viewBox="0 0 120 60" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--accent-purple);">
+                <path d="M5 30C30 10 90 10 115 30C90 50 30 50 5 30Z" />
+                <circle cx="60" cy="30" r="12" fill="currentColor" opacity="0.8" />
+                <circle cx="60" cy="30" r="5" fill="#ffffff" />
+            </svg>
+        </div>
+        <h1 class="brand-title">SHINU</h1>
+        <div class="brand-divider">✦</div>
+    </div>
 
-        <!-- Search Input Bar & Button -->
-        <div class="search-dock">
-            <input type="text" id="searchInput" placeholder="Search or prompt visual engine..." />
-            <button class="search-btn" id="searchBtn">Search</button>
+    <div class="greeting-bubble" id="greetingBubble">
+        <div class="bubble-star">✦</div>
+        <div class="bubble-content">
+            <h3>Hello!</h3>
+            <p>How can I help you today?</p>
         </div>
     </div>
 
-<script>
-    const canvas = document.getElementById('engineCanvas');
-    const ctx = canvas.getContext('2d');
-    
-    let frame = 0;
-    const totalFrames = 150; 
+    <div class="input-dock" id="inputDock">
+        <button class="action-icon-btn">+</button>
+        <input type="text" id="userInput" placeholder="Type a message..." />
+        <button class="send-icon-btn" id="sendBtn">
+            <svg viewBox="0 0 24 24">
+                <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+            </svg>
+        </button>
+    </div>
 
-    // Sliding Drawer Logic
+<script>
     const menuToggle = document.getElementById('menuToggle');
     const sideDrawer = document.getElementById('sideDrawer');
     const drawerBackdrop = document.getElementById('drawerBackdrop');
+    const centerStage = document.getElementById('centerStage');
+    const greetingBubble = document.getElementById('greetingBubble');
+    const userInput = document.getElementById('userInput');
 
     function toggleDrawer() {
         sideDrawer.classList.toggle('open');
@@ -223,107 +325,75 @@
     menuToggle.onclick = toggleDrawer;
     drawerBackdrop.onclick = toggleDrawer;
 
-    // Procedural Renderer Animation Loop
-    function renderShadedFrame(f) {
-        let width = canvas.width;
-        let height = canvas.height;
-
-        let bgGrad = ctx.createRadialGradient(width/2, height/2, 50, width/2, height/2, width * 0.9);
-        bgGrad.addColorStop(0, '#28071e');  
-        bgGrad.addColorStop(0.5, '#0b0412'); 
-        bgGrad.addColorStop(1, '#020205');  
-        ctx.fillStyle = bgGrad;
-        ctx.fillRect(0, 0, width, height);
-
-        ctx.save();
-        ctx.translate(width / 2, height / 2);
-        
-        for (let i = 0; i < 350; i++) {
-            let angle = (i * 0.08) + (f * 0.008);
-            let radius = 200 + (i * 1.2) + Math.sin(i * 0.2 + f * 0.03) * 40;
-            
-            ctx.beginPath();
-            if (i % 2 === 0) {
-                ctx.strokeStyle = `rgba(255, 170, 50, ${0.12 + (i/700)})`;
-            } else {
-                ctx.strokeStyle = `rgba(80, 200, 255, ${0.10 + (i/700)})`;
-            }
-            
-            ctx.lineWidth = 1.5;
-            ctx.arc(0, 0, radius, angle, angle + Math.PI * 1.4);
-            ctx.stroke();
-        }
-        ctx.restore();
-
-        ctx.globalCompositeOperation = 'screen';
-        let coreGlow = ctx.createRadialGradient(width/2, height/2, 20, width/2, height/2, 400);
-        coreGlow.addColorStop(0, 'rgba(255, 200, 50, 0.7)');
-        coreGlow.addColorStop(0.4, 'rgba(255, 80, 0, 0.3)');
-        coreGlow.addColorStop(1, 'rgba(0, 0, 0, 0)');
-        ctx.fillStyle = coreGlow;
-        ctx.fillRect(0, 0, width, height);
-        ctx.globalCompositeOperation = 'source-over';
-
-        ctx.save();
-        ctx.textAlign = 'center';
-        ctx.fillStyle = '#8e8ea0';
-        ctx.font = '500 36px sans-serif';
-        ctx.fillText("POWERED BY SHINU ENGINE", width / 2, 750);
-
-        ctx.shadowColor = 'rgba(255, 120, 0, 0.6)';
-        ctx.shadowBlur = 30;
-        ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold 120px serif';
-        ctx.fillText("SHINU", width / 2, 900);
-        ctx.restore();
-    }
-
-    function loop() {
-        renderShadedFrame(frame);
-        frame = (frame + 1) % totalFrames;
-        requestAnimationFrame(loop);
-    }
-    loop();
-
-    // Search Trigger
-    document.getElementById('searchBtn').onclick = handleSearch;
-    document.getElementById('searchInput').onkeypress = (e) => { if(e.key === 'Enter') handleSearch(); };
-
-    function handleSearch() {
-        const query = document.getElementById('searchInput').value.trim();
-        if(!query) return;
-        alert(`Searching / Executing prompt: "${query}"`);
-    }
-
-    // Export Trigger from Drawer Menu
-    document.getElementById('exportOption').onclick = () => {
-        toggleDrawer();
-        const stream = canvas.captureStream(25);
-        let options = { mimeType: 'video/webm; codecs=vp9' };
-        if (!MediaRecorder.isTypeSupported(options.mimeType)) options = { mimeType: 'video/webm' };
-
-        const recorder = new MediaRecorder(stream, options);
-        let chunks = [];
-
-        recorder.ondataavailable = e => chunks.push(e.data);
-        recorder.onstop = () => {
-            const blob = new Blob(chunks, { type: 'video/webm' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = 'shinu_render.webm';
-            a.click();
-        };
-
-        recorder.start();
-        let currentLoop = frame;
-        const checkInterval = setInterval(() => {
-            if (frame === currentLoop) {
-                recorder.stop();
-                clearInterval(checkInterval);
-            }
-        }, 100);
+    // Dissolve and keyboard shift behavior on focus/typing
+    userInput.onfocus = () => {
+        centerStage.classList.add('dissolved');
+        greetingBubble.classList.add('dissolved');
     };
+
+    userInput.onblur = () => {
+        if(userInput.value.trim() === '') {
+            centerStage.classList.remove('dissolved');
+            greetingBubble.classList.remove('dissolved');
+        }
+    };
+
+    // Canvas Background Starfield
+    const canvas = document.getElementById('bgCanvas');
+    const ctx = canvas.getContext('2d');
+
+    function resizeCanvas() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+    }
+    window.onresize = resizeCanvas;
+    resizeCanvas();
+
+    function drawBackground() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        ctx.strokeStyle = 'rgba(180, 130, 255, 0.08)';
+        ctx.lineWidth = 1;
+        
+        ctx.beginPath();
+        ctx.arc(canvas.width + 100, -50, 400, Math.PI * 0.8, Math.PI * 1.3);
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.arc(-50, canvas.height + 100, 500, Math.PI * 1.7, Math.PI * 2.1);
+        ctx.stroke();
+
+        const stars = [
+            {x: canvas.width * 0.8, y: 100, size: 2},
+            {x: canvas.width * 0.85, y: 90, size: 1},
+            {x: canvas.width * 0.15, y: canvas.height * 0.75, size: 1.5},
+            {x: canvas.width * 0.5, y: canvas.height * 0.3, size: 1}
+        ];
+
+        stars.forEach(s => {
+            ctx.fillStyle = 'rgba(210, 180, 255, 0.6)';
+            ctx.shadowColor = 'rgba(196, 150, 255, 0.8)';
+            ctx.shadowBlur = 8;
+            ctx.beginPath();
+            ctx.arc(s.x, s.y, s.size, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.shadowBlur = 0;
+        });
+
+        requestAnimationFrame(drawBackground);
+    }
+    drawBackground();
+
+    document.getElementById('sendBtn').onclick = handleSend;
+    userInput.onkeypress = (e) => { if(e.key === 'Enter') handleSend(); };
+
+    function handleSend() {
+        const text = userInput.value.trim();
+        if(!text) return;
+        alert(`Prompt sent to Shinu engine: "${text}"`);
+        userInput.value = '';
+        userInput.blur();
+    }
 </script>
 
 </body>
