@@ -47,7 +47,7 @@
             color: var(--text-main);
             width: 100%;
             height: 100vh;
-            height: 100dvh; /* fixes the cut-off input on mobile browsers */
+            height: 100dvh;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -67,7 +67,6 @@
             pointer-events: none;
         }
 
-        /* ---------- Header: menu + topic bar ---------- */
         header {
             width: 100%;
             max-width: 480px;
@@ -280,7 +279,6 @@
         .theme-sub-item:hover { color: var(--text-main); background: rgba(255,255,255,0.04); }
         .theme-sub-item.active { color: var(--accent-purple); border-color: var(--panel-border); background: rgba(255,255,255,0.06); font-weight: 600; }
 
-        /* Neon dots */
         .theme-sub-item .dot {
             --dot: #c496ff;
             position: relative;
@@ -297,19 +295,6 @@
         .theme-sub-item.active .dot {
             opacity: 1;
             box-shadow: 0 0 8px var(--dot), 0 0 20px var(--dot);
-        }
-        .theme-sub-item.active .dot::after {
-            content: '';
-            position: absolute;
-            inset: -5px;
-            border-radius: 50%;
-            border: 1px solid var(--dot);
-            opacity: 0.6;
-            animation: dotPulse 2.4s ease-in-out infinite;
-        }
-        @keyframes dotPulse {
-            0%, 100% { transform: scale(0.85); opacity: 0.65; }
-            50% { transform: scale(1.25); opacity: 0; }
         }
 
         .chat-history-list {
@@ -342,19 +327,6 @@
             font-size: 14px; cursor: pointer; padding: 2px 6px; border-radius: 6px;
         }
         .history-item .del:hover { color: var(--text-main); background: rgba(255,255,255,0.08); }
-
-        .drawer-item {
-            padding: 14px 16px;
-            background: rgba(255,255,255,0.03);
-            border: 1px solid var(--panel-border);
-            border-radius: 12px;
-            font-size: 14px;
-            font-weight: 500;
-            color: var(--text-main);
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-        .drawer-item:hover { background: rgba(255,255,255,0.07); transform: translateX(4px); }
 
         .backdrop {
             position: fixed;
@@ -425,7 +397,7 @@
         /* ---------- Chat ---------- */
         .chat-container {
             flex: 1;
-            min-height: 0; /* lets the feed shrink so the input dock is never pushed off-screen */
+            min-height: 0;
             width: 100%;
             max-width: 480px;
             z-index: 5;
@@ -475,6 +447,7 @@
             border-bottom-left-radius: 6px;
             box-shadow: 0 8px 24px rgba(0,0,0,0.35);
         }
+        .message-bubble.bot a { color: var(--accent-purple); text-decoration: underline; }
 
         .typing { display: inline-flex; gap: 5px; padding: 4px 0; }
         .typing i {
@@ -532,7 +505,7 @@
             background: transparent;
             border: none;
             color: var(--text-main);
-            font-size: 16px; /* 16px stops mobile browsers auto-zooming on focus */
+            font-size: 16px;
             outline: none;
         }
         .input-dock input::placeholder { color: var(--text-muted); }
@@ -563,7 +536,6 @@
 </head>
 <body>
 
-    <!-- Shared eye definitions (gradients + eye-shaped clip) -->
     <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
         <defs>
             <clipPath id="eyeClip">
@@ -652,14 +624,13 @@
     <!-- Input Dock -->
     <div class="input-dock" id="inputDock">
         <button class="action-icon-btn" aria-label="Add">+</button>
-        <input type="text" id="userInput" placeholder="Type a message..." autocomplete="off" />
+        <input type="text" id="userInput" placeholder="Type a message or search reddit (e.g. reddit python)..." autocomplete="off" />
         <button class="send-icon-btn" id="sendBtn" aria-label="Send">
             <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
         </button>
     </div>
 
 <script>
-    // ---------- Eye markup (injected into every [data-eye] element) ----------
     const EYE_SVG = `
     <svg class="eye-svg" viewBox="0 0 120 60" aria-hidden="true">
         <path class="crease" d="M16 24C34 3 86 3 104 24"/>
@@ -691,7 +662,6 @@
     </svg>`;
     document.querySelectorAll('[data-eye]').forEach(el => { el.innerHTML = EYE_SVG; });
 
-    // ---------- Eye movement: follows touch/cursor, glances around when idle ----------
     const rootEl = document.documentElement;
     let lastPointer = 0;
     const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -713,11 +683,9 @@
         }
     }, 2600);
 
-    // ---------- Safe storage helpers ----------
     function store(key, val) { try { localStorage.setItem(key, val); } catch (e) {} }
     function load(key) { try { return localStorage.getItem(key); } catch (e) { return null; } }
 
-    // ---------- Theme ----------
     function applyTheme(themeName) {
         document.body.classList.remove('theme-amber', 'theme-pink');
         if (themeName === 'amber') document.body.classList.add('theme-amber');
@@ -733,7 +701,6 @@
     });
     applyTheme(load('shinu_theme') || 'purple');
 
-    // ---------- Greeting ----------
     const hour = new Date().getHours();
     const greetingEl = document.getElementById('openGreeting');
     if (hour >= 5 && hour < 12) greetingEl.textContent = "Good morning!";
@@ -741,7 +708,6 @@
     else if (hour >= 17 && hour < 22) greetingEl.textContent = "Good evening!";
     else greetingEl.textContent = "Late night hustle?";
 
-    // ---------- Elements ----------
     const menuToggle = document.getElementById('menuToggle');
     const sideDrawer = document.getElementById('sideDrawer');
     const drawerBackdrop = document.getElementById('drawerBackdrop');
@@ -764,7 +730,6 @@
     menuToggle.onclick = toggleDrawer;
     drawerBackdrop.onclick = closeDrawer;
 
-    // ---------- Topic helpers ----------
     function tryMath(q) {
         const expr = q.replace(/x/gi, '*').replace(/\^/g, '**');
         if (!/^[0-9+\-*/().%\s]+$/.test(expr) || !/[0-9]/.test(expr) || !/[+\-*/%]/.test(expr)) return null;
@@ -774,11 +739,11 @@
         } catch (e) { return null; }
     }
 
-    // Returns a short topic string, or null if the message is only a greeting
     function makeTopic(raw) {
         let t = raw.trim().replace(/\s+/g, ' ');
         if (tryMath(t.toLowerCase()) !== null) return 'Quick Calculation';
         if (/^(hello|hi+|hey+|yo|good (morning|afternoon|evening))\b[\s!.,?]*$/i.test(t)) return null;
+        if (/^reddit\b/i.test(t)) return 'Reddit Search';
 
         const lead = /^(please\s+|can you\s+|could you\s+|would you\s+|i want to\s+|i need to\s+|i would like to\s+|help me\s+(to\s+)?|tell me\s+(about\s+)?|(who|what)\s+(is|are|was|were)\s+(an?\s+|the\s+)?|what'?s\s+(an?\s+|the\s+)?|who'?s\s+|how\s+(do|can|to|does)\s+(i\s+|you\s+|we\s+)?|why\s+(is|are|do|does)\s+(the\s+)?|explain\s+(to me\s+)?|define\s+|describe\s+|show me\s+|give me\s+)/i;
         let prev;
@@ -805,7 +770,6 @@
         }, 170);
     }
 
-    // ---------- Chat sessions ----------
     let chats = [];
     try { chats = JSON.parse(load('shinu_chats') || '[]'); } catch (e) { chats = []; }
     chats.forEach(c => { if (!c.topic) c.topic = c.title || 'Chat'; });
@@ -823,10 +787,14 @@
         chatContainer.classList.remove('active');
     }
 
-    function addBubble(role, text) {
+    function addBubble(role, htmlContent, isHtml = false) {
         const div = document.createElement('div');
         div.className = 'message-bubble ' + role;
-        div.textContent = text;
+        if (isHtml) {
+            div.innerHTML = htmlContent;
+        } else {
+            div.textContent = htmlContent;
+        }
         chatContainer.appendChild(div);
         chatContainer.scrollTop = chatContainer.scrollHeight;
         return div;
@@ -873,7 +841,7 @@
         if (!chat) return;
         currentId = id;
         chatContainer.innerHTML = '';
-        chat.messages.forEach(m => addBubble(m.role, m.text));
+        chat.messages.forEach(m => addBubble(m.role, m.text, m.isHtml));
         showChatView();
         updateTopicBar(chat.topic);
         renderHistory();
@@ -893,29 +861,61 @@
 
     userInput.addEventListener('focus', showChatView);
 
-    // ---------- Reply engine ----------
-    function shinuReply(inputMessage) {
+    // ---------- Free Reddit Search Integration ----------
+    async function fetchRedditSearch(query) {
+        try {
+            // Remove 'reddit' keyword from query if prefixed
+            const cleanQuery = query.replace(/^reddit\s+/i, '').trim();
+            const url = `https://www.reddit.com/search.json?q=${encodeURIComponent(cleanQuery)}&limit=3`;
+            const response = await fetch(url);
+            if (!response.ok) throw new Error('Network response was not ok');
+            const data = await response.json();
+            const posts = data?.data?.children;
+
+            if (!posts || posts.length === 0) {
+                return `No Reddit posts found for "${cleanQuery}".`;
+            }
+
+            let html = `<strong>Top Reddit results for "${cleanQuery}":</strong><br><br>`;
+            posts.forEach((p, idx) => {
+                const post = p.data;
+                const permalink = `https://reddit.com${post.permalink}`;
+                html += `${idx + 1}. <a href="${permalink}" target="_blank" rel="noopener">${post.title}</a><br><small>r/${post.subreddit} • ⬆ ${post.score}</small><br><br>`;
+            });
+            return html;
+        } catch (err) {
+            return `Failed to fetch Reddit search results. (CORS or network restriction). Try searching a specific subreddit URL or term.`;
+        }
+    }
+
+    async function shinuReply(inputMessage) {
         const query = inputMessage.toLowerCase().trim();
         const has = (re) => re.test(query);
 
+        // Check if user wants to search Reddit (e.g. "reddit javascript" or "search reddit tech")
+        if (has(/^reddit\s+/) || has(/^search reddit/)) {
+            const resultHtml = await fetchRedditSearch(inputMessage);
+            return { text: resultHtml, isHtml: true };
+        }
+
         const math = tryMath(query);
-        if (math !== null) return inputMessage.trim() + " = " + math;
+        if (math !== null) return { text: inputMessage.trim() + " = " + math, isHtml: false };
 
         if (has(/\b(hello|hi|hey)\b/)) {
-            return "Hello! Shinu Engine 100x is fully operational. What are we building or exploring today?";
+            return { text: "Hello! Shinu Engine is operational. Type 'reddit [topic]' to search live Reddit posts for free!", isHtml: false };
         } else if (has(/who are you|what is shinu/)) {
-            return "I am Shinu, your high-end procedural AI interface and developer workspace engine.";
+            return { text: "I am Shinu, your high-end procedural AI interface and developer workspace engine.", isHtml: false };
         } else if (has(/\b(version|v1)\b/)) {
-            return "Shinu Engine v1.0 Pro (100x Quality Build) is live and online via Vercel.";
+            return { text: "Shinu Engine v1.0 Pro is live and online with live Reddit search capabilities.", isHtml: false };
         } else if (has(/\b(help|options)\b/)) {
-            return "Open the menu to start a New Chat, switch themes (Cosmic Purple, Neon Amber, Neon Pink) or reopen a previous chat from History!";
+            return { text: "Type 'reddit [your query]' to query Reddit instantly, or open the menu to manage themes and history.", isHtml: false };
         } else if (has(/\btime\b/)) {
-            return "Current system local time is " + new Date().toLocaleTimeString() + ".";
+            return { text: "Current system local time is " + new Date().toLocaleTimeString() + ".", isHtml: false };
         }
-        return `Pipeline compiled successfully for your query: "${inputMessage}". All systems nominal.`;
+        return { text: `Pipeline compiled successfully for your query: "${inputMessage}". Try typing 'reddit [topic]' to browse live discussions!`, isHtml: false };
     }
 
-    function handleSend() {
+    async function handleSend() {
         const text = userInput.value.trim();
         if (!text) return;
 
@@ -929,7 +929,6 @@
             chatContainer.innerHTML = '';
         }
 
-        // Set (or refine) the short topic shown in the bar
         if (!chat.topic || chat.generic) {
             const t = makeTopic(text);
             if (t) { chat.topic = t; chat.generic = false; }
@@ -937,8 +936,8 @@
         }
         updateTopicBar(chat.topic);
 
-        chat.messages.push({ role: 'user', text });
-        addBubble('user', text);
+        chat.messages.push({ role: 'user', text, isHtml: false });
+        addBubble('user', text, false);
         saveChats();
         renderHistory();
 
@@ -952,15 +951,18 @@
         chatContainer.scrollTop = chatContainer.scrollHeight;
 
         const chatId = chat.id;
-        setTimeout(() => {
-            const reply = shinuReply(text);
-            const target = chats.find(c => c.id === chatId);
-            if (target) { target.messages.push({ role: 'bot', text: reply }); saveChats(); }
-            if (currentId === chatId) {
-                typing.remove();
-                addBubble('bot', reply);
-            }
-        }, 600);
+        // Await the asynchronous reply engine (Reddit fetch)
+        const replyObj = await shinuReply(text);
+
+        const target = chats.find(c => c.id === chatId);
+        if (target) { 
+            target.messages.push({ role: 'bot', text: replyObj.text, isHtml: replyObj.isHtml }); 
+            saveChats(); 
+        }
+        if (currentId === chatId) {
+            typing.remove();
+            addBubble('bot', replyObj.text, replyObj.isHtml);
+        }
     }
 
     document.getElementById('sendBtn').onclick = handleSend;
@@ -968,7 +970,6 @@
 
     renderHistory();
 
-    // ---------- Background canvas ----------
     const canvas = document.getElementById('bgCanvas');
     const ctx = canvas.getContext('2d');
 
