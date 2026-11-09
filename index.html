@@ -67,13 +67,15 @@
             pointer-events: none;
         }
 
+        /* ---------- Header: menu + topic bar ---------- */
         header {
             width: 100%;
             max-width: 480px;
-            height: 52px;
+            height: 42px;
+            margin-bottom: 10px;
             display: flex;
             align-items: center;
-            justify-content: flex-start;
+            gap: 10px;
             z-index: 10;
             flex-shrink: 0;
         }
@@ -91,6 +93,7 @@
             gap: 5px;
             width: 42px;
             height: 42px;
+            flex-shrink: 0;
             border-radius: 13px;
             box-shadow: 0 8px 25px rgba(0,0,0,0.4);
             transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s;
@@ -103,6 +106,97 @@
             background-color: var(--text-main);
             border-radius: 2px;
         }
+
+        .topic-bar {
+            flex: 1;
+            min-width: 0;
+            height: 42px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 0 16px;
+            background: var(--panel-bg);
+            border: 1px solid var(--panel-border);
+            border-radius: 13px;
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.4);
+        }
+        .topic-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            flex-shrink: 0;
+            background: var(--accent-purple);
+            box-shadow: 0 0 8px var(--accent-purple);
+            animation: topicPulse 2.8s ease-in-out infinite;
+        }
+        @keyframes topicPulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.35; }
+        }
+        .topic-label {
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            flex-shrink: 0;
+        }
+        .topic-divider {
+            width: 1px;
+            height: 16px;
+            background: var(--panel-border);
+            flex-shrink: 0;
+        }
+        .topic-text {
+            flex: 1;
+            min-width: 0;
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-main);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            transition: opacity 0.18s ease, transform 0.18s ease;
+        }
+        .topic-text.swap { opacity: 0; transform: translateY(4px); }
+        .topic-bar.idle .topic-text { color: var(--text-muted); font-weight: 500; }
+        .topic-bar.idle .topic-dot { opacity: 0.4; animation: none; }
+
+        /* ---------- Natural eye ---------- */
+        .eye-svg { width: 100%; height: 100%; display: block; overflow: visible; }
+        .eye-svg .crease { fill: none; stroke: var(--accent-purple); stroke-width: 1; stroke-linecap: round; opacity: 0.3; }
+        .eye-svg .caruncle { fill: var(--accent-purple); opacity: 0.45; }
+        .eye-svg .iris-base { fill: var(--accent-purple); }
+        .eye-svg .fibers { fill: none; stroke: #fff; stroke-opacity: 0.28; stroke-width: 4; stroke-dasharray: 0.6 1.6; }
+        .eye-svg .fibers-dark { fill: none; stroke: #000; stroke-opacity: 0.3; stroke-width: 2.4; stroke-dasharray: 0.5 1.9; }
+        .eye-svg .collarette { fill: none; stroke: #fff; stroke-opacity: 0.18; stroke-width: 0.7; }
+        .eye-svg .limbal { fill: none; stroke: #000; stroke-opacity: 0.55; stroke-width: 1.4; }
+        .eye-svg .pupil circle { fill: #06030c; }
+        .eye-svg .pupil { transform-box: fill-box; transform-origin: center; animation: pupilBreathe 6s ease-in-out infinite; }
+        @keyframes pupilBreathe {
+            0%, 100% { transform: scale(0.9); }
+            50% { transform: scale(1.08); }
+        }
+        .eye-svg .iris-move {
+            transform: translate(var(--ex, 0px), var(--ey, 0px));
+            transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+        }
+        .eye-svg .glint-move {
+            transform: translate(calc(var(--ex, 0px) * 0.55), calc(var(--ey, 0px) * 0.55));
+            transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+        }
+        .eye-svg .lid-fill { fill: color-mix(in srgb, var(--accent-purple) 16%, var(--bg-color)); }
+        .eye-svg .lid-edge { fill: none; stroke: var(--accent-purple); stroke-width: 2.4; stroke-linecap: round; }
+        .eye-svg .lid { animation: eyeBlink 5.5s infinite ease-in-out; }
+        @keyframes eyeBlink {
+            0%, 90%, 100% { transform: translateY(0); }
+            93.5% { transform: translateY(35px); }
+            97% { transform: translateY(0); }
+        }
+        .eye-svg .lash-top { fill: none; stroke: var(--accent-purple); stroke-width: 2.6; stroke-linecap: round; }
+        .eye-svg .lash-bottom { fill: none; stroke: var(--accent-purple); stroke-width: 1.2; stroke-linecap: round; opacity: 0.7; }
 
         /* ---------- Drawer ---------- */
         .drawer {
@@ -128,12 +222,8 @@
         }
         .drawer.open { transform: translateX(0); }
 
-        .drawer-brand {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-        .drawer-brand svg { width: 38px; height: 20px; color: var(--accent-purple); filter: drop-shadow(0 0 8px var(--accent-glow)); }
+        .drawer-brand { display: flex; align-items: center; gap: 14px; }
+        .mini-eye { width: 48px; height: 24px; flex-shrink: 0; filter: drop-shadow(0 0 8px var(--accent-glow)); }
         .drawer-brand span { font-size: 18px; letter-spacing: 6px; font-weight: 300; text-shadow: 0 0 20px var(--accent-glow); }
 
         .new-chat-btn {
@@ -176,7 +266,7 @@
         .theme-sub-item {
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 12px;
             padding: 10px 14px;
             background: transparent;
             border: 1px solid transparent;
@@ -187,9 +277,40 @@
             transition: all 0.2s;
             text-align: left;
         }
-        .theme-sub-item .dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
         .theme-sub-item:hover { color: var(--text-main); background: rgba(255,255,255,0.04); }
         .theme-sub-item.active { color: var(--accent-purple); border-color: var(--panel-border); background: rgba(255,255,255,0.06); font-weight: 600; }
+
+        /* Neon dots */
+        .theme-sub-item .dot {
+            --dot: #c496ff;
+            position: relative;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            flex-shrink: 0;
+            background: radial-gradient(circle at 35% 30%, #fff 0%, var(--dot) 45%, var(--dot) 100%);
+            box-shadow: 0 0 6px var(--dot), 0 0 14px color-mix(in srgb, var(--dot) 55%, transparent);
+            opacity: 0.55;
+            transition: opacity 0.3s, transform 0.3s, box-shadow 0.3s;
+        }
+        .theme-sub-item:hover .dot { opacity: 0.9; transform: scale(1.15); }
+        .theme-sub-item.active .dot {
+            opacity: 1;
+            box-shadow: 0 0 8px var(--dot), 0 0 20px var(--dot);
+        }
+        .theme-sub-item.active .dot::after {
+            content: '';
+            position: absolute;
+            inset: -5px;
+            border-radius: 50%;
+            border: 1px solid var(--dot);
+            opacity: 0.6;
+            animation: dotPulse 2.4s ease-in-out infinite;
+        }
+        @keyframes dotPulse {
+            0%, 100% { transform: scale(0.85); opacity: 0.65; }
+            50% { transform: scale(1.25); opacity: 0; }
+        }
 
         .chat-history-list {
             display: flex;
@@ -251,7 +372,7 @@
         /* ---------- Center stage ---------- */
         .center-stage {
             position: absolute;
-            top: 42%;
+            top: 44%;
             left: 50%;
             transform: translate(-50%, -50%);
             z-index: 10;
@@ -265,15 +386,10 @@
         .center-stage.dissolved { opacity: 0; pointer-events: none; }
 
         .eye-container {
-            width: 120px;
-            height: 60px;
+            width: 132px;
+            height: 66px;
             margin-bottom: 22px;
             filter: drop-shadow(0 0 25px var(--accent-glow));
-            animation: eyeBlink 4.5s infinite ease-in-out;
-        }
-        @keyframes eyeBlink {
-            0%, 46%, 54%, 100% { transform: scaleY(1); }
-            50% { transform: scaleY(0.06); }
         }
 
         .brand-title {
@@ -381,7 +497,7 @@
             background: var(--panel-bg);
             border: 1px solid var(--panel-border);
             border-radius: 34px;
-            padding: 8px 8px 8px 8px;
+            padding: 8px;
             display: flex;
             align-items: center;
             gap: 10px;
@@ -439,9 +555,43 @@
         .send-icon-btn:hover { filter: brightness(1.1); }
         .send-icon-btn:active { transform: scale(0.92); }
         .send-icon-btn svg { width: 16px; height: 16px; fill: currentColor; }
+
+        @media (prefers-reduced-motion: reduce) {
+            .eye-svg .lid, .eye-svg .pupil, .typing i, .topic-dot { animation: none; }
+        }
     </style>
 </head>
 <body>
+
+    <!-- Shared eye definitions (gradients + eye-shaped clip) -->
+    <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+        <defs>
+            <clipPath id="eyeClip">
+                <path d="M6 32C28 8 92 8 114 32C94 48 26 48 6 32Z"/>
+            </clipPath>
+            <radialGradient id="eyeSclera" cx="50%" cy="50%" r="55%">
+                <stop offset="0" style="stop-color: var(--text-main)" stop-opacity="0.95"/>
+                <stop offset="0.62" style="stop-color: var(--text-main)" stop-opacity="0.82"/>
+                <stop offset="1" style="stop-color: var(--accent-purple)" stop-opacity="0.55"/>
+            </radialGradient>
+            <radialGradient id="irisShade" cx="50%" cy="50%" r="50%">
+                <stop offset="0" stop-color="#000" stop-opacity="0"/>
+                <stop offset="0.55" stop-color="#000" stop-opacity="0"/>
+                <stop offset="0.85" stop-color="#000" stop-opacity="0.3"/>
+                <stop offset="1" stop-color="#000" stop-opacity="0.7"/>
+            </radialGradient>
+            <radialGradient id="irisGlow" cx="50%" cy="78%" r="55%">
+                <stop offset="0" stop-color="#fff" stop-opacity="0.4"/>
+                <stop offset="1" stop-color="#fff" stop-opacity="0"/>
+            </radialGradient>
+            <linearGradient id="lidShadow" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0.18" stop-color="#000" stop-opacity="0.6"/>
+                <stop offset="0.5" stop-color="#000" stop-opacity="0"/>
+                <stop offset="0.8" stop-color="#000" stop-opacity="0"/>
+                <stop offset="0.95" stop-color="#000" stop-opacity="0.3"/>
+            </linearGradient>
+        </defs>
+    </svg>
 
     <canvas id="bgCanvas"></canvas>
 
@@ -449,15 +599,18 @@
         <button class="menu-btn" id="menuToggle" title="Menu" aria-label="Open menu">
             <span></span><span></span><span></span>
         </button>
+        <div class="topic-bar idle" id="topicBar">
+            <span class="topic-dot"></span>
+            <span class="topic-label">Topic</span>
+            <span class="topic-divider"></span>
+            <span class="topic-text" id="topicText">New Chat</span>
+        </div>
     </header>
 
     <!-- Sliding Menu Drawer -->
     <div class="drawer" id="sideDrawer">
         <div class="drawer-brand">
-            <svg viewBox="0 0 120 60" fill="none" stroke="currentColor" stroke-width="3">
-                <path d="M5 30C30 10 90 10 115 30C90 50 30 50 5 30Z" />
-                <circle cx="60" cy="30" r="12" fill="currentColor" opacity="0.85" />
-            </svg>
+            <div class="mini-eye" data-eye></div>
             <span>SHINU</span>
         </div>
 
@@ -469,9 +622,9 @@
         <div>
             <div class="drawer-section-title">Theme Options</div>
             <div class="theme-submenu">
-                <button class="theme-sub-item active" data-theme="purple"><span class="dot" style="background:#c496ff"></span>Cosmic Purple</button>
-                <button class="theme-sub-item" data-theme="amber"><span class="dot" style="background:#ffaa50"></span>Neon Amber</button>
-                <button class="theme-sub-item" data-theme="pink"><span class="dot" style="background:#ff69b4"></span>Neon Pink</button>
+                <button class="theme-sub-item active" data-theme="purple"><span class="dot" style="--dot:#c496ff"></span>Cosmic Purple</button>
+                <button class="theme-sub-item" data-theme="amber"><span class="dot" style="--dot:#ffaa50"></span>Neon Amber</button>
+                <button class="theme-sub-item" data-theme="pink"><span class="dot" style="--dot:#ff69b4"></span>Neon Pink</button>
             </div>
         </div>
         <div>
@@ -487,13 +640,7 @@
 
     <!-- Central Stage -->
     <div class="center-stage" id="centerStage">
-        <div class="eye-container">
-            <svg viewBox="0 0 120 60" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--accent-purple);">
-                <path d="M5 30C30 10 90 10 115 30C90 50 30 50 5 30Z" />
-                <circle cx="60" cy="30" r="12" fill="currentColor" opacity="0.85" />
-                <circle cx="60" cy="30" r="5" fill="#ffffff" />
-            </svg>
-        </div>
+        <div class="eye-container" data-eye></div>
         <h1 class="brand-title">SHINU</h1>
         <div class="brand-divider">·</div>
         <div class="open-greeting" id="openGreeting">Good morning!</div>
@@ -512,6 +659,60 @@
     </div>
 
 <script>
+    // ---------- Eye markup (injected into every [data-eye] element) ----------
+    const EYE_SVG = `
+    <svg class="eye-svg" viewBox="0 0 120 60" aria-hidden="true">
+        <path class="crease" d="M16 24C34 3 86 3 104 24"/>
+        <g clip-path="url(#eyeClip)">
+            <path d="M6 32C28 8 92 8 114 32C94 48 26 48 6 32Z" fill="url(#eyeSclera)"/>
+            <ellipse class="caruncle" cx="10" cy="32" rx="3.2" ry="2.2"/>
+            <g class="iris-move">
+                <circle class="iris-base" cx="60" cy="30" r="13"/>
+                <circle cx="60" cy="30" r="13" fill="url(#irisShade)"/>
+                <circle cx="60" cy="30" r="13" fill="url(#irisGlow)"/>
+                <circle class="fibers" cx="60" cy="30" r="9.5"/>
+                <circle class="fibers-dark" cx="60" cy="30" r="11.4"/>
+                <circle class="collarette" cx="60" cy="30" r="7"/>
+                <circle class="limbal" cx="60" cy="30" r="12.6"/>
+                <g class="pupil"><circle cx="60" cy="30" r="5"/></g>
+            </g>
+            <g class="glint-move">
+                <circle cx="64.6" cy="25.4" r="2.3" fill="#fff" fill-opacity="0.95"/>
+                <circle cx="56" cy="34.6" r="1" fill="#fff" fill-opacity="0.5"/>
+            </g>
+            <rect x="0" y="0" width="120" height="60" fill="url(#lidShadow)"/>
+            <g class="lid">
+                <path class="lid-fill" d="M-10 -50H130V2Q60 16 -10 2Z"/>
+                <path class="lid-edge" d="M-10 2Q60 16 130 2"/>
+            </g>
+        </g>
+        <path class="lash-top" d="M6 32C28 8 92 8 114 32"/>
+        <path class="lash-bottom" d="M6 32C26 48 94 48 114 32"/>
+    </svg>`;
+    document.querySelectorAll('[data-eye]').forEach(el => { el.innerHTML = EYE_SVG; });
+
+    // ---------- Eye movement: follows touch/cursor, glances around when idle ----------
+    const rootEl = document.documentElement;
+    let lastPointer = 0;
+    const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+
+    function lookAt(nx, ny) {
+        rootEl.style.setProperty('--ex', (nx * 7).toFixed(2) + 'px');
+        rootEl.style.setProperty('--ey', (ny * 3).toFixed(2) + 'px');
+    }
+    function onPointer(e) {
+        lastPointer = Date.now();
+        lookAt(clamp((e.clientX / window.innerWidth - 0.5) * 2, -1, 1),
+               clamp((e.clientY / window.innerHeight - 0.5) * 2, -1, 1));
+    }
+    window.addEventListener('pointermove', onPointer);
+    window.addEventListener('pointerdown', onPointer);
+    setInterval(() => {
+        if (Date.now() - lastPointer > 3500) {
+            lookAt((Math.random() * 2 - 1), (Math.random() * 2 - 1) * 0.7);
+        }
+    }, 2600);
+
     // ---------- Safe storage helpers ----------
     function store(key, val) { try { localStorage.setItem(key, val); } catch (e) {} }
     function load(key) { try { return localStorage.getItem(key); } catch (e) { return null; } }
@@ -549,6 +750,8 @@
     const userInput = document.getElementById('userInput');
     const historyList = document.getElementById('historyList');
     const newChatBtn = document.getElementById('newChatBtn');
+    const topicBar = document.getElementById('topicBar');
+    const topicText = document.getElementById('topicText');
 
     function toggleDrawer() {
         sideDrawer.classList.toggle('open');
@@ -561,9 +764,51 @@
     menuToggle.onclick = toggleDrawer;
     drawerBackdrop.onclick = closeDrawer;
 
+    // ---------- Topic helpers ----------
+    function tryMath(q) {
+        const expr = q.replace(/x/gi, '*').replace(/\^/g, '**');
+        if (!/^[0-9+\-*/().%\s]+$/.test(expr) || !/[0-9]/.test(expr) || !/[+\-*/%]/.test(expr)) return null;
+        try {
+            const result = Function('"use strict"; return (' + expr + ')')();
+            return (typeof result === 'number' && isFinite(result)) ? result : null;
+        } catch (e) { return null; }
+    }
+
+    // Returns a short topic string, or null if the message is only a greeting
+    function makeTopic(raw) {
+        let t = raw.trim().replace(/\s+/g, ' ');
+        if (tryMath(t.toLowerCase()) !== null) return 'Quick Calculation';
+        if (/^(hello|hi+|hey+|yo|good (morning|afternoon|evening))\b[\s!.,?]*$/i.test(t)) return null;
+
+        const lead = /^(please\s+|can you\s+|could you\s+|would you\s+|i want to\s+|i need to\s+|i would like to\s+|help me\s+(to\s+)?|tell me\s+(about\s+)?|(who|what)\s+(is|are|was|were)\s+(an?\s+|the\s+)?|what'?s\s+(an?\s+|the\s+)?|who'?s\s+|how\s+(do|can|to|does)\s+(i\s+|you\s+|we\s+)?|why\s+(is|are|do|does)\s+(the\s+)?|explain\s+(to me\s+)?|define\s+|describe\s+|show me\s+|give me\s+)/i;
+        let prev;
+        do { prev = t; t = t.replace(lead, ''); } while (t !== prev && t);
+
+        t = t.replace(/[?.!,;:]+$/, '').trim();
+        if (!t) t = raw.trim().replace(/[?.!]+$/, '');
+
+        t = t.split(' ').slice(0, 5).join(' ');
+        t = t.replace(/(^|\s)([a-z])/g, (m, s, c) => s + c.toUpperCase());
+        if (t.length > 30) t = t.slice(0, 29).trim() + '…';
+        return t || 'New Chat';
+    }
+
+    function updateTopicBar(topic) {
+        const label = topic || 'New Chat';
+        topicBar.classList.toggle('idle', !topic);
+        document.title = topic ? topic + ' — Shinu' : 'Shinu — High-End AI Workspace';
+        if (topicText.textContent === label) return;
+        topicText.classList.add('swap');
+        setTimeout(() => {
+            topicText.textContent = label;
+            topicText.classList.remove('swap');
+        }, 170);
+    }
+
     // ---------- Chat sessions ----------
     let chats = [];
     try { chats = JSON.parse(load('shinu_chats') || '[]'); } catch (e) { chats = []; }
+    chats.forEach(c => { if (!c.topic) c.topic = c.title || 'Chat'; });
     let currentId = null;
 
     function saveChats() { store('shinu_chats', JSON.stringify(chats)); }
@@ -602,7 +847,7 @@
 
             const title = document.createElement('span');
             title.className = 'title';
-            title.textContent = chat.title;
+            title.textContent = chat.topic;
 
             const del = document.createElement('button');
             del.className = 'del';
@@ -630,6 +875,7 @@
         chatContainer.innerHTML = '';
         chat.messages.forEach(m => addBubble(m.role, m.text));
         showChatView();
+        updateTopicBar(chat.topic);
         renderHistory();
         closeDrawer();
     }
@@ -638,6 +884,7 @@
         currentId = null;
         chatContainer.innerHTML = '';
         showHomeView();
+        updateTopicBar(null);
         renderHistory();
         userInput.value = '';
         if (close) closeDrawer();
@@ -647,15 +894,6 @@
     userInput.addEventListener('focus', showChatView);
 
     // ---------- Reply engine ----------
-    function tryMath(q) {
-        const expr = q.replace(/x/gi, '*').replace(/\^/g, '**');
-        if (!/^[0-9+\-*/().%\s]+$/.test(expr) || !/[0-9]/.test(expr) || !/[+\-*/%]/.test(expr)) return null;
-        try {
-            const result = Function('"use strict"; return (' + expr + ')')();
-            return (typeof result === 'number' && isFinite(result)) ? result : null;
-        } catch (e) { return null; }
-    }
-
     function shinuReply(inputMessage) {
         const query = inputMessage.toLowerCase().trim();
         const has = (re) => re.test(query);
@@ -685,11 +923,19 @@
 
         let chat = currentChat();
         if (!chat) {
-            chat = { id: Date.now().toString(36), title: text.length > 34 ? text.slice(0, 34) + '…' : text, messages: [] };
+            chat = { id: Date.now().toString(36), topic: '', generic: false, messages: [] };
             chats.push(chat);
             currentId = chat.id;
             chatContainer.innerHTML = '';
         }
+
+        // Set (or refine) the short topic shown in the bar
+        if (!chat.topic || chat.generic) {
+            const t = makeTopic(text);
+            if (t) { chat.topic = t; chat.generic = false; }
+            else if (!chat.topic) { chat.topic = 'Greeting'; chat.generic = true; }
+        }
+        updateTopicBar(chat.topic);
 
         chat.messages.push({ role: 'user', text });
         addBubble('user', text);
