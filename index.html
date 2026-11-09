@@ -137,7 +137,6 @@
         body.theme-pink .drawer-item { background: rgba(255, 105, 180, 0.04); }
         body.theme-pink .drawer-item:hover { background: rgba(255, 105, 180, 0.1); }
 
-        /* Theme Sub-Screen Options */
         .theme-submenu {
             display: flex;
             flex-direction: column;
@@ -192,22 +191,26 @@
         }
         .backdrop.active { opacity: 1; pointer-events: auto; }
 
+        /* Central Stage with Smooth Slow Fade-out */
         .center-stage {
-            position: relative;
+            position: absolute;
+            top: 35%;
+            left: 50%;
+            transform: translate(-50%, -50%);
             z-index: 10;
             display: flex;
             flex-direction: column;
             align-items: center;
             text-align: center;
-            margin-top: -30px;
-            transition: opacity 0.4s ease, transform 0.4s ease;
+            opacity: 1;
+            transition: opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1), transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+            pointer-events: auto;
         }
 
         .center-stage.dissolved {
             opacity: 0;
-            transform: translateY(-25px);
+            transform: translate(-50%, -65%) scale(0.95);
             pointer-events: none;
-            display: none;
         }
 
         .eye-container {
@@ -259,13 +262,70 @@
             font-weight: 400;
             letter-spacing: 0.5px;
             text-shadow: 0 0 10px rgba(196, 150, 255, 0.2);
-            transition: opacity 0.4s ease, transform 0.4s ease;
         }
 
-        .input-dock {
-            position: relative;
-            z-index: 10;
+        /* Chat Stream Container */
+        .chat-container {
+            position: absolute;
+            top: 70px;
+            bottom: 90px;
             width: 100%;
+            max-width: 480px;
+            z-index: 5;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            padding: 10px 20px;
+            scroll-behavior: smooth;
+            opacity: 0;
+            transition: opacity 0.5s ease;
+        }
+        .chat-container.active { opacity: 1; }
+        
+        .chat-container::-webkit-scrollbar { width: 4px; }
+        .chat-container::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 4px; }
+
+        .message-bubble {
+            max-width: 80%;
+            padding: 12px 16px;
+            border-radius: 18px;
+            font-size: 14px;
+            line-height: 1.4;
+            word-wrap: break-word;
+            animation: fadeInBubble 0.3s ease forwards;
+        }
+
+        @keyframes fadeInBubble {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .message-bubble.user {
+            background: var(--accent-purple);
+            color: #0b0614;
+            align-self: flex-end;
+            border-bottom-right-radius: 4px;
+            font-weight: 500;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        }
+
+        .message-bubble.bot {
+            background: rgba(180, 130, 255, 0.08);
+            border: 1px solid var(--panel-border);
+            color: var(--text-main);
+            align-self: flex-start;
+            border-bottom-left-radius: 4px;
+        }
+        body.theme-amber .message-bubble.bot { background: rgba(255, 170, 80, 0.08); }
+        body.theme-pink .message-bubble.bot { background: rgba(255, 105, 180, 0.08); }
+
+        /* Input Dock */
+        .input-dock {
+            position: absolute;
+            bottom: 20px;
+            z-index: 10;
+            width: calc(100% - 40px);
             max-width: 420px;
             background: rgba(12, 8, 20, 0.9);
             border: 1px solid var(--panel-border);
@@ -276,7 +336,6 @@
             gap: 10px;
             backdrop-filter: blur(15px);
             box-shadow: 0 10px 30px rgba(0,0,0,0.6);
-            margin-bottom: 80px;
             transition: transform 0.3s ease, background-color 0.3s;
         }
         body.theme-amber .input-dock { background: rgba(20, 14, 10, 0.9); }
@@ -338,7 +397,7 @@
         </button>
     </header>
 
-    <!-- Sliding Menu Drawer with Theme Sub-screen, History, Account Setting -->
+    <!-- Sliding Menu Drawer -->
     <div class="drawer" id="sideDrawer">
         <div>
             <div class="drawer-section-title">1. Theme Options</div>
@@ -361,7 +420,7 @@
     </div>
     <div class="backdrop" id="drawerBackdrop"></div>
 
-    <!-- Central Stage: Appears ONLY at start of a new chat -->
+    <!-- Central Stage: Fades out slowly on start -->
     <div class="center-stage" id="centerStage">
         <div class="eye-container">
             <svg viewBox="0 0 120 60" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--accent-purple);">
@@ -375,6 +434,10 @@
         <div class="open-greeting" id="openGreeting">Good morning!</div>
     </div>
 
+    <!-- Live Messaging Feed -->
+    <div class="chat-container" id="chatContainer"></div>
+
+    <!-- Input Dock -->
     <div class="input-dock" id="inputDock">
         <button class="action-icon-btn">+</button>
         <input type="text" id="userInput" placeholder="Type a message..." />
@@ -386,7 +449,7 @@
     </div>
 
 <script>
-    // Load saved theme from localStorage on startup
+    // Saved Theme Management
     const savedTheme = localStorage.getItem('shinu_theme') || 'purple';
     applyTheme(savedTheme);
 
@@ -398,7 +461,6 @@
             document.body.classList.add('theme-pink');
         }
         
-        // Update active class on sub-screen buttons
         document.querySelectorAll('.theme-sub-item').forEach(btn => {
             if(btn.getAttribute('data-theme') === themeName) {
                 btn.classList.add('active');
@@ -410,15 +472,13 @@
         localStorage.setItem('shinu_theme', themeName);
     }
 
-    // Theme Sub-screen button click handlers
     document.querySelectorAll('.theme-sub-item').forEach(btn => {
         btn.onclick = () => {
-            const chosenTheme = btn.getAttribute('data-theme');
-            applyTheme(chosenTheme);
+            applyTheme(btn.getAttribute('data-theme'));
         };
     });
 
-    // Dynamic Greeting based on time
+    // Time-aware greeting
     const hour = new Date().getHours();
     const greetingEl = document.getElementById('openGreeting');
     if (hour >= 5 && hour < 12) {
@@ -435,8 +495,8 @@
     const sideDrawer = document.getElementById('sideDrawer');
     const drawerBackdrop = document.getElementById('drawerBackdrop');
     const centerStage = document.getElementById('centerStage');
+    const chatContainer = document.getElementById('chatContainer');
     const userInput = document.getElementById('userInput');
-    const inputDock = document.getElementById('inputDock');
     const historyList = document.getElementById('historyList');
 
     function toggleDrawer() {
@@ -447,43 +507,75 @@
     menuToggle.onclick = toggleDrawer;
     drawerBackdrop.onclick = toggleDrawer;
 
-    // Dissolve and remove eye motif permanently for the session upon focusing/typing
     let chatStarted = false;
+
     userInput.addEventListener('focus', () => {
         if(!chatStarted) {
             centerStage.classList.add('dissolved');
+            chatContainer.classList.add('active');
             chatStarted = true;
         }
-        inputDock.style.transform = 'translateY(-20px)';
     });
 
-    userInput.addEventListener('blur', () => {
-        inputDock.style.transform = 'translateY(0)';
-    });
+    // Shinu Reply & Response Intelligence Engine
+    function shinuReply(inputMessage) {
+        const query = inputMessage.toLowerCase().trim();
 
-    // Handle Sending & History tracking
+        if (query.includes('hello') || query.includes('hi') || query.includes('hey')) {
+            return "Hello! Shinu engine is active. What are we building or exploring today?";
+        } else if (query.includes('who are you') || query.includes('what is shinu')) {
+            return "I am Shinu, your high-end procedural media and developer workspace engine.";
+        } else if (query.includes('version') || query.includes('v1')) {
+            return "Shinu Engine v1.0 Pro is currently deployed and online via Vercel.";
+        } else if (query.includes('help') || query.includes('options')) {
+            return "You can use the 3-lines menu to switch themes (Purple, Amber, Pink) or check your typed history!";
+        } else if (query.includes('time')) {
+            return "Current system local time is " + new Date().toLocaleTimeString() + ".";
+        } else {
+            return `Pipeline compiled successfully for your query: "${inputMessage}". All systems nominal.`;
+        }
+    }
+
+    // Handle Sending & Reply Simulation
     function handleSend() {
         const text = userInput.value.trim();
         if(!text) return;
 
         if(!chatStarted) {
             centerStage.classList.add('dissolved');
+            chatContainer.classList.add('active');
             chatStarted = true;
         }
 
+        // Add user bubble
+        chatContainer.innerHTML += `<div class="message-bubble user">${escapeHtml(text)}</div>`;
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+
+        // Update history drawer
         if(historyList.innerHTML.includes('No prompts typed yet')) {
             historyList.innerHTML = '';
         }
-        historyList.innerHTML += `<div class="history-item">${text}</div>`;
+        historyList.innerHTML += `<div class="history-item">${escapeHtml(text)}</div>`;
 
         userInput.value = '';
         userInput.blur();
+
+        // Generate intelligent reply from Shinu after a short natural delay
+        setTimeout(() => {
+            const responseText = shinuReply(text);
+            chatContainer.innerHTML += `<div class="message-bubble bot">${escapeHtml(responseText)}</div>`;
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }, 500);
+    }
+
+    function escapeHtml(str) {
+        return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
     }
 
     document.getElementById('sendBtn').onclick = handleSend;
     userInput.onkeypress = (e) => { if(e.key === 'Enter') handleSend(); };
 
-    // Canvas Particle & Orbit Background
+    // Background Particle Canvas
     const canvas = document.getElementById('bgCanvas');
     const ctx = canvas.getContext('2d');
 
