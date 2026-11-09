@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Shinu — High-End AI Workspace</title>
     <style>
         :root {
@@ -13,9 +13,9 @@
             --accent-glow: rgba(196, 150, 255, 0.35);
             --text-main: #f4ecff;
             --text-muted: #8d7b9e;
+            --drawer-bg: rgba(8, 6, 14, 0.94);
         }
 
-        /* Amber Theme 100x */
         body.theme-amber {
             --bg-color: #070402;
             --panel-bg: rgba(22, 14, 10, 0.75);
@@ -24,9 +24,9 @@
             --accent-glow: rgba(255, 170, 80, 0.35);
             --text-main: #fff5ec;
             --text-muted: #9e8c7a;
+            --drawer-bg: rgba(14, 10, 8, 0.94);
         }
 
-        /* Neon Pink Theme 100x */
         body.theme-pink {
             --bg-color: #070206;
             --panel-bg: rgba(22, 10, 18, 0.75);
@@ -35,30 +35,34 @@
             --accent-glow: rgba(255, 105, 180, 0.35);
             --text-main: #ffecfa;
             --text-muted: #9e7a8e;
+            --drawer-bg: rgba(14, 6, 11, 0.94);
         }
 
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-        
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; -webkit-tap-highlight-color: transparent; }
+
+        html, body { height: 100%; }
+
         body {
             background-color: var(--bg-color);
             color: var(--text-main);
-            width: 100vw;
+            width: 100%;
             height: 100vh;
+            height: 100dvh; /* fixes the cut-off input on mobile browsers */
             display: flex;
             flex-direction: column;
             align-items: center;
             overflow: hidden;
             position: relative;
-            padding: 16px;
+            padding: 16px 16px max(16px, env(safe-area-inset-bottom));
+            padding-top: max(16px, env(safe-area-inset-top));
             transition: background-color 0.4s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         #bgCanvas {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100vh;
+            position: fixed;
+            inset: 0;
+            width: 100%;
+            height: 100%;
             z-index: 1;
             pointer-events: none;
         }
@@ -78,87 +82,101 @@
             background: var(--panel-bg);
             border: 1px solid var(--panel-border);
             backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
             cursor: pointer;
             display: flex;
             flex-direction: column;
             justify-content: center;
+            align-items: center;
             gap: 5px;
-            width: 40px;
-            height: 40px;
-            border-radius: 12px;
-            padding: 10px;
+            width: 42px;
+            height: 42px;
+            border-radius: 13px;
             box-shadow: 0 8px 25px rgba(0,0,0,0.4);
-            transition: transform 0.2s, border-color 0.2s;
+            transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s;
         }
-        .menu-btn:hover { transform: scale(1.05); border-color: var(--accent-purple); }
-
+        .menu-btn:hover { transform: scale(1.05); border-color: var(--accent-purple); box-shadow: 0 0 20px var(--accent-glow); }
         .menu-btn span {
             display: block;
             width: 18px;
             height: 2px;
             background-color: var(--text-main);
             border-radius: 2px;
-            transition: background-color 0.3s;
         }
 
-        /* Sliding Drawer (100x Glassmorphic Style) */
+        /* ---------- Drawer ---------- */
         .drawer {
             position: fixed;
             top: 0;
-            left: -340px;
-            width: 340px;
+            left: 0;
+            width: min(330px, 86vw);
             height: 100vh;
-            background: rgba(8, 6, 14, 0.92);
+            height: 100dvh;
+            background: var(--drawer-bg);
             border-right: 1px solid var(--panel-border);
             backdrop-filter: blur(30px);
             -webkit-backdrop-filter: blur(30px);
-            transition: left 0.4s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.4s;
+            transform: translateX(-105%);
+            transition: transform 0.45s cubic-bezier(0.16, 1, 0.3, 1);
             z-index: 50;
-            padding: 32px 24px;
+            padding: max(22px, env(safe-area-inset-top)) 20px max(20px, env(safe-area-inset-bottom));
             display: flex;
             flex-direction: column;
-            gap: 24px;
+            gap: 22px;
             box-shadow: 20px 0 60px rgba(0,0,0,0.8);
+            overflow-y: auto;
         }
-        body.theme-amber .drawer { background: rgba(14, 10, 8, 0.92); }
-        body.theme-pink .drawer { background: rgba(14, 6, 11, 0.92); }
-        .drawer.open { left: 0; }
-        
-        .drawer-section-title { 
-            font-size: 11px; 
-            font-weight: 700; 
-            color: var(--accent-purple); 
-            letter-spacing: 2px; 
-            text-transform: uppercase; 
-            margin-bottom: 10px; 
-        }
+        .drawer.open { transform: translateX(0); }
 
-        .drawer-item {
-            padding: 14px 16px;
-            background: rgba(255, 255, 255, 0.03);
-            border: 1px solid var(--panel-border);
-            border-radius: 12px;
-            font-size: 14px;
-            font-weight: 500;
-            color: var(--text-main);
-            cursor: pointer;
-            transition: all 0.2s;
-            margin-bottom: 8px;
+        .drawer-brand {
             display: flex;
-            justify-content: space-between;
             align-items: center;
+            gap: 12px;
         }
-        .drawer-item:hover { background: rgba(255, 255, 255, 0.07); transform: translateX(4px); }
+        .drawer-brand svg { width: 38px; height: 20px; color: var(--accent-purple); filter: drop-shadow(0 0 8px var(--accent-glow)); }
+        .drawer-brand span { font-size: 18px; letter-spacing: 6px; font-weight: 300; text-shadow: 0 0 20px var(--accent-glow); }
+
+        .new-chat-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            width: 100%;
+            padding: 14px 16px;
+            background: var(--accent-purple);
+            color: #050308;
+            border: none;
+            border-radius: 14px;
+            font-size: 14.5px;
+            font-weight: 700;
+            cursor: pointer;
+            box-shadow: 0 8px 28px var(--accent-glow);
+            transition: transform 0.2s, filter 0.2s;
+        }
+        .new-chat-btn:hover { filter: brightness(1.08); transform: translateY(-1px); }
+        .new-chat-btn:active { transform: scale(0.97); }
+        .new-chat-btn svg { width: 16px; height: 16px; stroke: currentColor; stroke-width: 2.5; fill: none; stroke-linecap: round; }
+
+        .drawer-section-title {
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--accent-purple);
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+        }
 
         .theme-submenu {
             display: flex;
             flex-direction: column;
             gap: 6px;
-            margin-top: 4px;
             padding-left: 12px;
             border-left: 2px solid var(--panel-border);
         }
         .theme-sub-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
             padding: 10px 14px;
             background: transparent;
             border: 1px solid transparent;
@@ -169,34 +187,60 @@
             transition: all 0.2s;
             text-align: left;
         }
-        .theme-sub-item:hover { color: var(--text-main); background: rgba(255, 255, 255, 0.04); }
-        .theme-sub-item.active { color: var(--accent-purple); border-color: var(--panel-border); background: rgba(255, 255, 255, 0.06); font-weight: 600; }
-        
+        .theme-sub-item .dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+        .theme-sub-item:hover { color: var(--text-main); background: rgba(255,255,255,0.04); }
+        .theme-sub-item.active { color: var(--accent-purple); border-color: var(--panel-border); background: rgba(255,255,255,0.06); font-weight: 600; }
+
         .chat-history-list {
-            flex: 1;
-            overflow-y: auto;
             display: flex;
             flex-direction: column;
-            gap: 10px;
-            max-height: 35vh;
+            gap: 8px;
+            max-height: 32vh;
+            overflow-y: auto;
         }
+        .history-empty { font-size: 13.5px; color: var(--text-muted); }
         .history-item {
-            padding: 12px 14px;
-            background: rgba(255, 255, 255, 0.03);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            padding: 11px 12px 11px 14px;
+            background: rgba(255,255,255,0.03);
             border: 1px solid var(--panel-border);
-            border-radius: 10px;
+            border-radius: 12px;
             font-size: 13.5px;
             color: var(--text-main);
+            cursor: pointer;
+            transition: all 0.2s;
         }
+        .history-item:hover { background: rgba(255,255,255,0.07); transform: translateX(3px); }
+        .history-item.active { border-color: var(--accent-purple); box-shadow: 0 0 16px var(--accent-glow); }
+        .history-item .title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
+        .history-item .del {
+            background: none; border: none; color: var(--text-muted);
+            font-size: 14px; cursor: pointer; padding: 2px 6px; border-radius: 6px;
+        }
+        .history-item .del:hover { color: var(--text-main); background: rgba(255,255,255,0.08); }
+
+        .drawer-item {
+            padding: 14px 16px;
+            background: rgba(255,255,255,0.03);
+            border: 1px solid var(--panel-border);
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-main);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .drawer-item:hover { background: rgba(255,255,255,0.07); transform: translateX(4px); }
 
         .backdrop {
             position: fixed;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100vh;
+            inset: 0;
             background: rgba(0,0,0,0.65);
             backdrop-filter: blur(6px);
+            -webkit-backdrop-filter: blur(6px);
             opacity: 0;
             pointer-events: none;
             transition: opacity 0.4s;
@@ -204,7 +248,7 @@
         }
         .backdrop.active { opacity: 1; pointer-events: auto; }
 
-        /* Central Stage: High-End Floating Motif */
+        /* ---------- Center stage ---------- */
         .center-stage {
             position: absolute;
             top: 42%;
@@ -217,13 +261,8 @@
             text-align: center;
             opacity: 1;
             transition: opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1);
-            pointer-events: auto;
         }
-
-        .center-stage.dissolved {
-            opacity: 0;
-            pointer-events: none;
-        }
+        .center-stage.dissolved { opacity: 0; pointer-events: none; }
 
         .eye-container {
             width: 120px;
@@ -232,7 +271,6 @@
             filter: drop-shadow(0 0 25px var(--accent-glow));
             animation: eyeBlink 4.5s infinite ease-in-out;
         }
-
         @keyframes eyeBlink {
             0%, 46%, 54%, 100% { transform: scaleY(1); }
             50% { transform: scaleY(0.06); }
@@ -247,7 +285,6 @@
             text-shadow: 0 0 30px var(--accent-glow);
             margin-left: 14px;
         }
-
         .brand-divider {
             display: flex;
             align-items: center;
@@ -256,25 +293,23 @@
             opacity: 0.8;
             margin-bottom: 18px;
         }
-
         .brand-divider::before, .brand-divider::after {
             content: '';
             width: 70px;
             height: 1px;
             background: linear-gradient(90deg, transparent, var(--accent-purple), transparent);
         }
-
         .open-greeting {
             font-size: 16.5px;
             color: var(--text-muted);
-            font-weight: 400;
             letter-spacing: 0.8px;
             text-shadow: 0 0 15px var(--accent-glow);
         }
 
-        /* Chat Stream Container (100x Quality Flow) */
+        /* ---------- Chat ---------- */
         .chat-container {
             flex: 1;
+            min-height: 0; /* lets the feed shrink so the input dock is never pushed off-screen */
             width: 100%;
             max-width: 480px;
             z-index: 5;
@@ -282,14 +317,14 @@
             display: flex;
             flex-direction: column;
             gap: 14px;
-            padding: 10px 4px;
+            padding: 14px 12px;
             scroll-behavior: smooth;
             opacity: 0;
+            pointer-events: none;
             transition: opacity 0.6s ease;
             margin-bottom: 12px;
         }
-        .chat-container.active { opacity: 1; }
-        
+        .chat-container.active { opacity: 1; pointer-events: auto; }
         .chat-container::-webkit-scrollbar { width: 4px; }
         .chat-container::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 4px; }
 
@@ -301,33 +336,44 @@
             line-height: 1.5;
             word-wrap: break-word;
             animation: fadeInBubble 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
         }
-
         @keyframes fadeInBubble {
             from { opacity: 0; transform: translateY(15px) scale(0.98); }
             to { opacity: 1; transform: translateY(0) scale(1); }
         }
-
         .message-bubble.user {
             background: var(--accent-purple);
             color: #050308;
             align-self: flex-end;
             border-bottom-right-radius: 6px;
             font-weight: 600;
-            box-shadow: 0 8px 30px var(--accent-glow);
+            box-shadow: 0 6px 22px var(--accent-glow);
         }
-
         .message-bubble.bot {
             background: var(--panel-bg);
             border: 1px solid var(--panel-border);
             backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
             color: var(--text-main);
             align-self: flex-start;
             border-bottom-left-radius: 6px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.35);
         }
 
-        /* Input Dock (100x Polished Glassmorphism) */
+        .typing { display: inline-flex; gap: 5px; padding: 4px 0; }
+        .typing i {
+            width: 7px; height: 7px; border-radius: 50%;
+            background: var(--accent-purple);
+            animation: typingDot 1s infinite ease-in-out;
+        }
+        .typing i:nth-child(2) { animation-delay: 0.15s; }
+        .typing i:nth-child(3) { animation-delay: 0.3s; }
+        @keyframes typingDot {
+            0%, 80%, 100% { opacity: 0.25; transform: translateY(0); }
+            40% { opacity: 1; transform: translateY(-4px); }
+        }
+
+        /* ---------- Input dock ---------- */
         .input-dock {
             width: 100%;
             max-width: 480px;
@@ -335,20 +381,20 @@
             background: var(--panel-bg);
             border: 1px solid var(--panel-border);
             border-radius: 34px;
-            padding: 8px 8px 8px 18px;
+            padding: 8px 8px 8px 8px;
             display: flex;
             align-items: center;
-            gap: 12px;
+            gap: 10px;
             backdrop-filter: blur(20px);
             -webkit-backdrop-filter: blur(20px);
             box-shadow: 0 15px 40px rgba(0,0,0,0.6);
             flex-shrink: 0;
-            transition: border-color 0.3s;
+            transition: border-color 0.3s, box-shadow 0.3s;
         }
-        .input-dock:focus-within { border-color: var(--accent-purple); }
+        .input-dock:focus-within { border-color: var(--accent-purple); box-shadow: 0 15px 40px rgba(0,0,0,0.6), 0 0 24px var(--accent-glow); }
 
         .action-icon-btn {
-            background: rgba(255, 255, 255, 0.04);
+            background: rgba(255,255,255,0.04);
             border: 1px solid var(--panel-border);
             color: var(--accent-purple);
             width: 40px;
@@ -359,16 +405,18 @@
             justify-content: center;
             font-size: 22px;
             cursor: pointer;
+            flex-shrink: 0;
             transition: all 0.2s;
         }
-        .action-icon-btn:hover { background: rgba(255, 255, 255, 0.09); transform: scale(1.05); }
+        .action-icon-btn:hover { background: rgba(255,255,255,0.09); transform: scale(1.05); }
 
         .input-dock input {
             flex: 1;
+            min-width: 0;
             background: transparent;
             border: none;
             color: var(--text-main);
-            font-size: 14.5px;
+            font-size: 16px; /* 16px stops mobile browsers auto-zooming on focus */
             outline: none;
         }
         .input-dock input::placeholder { color: var(--text-muted); }
@@ -384,6 +432,7 @@
             align-items: center;
             justify-content: center;
             cursor: pointer;
+            flex-shrink: 0;
             box-shadow: 0 0 20px var(--accent-glow);
             transition: transform 0.2s, filter 0.2s;
         }
@@ -397,31 +446,40 @@
     <canvas id="bgCanvas"></canvas>
 
     <header>
-        <button class="menu-btn" id="menuToggle" title="Menu">
-            <span></span>
-            <span></span>
-            <span></span>
+        <button class="menu-btn" id="menuToggle" title="Menu" aria-label="Open menu">
+            <span></span><span></span><span></span>
         </button>
     </header>
 
     <!-- Sliding Menu Drawer -->
     <div class="drawer" id="sideDrawer">
+        <div class="drawer-brand">
+            <svg viewBox="0 0 120 60" fill="none" stroke="currentColor" stroke-width="3">
+                <path d="M5 30C30 10 90 10 115 30C90 50 30 50 5 30Z" />
+                <circle cx="60" cy="30" r="12" fill="currentColor" opacity="0.85" />
+            </svg>
+            <span>SHINU</span>
+        </div>
+
+        <button class="new-chat-btn" id="newChatBtn">
+            <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+            New Chat
+        </button>
+
         <div>
-            <div class="drawer-section-title">1. Theme Options</div>
+            <div class="drawer-section-title">Theme Options</div>
             <div class="theme-submenu">
-                <button class="theme-sub-item active" data-theme="purple">Cosmic Purple</button>
-                <button class="theme-sub-item" data-theme="amber">Neon Amber</button>
-                <button class="theme-sub-item" data-theme="pink">Neon Pink</button>
+                <button class="theme-sub-item active" data-theme="purple"><span class="dot" style="background:#c496ff"></span>Cosmic Purple</button>
+                <button class="theme-sub-item" data-theme="amber"><span class="dot" style="background:#ffaa50"></span>Neon Amber</button>
+                <button class="theme-sub-item" data-theme="pink"><span class="dot" style="background:#ff69b4"></span>Neon Pink</button>
             </div>
         </div>
         <div>
-            <div class="drawer-section-title">2. History</div>
-            <div class="chat-history-list" id="historyList">
-                <div style="font-size: 13.5px; color: var(--text-muted);">No prompts typed yet.</div>
-            </div>
+            <div class="drawer-section-title">History</div>
+            <div class="chat-history-list" id="historyList"></div>
         </div>
         <div>
-            <div class="drawer-section-title">3. Account Setting</div>
+            <div class="drawer-section-title">Account Setting</div>
             <div class="drawer-item">Configure Profile</div>
         </div>
     </div>
@@ -446,58 +504,43 @@
 
     <!-- Input Dock -->
     <div class="input-dock" id="inputDock">
-        <button class="action-icon-btn">+</button>
-        <input type="text" id="userInput" placeholder="Type a message..." />
-        <button class="send-icon-btn" id="sendBtn">
-            <svg viewBox="0 0 24 24">
-                <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
-            </svg>
+        <button class="action-icon-btn" aria-label="Add">+</button>
+        <input type="text" id="userInput" placeholder="Type a message..." autocomplete="off" />
+        <button class="send-icon-btn" id="sendBtn" aria-label="Send">
+            <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
         </button>
     </div>
 
 <script>
-    // Saved Theme Management
-    const savedTheme = localStorage.getItem('shinu_theme') || 'purple';
-    applyTheme(savedTheme);
+    // ---------- Safe storage helpers ----------
+    function store(key, val) { try { localStorage.setItem(key, val); } catch (e) {} }
+    function load(key) { try { return localStorage.getItem(key); } catch (e) { return null; } }
 
+    // ---------- Theme ----------
     function applyTheme(themeName) {
         document.body.classList.remove('theme-amber', 'theme-pink');
-        if(themeName === 'amber') {
-            document.body.classList.add('theme-amber');
-        } else if(themeName === 'pink') {
-            document.body.classList.add('theme-pink');
-        }
-        
+        if (themeName === 'amber') document.body.classList.add('theme-amber');
+        else if (themeName === 'pink') document.body.classList.add('theme-pink');
+
         document.querySelectorAll('.theme-sub-item').forEach(btn => {
-            if(btn.getAttribute('data-theme') === themeName) {
-                btn.classList.add('active');
-            } else {
-                btn.classList.remove('active');
-            }
+            btn.classList.toggle('active', btn.getAttribute('data-theme') === themeName);
         });
-
-        localStorage.setItem('shinu_theme', themeName);
+        store('shinu_theme', themeName);
     }
-
     document.querySelectorAll('.theme-sub-item').forEach(btn => {
-        btn.onclick = () => {
-            applyTheme(btn.getAttribute('data-theme'));
-        };
+        btn.onclick = () => applyTheme(btn.getAttribute('data-theme'));
     });
+    applyTheme(load('shinu_theme') || 'purple');
 
-    // Time-aware greeting
+    // ---------- Greeting ----------
     const hour = new Date().getHours();
     const greetingEl = document.getElementById('openGreeting');
-    if (hour >= 5 && hour < 12) {
-        greetingEl.textContent = "Good morning!";
-    } else if (hour >= 12 && hour < 17) {
-        greetingEl.textContent = "Good afternoon!";
-    } else if (hour >= 17 && hour < 22) {
-        greetingEl.textContent = "Good evening!";
-    } else {
-        greetingEl.textContent = "Late night hustle?";
-    }
+    if (hour >= 5 && hour < 12) greetingEl.textContent = "Good morning!";
+    else if (hour >= 12 && hour < 17) greetingEl.textContent = "Good afternoon!";
+    else if (hour >= 17 && hour < 22) greetingEl.textContent = "Good evening!";
+    else greetingEl.textContent = "Late night hustle?";
 
+    // ---------- Elements ----------
     const menuToggle = document.getElementById('menuToggle');
     const sideDrawer = document.getElementById('sideDrawer');
     const drawerBackdrop = document.getElementById('drawerBackdrop');
@@ -505,80 +548,181 @@
     const chatContainer = document.getElementById('chatContainer');
     const userInput = document.getElementById('userInput');
     const historyList = document.getElementById('historyList');
+    const newChatBtn = document.getElementById('newChatBtn');
 
     function toggleDrawer() {
         sideDrawer.classList.toggle('open');
         drawerBackdrop.classList.toggle('active');
     }
-
+    function closeDrawer() {
+        sideDrawer.classList.remove('open');
+        drawerBackdrop.classList.remove('active');
+    }
     menuToggle.onclick = toggleDrawer;
-    drawerBackdrop.onclick = toggleDrawer;
+    drawerBackdrop.onclick = closeDrawer;
 
-    let chatStarted = false;
+    // ---------- Chat sessions ----------
+    let chats = [];
+    try { chats = JSON.parse(load('shinu_chats') || '[]'); } catch (e) { chats = []; }
+    let currentId = null;
 
-    userInput.addEventListener('focus', () => {
-        if(!chatStarted) {
-            centerStage.classList.add('dissolved');
-            chatContainer.classList.add('active');
-            chatStarted = true;
+    function saveChats() { store('shinu_chats', JSON.stringify(chats)); }
+    function currentChat() { return chats.find(c => c.id === currentId) || null; }
+
+    function showChatView() {
+        centerStage.classList.add('dissolved');
+        chatContainer.classList.add('active');
+    }
+    function showHomeView() {
+        centerStage.classList.remove('dissolved');
+        chatContainer.classList.remove('active');
+    }
+
+    function addBubble(role, text) {
+        const div = document.createElement('div');
+        div.className = 'message-bubble ' + role;
+        div.textContent = text;
+        chatContainer.appendChild(div);
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+        return div;
+    }
+
+    function renderHistory() {
+        historyList.innerHTML = '';
+        if (!chats.length) {
+            const empty = document.createElement('div');
+            empty.className = 'history-empty';
+            empty.textContent = 'No chats yet.';
+            historyList.appendChild(empty);
+            return;
         }
-    });
+        [...chats].reverse().forEach(chat => {
+            const item = document.createElement('div');
+            item.className = 'history-item' + (chat.id === currentId ? ' active' : '');
 
-    // Shinu Reply Intelligence Engine
+            const title = document.createElement('span');
+            title.className = 'title';
+            title.textContent = chat.title;
+
+            const del = document.createElement('button');
+            del.className = 'del';
+            del.textContent = '✕';
+            del.setAttribute('aria-label', 'Delete chat');
+            del.onclick = (e) => {
+                e.stopPropagation();
+                chats = chats.filter(c => c.id !== chat.id);
+                saveChats();
+                if (chat.id === currentId) startNewChat(false);
+                else renderHistory();
+            };
+
+            item.onclick = () => openChat(chat.id);
+            item.appendChild(title);
+            item.appendChild(del);
+            historyList.appendChild(item);
+        });
+    }
+
+    function openChat(id) {
+        const chat = chats.find(c => c.id === id);
+        if (!chat) return;
+        currentId = id;
+        chatContainer.innerHTML = '';
+        chat.messages.forEach(m => addBubble(m.role, m.text));
+        showChatView();
+        renderHistory();
+        closeDrawer();
+    }
+
+    function startNewChat(close = true) {
+        currentId = null;
+        chatContainer.innerHTML = '';
+        showHomeView();
+        renderHistory();
+        userInput.value = '';
+        if (close) closeDrawer();
+    }
+    newChatBtn.onclick = () => startNewChat(true);
+
+    userInput.addEventListener('focus', showChatView);
+
+    // ---------- Reply engine ----------
+    function tryMath(q) {
+        const expr = q.replace(/x/gi, '*').replace(/\^/g, '**');
+        if (!/^[0-9+\-*/().%\s]+$/.test(expr) || !/[0-9]/.test(expr) || !/[+\-*/%]/.test(expr)) return null;
+        try {
+            const result = Function('"use strict"; return (' + expr + ')')();
+            return (typeof result === 'number' && isFinite(result)) ? result : null;
+        } catch (e) { return null; }
+    }
+
     function shinuReply(inputMessage) {
         const query = inputMessage.toLowerCase().trim();
+        const has = (re) => re.test(query);
 
-        if (query.includes('hello') || query.includes('hi') || query.includes('hey')) {
+        const math = tryMath(query);
+        if (math !== null) return inputMessage.trim() + " = " + math;
+
+        if (has(/\b(hello|hi|hey)\b/)) {
             return "Hello! Shinu Engine 100x is fully operational. What are we building or exploring today?";
-        } else if (query.includes('who are you') || query.includes('what is shinu')) {
+        } else if (has(/who are you|what is shinu/)) {
             return "I am Shinu, your high-end procedural AI interface and developer workspace engine.";
-        } else if (query.includes('version') || query.includes('v1')) {
+        } else if (has(/\b(version|v1)\b/)) {
             return "Shinu Engine v1.0 Pro (100x Quality Build) is live and online via Vercel.";
-        } else if (query.includes('help') || query.includes('options')) {
-            return "You can use the 3-lines menu to switch themes (Cosmic Purple, Neon Amber, Neon Pink) or review your typed history!";
-        } else if (query.includes('time')) {
+        } else if (has(/\b(help|options)\b/)) {
+            return "Open the menu to start a New Chat, switch themes (Cosmic Purple, Neon Amber, Neon Pink) or reopen a previous chat from History!";
+        } else if (has(/\btime\b/)) {
             return "Current system local time is " + new Date().toLocaleTimeString() + ".";
-        } else {
-            return `Pipeline compiled successfully for your query: "${inputMessage}". All systems nominal.`;
         }
+        return `Pipeline compiled successfully for your query: "${inputMessage}". All systems nominal.`;
     }
 
     function handleSend() {
         const text = userInput.value.trim();
-        if(!text) return;
+        if (!text) return;
 
-        if(!chatStarted) {
-            centerStage.classList.add('dissolved');
-            chatContainer.classList.add('active');
-            chatStarted = true;
+        showChatView();
+
+        let chat = currentChat();
+        if (!chat) {
+            chat = { id: Date.now().toString(36), title: text.length > 34 ? text.slice(0, 34) + '…' : text, messages: [] };
+            chats.push(chat);
+            currentId = chat.id;
+            chatContainer.innerHTML = '';
         }
 
-        chatContainer.innerHTML += `<div class="message-bubble user">${escapeHtml(text)}</div>`;
-        chatContainer.scrollTop = chatContainer.scrollHeight;
-
-        if(historyList.innerHTML.includes('No prompts typed yet')) {
-            historyList.innerHTML = '';
-        }
-        historyList.innerHTML += `<div class="history-item">${escapeHtml(text)}</div>`;
+        chat.messages.push({ role: 'user', text });
+        addBubble('user', text);
+        saveChats();
+        renderHistory();
 
         userInput.value = '';
         userInput.blur();
 
-        setTimeout(() => {
-            const responseText = shinuReply(text);
-            chatContainer.innerHTML += `<div class="message-bubble bot">${escapeHtml(responseText)}</div>`;
-            chatContainer.scrollTop = chatContainer.scrollHeight;
-        }, 500);
-    }
+        const typing = document.createElement('div');
+        typing.className = 'message-bubble bot';
+        typing.innerHTML = '<span class="typing"><i></i><i></i><i></i></span>';
+        chatContainer.appendChild(typing);
+        chatContainer.scrollTop = chatContainer.scrollHeight;
 
-    function escapeHtml(str) {
-        return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        const chatId = chat.id;
+        setTimeout(() => {
+            const reply = shinuReply(text);
+            const target = chats.find(c => c.id === chatId);
+            if (target) { target.messages.push({ role: 'bot', text: reply }); saveChats(); }
+            if (currentId === chatId) {
+                typing.remove();
+                addBubble('bot', reply);
+            }
+        }, 600);
     }
 
     document.getElementById('sendBtn').onclick = handleSend;
-    userInput.onkeypress = (e) => { if(e.key === 'Enter') handleSend(); };
+    userInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') handleSend(); });
 
-    // 100x High-Precision Background Particle & Aura Canvas
+    renderHistory();
+
+    // ---------- Background canvas ----------
     const canvas = document.getElementById('bgCanvas');
     const ctx = canvas.getContext('2d');
 
@@ -586,12 +730,11 @@
         canvas.width = window.innerWidth;
         canvas.height = window.innerHeight;
     }
-    window.onresize = resizeCanvas;
+    window.addEventListener('resize', resizeCanvas);
     resizeCanvas();
 
-    let waveOffset = 0;
     const particles = [];
-    for(let i = 0; i < 35; i++) {
+    for (let i = 0; i < 35; i++) {
         particles.push({
             x: Math.random() * canvas.width,
             y: Math.random() * canvas.height,
@@ -607,25 +750,24 @@
 
         const isAmber = document.body.classList.contains('theme-amber');
         const isPink = document.body.classList.contains('theme-pink');
-        
+
         let strokeColor = 'rgba(196, 150, 255, 0.14)';
         let strokeColor2 = 'rgba(210, 180, 255, 0.08)';
         let particleColor = '210, 180, 255';
         let glowColor = 'rgba(196, 150, 255, 0.15)';
 
-        if(isAmber) {
+        if (isAmber) {
             strokeColor = 'rgba(255, 170, 80, 0.14)';
             strokeColor2 = 'rgba(255, 200, 120, 0.08)';
             particleColor = '255, 200, 120';
             glowColor = 'rgba(255, 170, 80, 0.15)';
-        } else if(isPink) {
+        } else if (isPink) {
             strokeColor = 'rgba(255, 105, 180, 0.14)';
             strokeColor2 = 'rgba(255, 160, 210, 0.08)';
             particleColor = '255, 160, 210';
             glowColor = 'rgba(255, 105, 180, 0.15)';
         }
 
-        // Multi-layered Orbital Arcs
         ctx.lineWidth = 1.2;
         ctx.strokeStyle = strokeColor;
         ctx.beginPath();
@@ -642,17 +784,13 @@
         ctx.arc(-50, canvas.height + 50, 520, Math.PI * 1.7, Math.PI * 2.15);
         ctx.stroke();
 
-        waveOffset += 0.35;
-
-        // Render High-Precision Floating Particles with Glow
         particles.forEach(p => {
             p.y += p.speedY;
             p.x += p.speedX;
-
-            if(p.y < 0) p.y = canvas.height;
-            if(p.y > canvas.height) p.y = 0;
-            if(p.x < 0) p.x = canvas.width;
-            if(p.x > canvas.width) p.x = 0;
+            if (p.y < 0) p.y = canvas.height;
+            if (p.y > canvas.height) p.y = 0;
+            if (p.x < 0) p.x = canvas.width;
+            if (p.x > canvas.width) p.x = 0;
 
             ctx.fillStyle = `rgba(${particleColor}, ${p.alpha})`;
             ctx.shadowColor = glowColor;
