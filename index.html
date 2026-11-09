@@ -44,7 +44,7 @@
             align-items: center;
             overflow: hidden;
             position: relative;
-            padding: 20px;
+            padding: 16px;
             transition: background-color 0.3s ease;
         }
 
@@ -65,7 +65,7 @@
             align-items: center;
             justify-content: flex-start;
             z-index: 10;
-            padding-top: 10px;
+            padding-top: 5px;
         }
 
         .menu-btn {
@@ -191,10 +191,10 @@
         }
         .backdrop.active { opacity: 1; pointer-events: auto; }
 
-        /* Central Stage with Smooth Slow Fade-out */
+        /* Central Stage: Pure Opacity Fade (No Upward Movement) */
         .center-stage {
             position: absolute;
-            top: 35%;
+            top: 38%;
             left: 50%;
             transform: translate(-50%, -50%);
             z-index: 10;
@@ -203,13 +203,12 @@
             align-items: center;
             text-align: center;
             opacity: 1;
-            transition: opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1), transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: opacity 0.8s ease-in-out;
             pointer-events: auto;
         }
 
         .center-stage.dissolved {
             opacity: 0;
-            transform: translate(-50%, -65%) scale(0.95);
             pointer-events: none;
         }
 
@@ -264,11 +263,11 @@
             text-shadow: 0 0 10px rgba(196, 150, 255, 0.2);
         }
 
-        /* Chat Stream Container */
+        /* Chat Stream Container (Fixed height to prevent cutoff) */
         .chat-container {
             position: absolute;
-            top: 70px;
-            bottom: 90px;
+            top: 60px;
+            bottom: 85px;
             width: 100%;
             max-width: 480px;
             z-index: 5;
@@ -276,7 +275,7 @@
             display: flex;
             flex-direction: column;
             gap: 12px;
-            padding: 10px 20px;
+            padding: 10px 16px;
             scroll-behavior: smooth;
             opacity: 0;
             transition: opacity 0.5s ease;
@@ -323,9 +322,9 @@
         /* Input Dock */
         .input-dock {
             position: absolute;
-            bottom: 20px;
+            bottom: 12px;
             z-index: 10;
-            width: calc(100% - 40px);
+            width: calc(100% - 32px);
             max-width: 420px;
             background: rgba(12, 8, 20, 0.9);
             border: 1px solid var(--panel-border);
@@ -336,7 +335,7 @@
             gap: 10px;
             backdrop-filter: blur(15px);
             box-shadow: 0 10px 30px rgba(0,0,0,0.6);
-            transition: transform 0.3s ease, background-color 0.3s;
+            transition: background-color 0.3s;
         }
         body.theme-amber .input-dock { background: rgba(20, 14, 10, 0.9); }
         body.theme-pink .input-dock { background: rgba(20, 10, 16, 0.9); }
@@ -420,7 +419,7 @@
     </div>
     <div class="backdrop" id="drawerBackdrop"></div>
 
-    <!-- Central Stage: Fades out slowly on start -->
+    <!-- Central Stage: Pure slow opacity fade -->
     <div class="center-stage" id="centerStage">
         <div class="eye-container">
             <svg viewBox="0 0 120 60" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--accent-purple);">
@@ -547,11 +546,9 @@
             chatStarted = true;
         }
 
-        // Add user bubble
         chatContainer.innerHTML += `<div class="message-bubble user">${escapeHtml(text)}</div>`;
         chatContainer.scrollTop = chatContainer.scrollHeight;
 
-        // Update history drawer
         if(historyList.innerHTML.includes('No prompts typed yet')) {
             historyList.innerHTML = '';
         }
@@ -560,7 +557,6 @@
         userInput.value = '';
         userInput.blur();
 
-        // Generate intelligent reply from Shinu after a short natural delay
         setTimeout(() => {
             const responseText = shinuReply(text);
             chatContainer.innerHTML += `<div class="message-bubble bot">${escapeHtml(responseText)}</div>`;
