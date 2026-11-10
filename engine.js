@@ -1,4 +1,4 @@
-// engine.js — Fast Engine, Zero Badges, Instant Background Wiki Synthesis
+// engine.js — Fixed Neural Priority, Strict Math First, Clean Borderless Text
 const menuToggle = document.getElementById('menuToggle');
 const sideDrawer = document.getElementById('sideDrawer');
 const drawerBackdrop = document.getElementById('drawerBackdrop');
@@ -28,7 +28,6 @@ function store(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
 function load(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
 function escapeHtml(s) { return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;"); }
 
-// Cleanly formats markdown (**bold**, lists, linebreaks) without ugly raw asterisks
 function formatCleanMarkdown(raw) {
     let safe = escapeHtml(raw);
     safe = safe.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
@@ -41,29 +40,28 @@ menuToggle.onclick = () => { sideDrawer.classList.toggle('open'); drawerBackdrop
 drawerBackdrop.onclick = () => { sideDrawer.classList.remove('open'); drawerBackdrop.classList.remove('active'); };
 
 // ============================================================================
-// 1. INSTANT NEURAL MEMORY (Auto-purges any Pollinations rate-limit errors)
+// 1. NEURAL MEMORY DATABASE
 // ============================================================================
 const CORE_SEEDS = [
     { id: 's1', trigger: 'violence', response: 'Yes, violence is harmful and destructive. It causes physical and psychological trauma, undermines trust, and escalates conflict, whereas empathy, law, and dialogue resolve issues constructively.', source: 'Core Knowledge' },
     { id: 's2', trigger: 'human behaviour', response: 'Human behaviour is the potential and expressed capacity for physical, mental, and social activity throughout human life, shaped by genetics, psychology, social norms, and environment.', source: 'Core Knowledge' },
-    { id: 's3', trigger: 'curvature', response: 'In mathematics and physics, curvature measures how much a geometric object or spacetime deviates from being flat, such as a curve deviating from a straight line or a surface from a plane.', source: 'Core Knowledge' }
+    { id: 's3', trigger: 'curvature', response: 'In mathematics and physics, curvature measures how much a geometric object or spacetime deviates from being flat.', source: 'Core Knowledge' }
 ];
 
 let brain = [];
 try {
-    const saved = JSON.parse(load('shinu_brain_v2') || '[]');
-    // Automatically strip out any corrupted "Free limit reached" nodes
+    const saved = JSON.parse(load('shinu_brain_v3') || '[]');
     const cleaned = Array.isArray(saved)
         ? saved.filter(n => n && n.response && !n.response.includes('Free limit reached') && !n.response.includes('pollinations'))
         : [];
     brain = cleaned.length ? cleaned : [...CORE_SEEDS];
-    store('shinu_brain_v2', JSON.stringify(brain));
+    store('shinu_brain_v3', JSON.stringify(brain));
 } catch (e) { brain = [...CORE_SEEDS]; }
 
 function saveBrain() {
     brain = brain.filter(n => n && n.response && !n.response.includes('Free limit reached'));
     if (brain.length > 250) brain = brain.slice(-250);
-    store('shinu_brain_v2', JSON.stringify(brain));
+    store('shinu_brain_v3', JSON.stringify(brain));
     renderBrainUI();
 }
 
@@ -81,18 +79,21 @@ function teachShinu(triggerRaw, responseRaw, source = 'Trained') {
     return node;
 }
 
-function stripQuestionWords(q) {
-    return q.toLowerCase()
-        .replace(/^(what|who|where|why|how|when)\s+(is|are|was|were|do|does)\s+(an?\s+|the\s+)?/i, '')
-        .replace(/^(is|are)\s+(.+?)\s+(good|bad|wrong|right)\b/i, '$2')
-        .replace(/[?.!,;:]+$/, '')
-        .trim();
-}
-
 function findMemoryMatch(query) {
     const q = query.toLowerCase().replace(/[?.!,;:]+$/, '').trim();
-    const core = stripQuestionWords(q);
-    return brain.find(b => b.trigger === q || (core && b.trigger === core)) || null;
+    // Check exact match first
+    let match = brain.find(b => b.trigger === q);
+    if (match) return match;
+
+    // Check if query contains any learned trigger as a distinct keyword phrase
+    for (const node of brain) {
+        if (node.trigger.length >= 3) {
+            const escaped = node.trigger.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const regex = new RegExp(`\\b${escaped}\\b`, 'i');
+            if (regex.test(q)) return node;
+        }
+    }
+    return null;
 }
 
 function renderBrainUI() {
@@ -115,7 +116,6 @@ function renderBrainUI() {
     });
 }
 
-// Instant Deep-Topic Learning via Wikipedia REST API (Takes 150ms, ZERO rate limits!)
 async function deepLearnTopic(topicRaw, sourceLabel = 'Web Synthesis') {
     const topic = topicRaw.replace(/^(teach|learn|train)\s*:?\s*/i, '').trim();
     if (!topic) return null;
@@ -138,22 +138,6 @@ async function deepLearnTopic(topicRaw, sourceLabel = 'Web Synthesis') {
     return null;
 }
 
-// Background Curriculum uses Wikipedia REST (Never touches AI chat rate limits!)
-const CURRICULUM = [
-    'Human behavior', 'Curvature', 'Quantum mechanics', 'Artificial neural network',
-    'Game theory', 'Cognitive bias', 'Thermodynamics', 'Cryptography',
-    'Macroeconomics', 'Evolutionary biology', 'Ethics', 'Astrophysics', 'Neuroplasticity'
-];
-
-setInterval(async () => {
-    if (document.hidden) return;
-    const unlearned = CURRICULUM.filter(t => !findMemoryMatch(t));
-    if (unlearned.length > 0) {
-        const pick = unlearned[Math.floor(Math.random() * unlearned.length)];
-        await deepLearnTopic(pick, 'Auto-Curriculum');
-    }
-}, 45000);
-
 headerBrainPill.onclick = () => { renderBrainUI(); trainModal.classList.add('open'); };
 openTrainModalBtn.onclick = () => { sideDrawer.classList.remove('open'); drawerBackdrop.classList.remove('active'); renderBrainUI(); trainModal.classList.add('open'); };
 closeTrainModal.onclick = () => trainModal.classList.remove('open');
@@ -169,7 +153,7 @@ saveTrainBtn.onclick = async () => {
 };
 
 harvestNowBtn.onclick = async () => {
-    const topic = trainTriggerInput.value.trim() || CURRICULUM[Math.floor(Math.random() * CURRICULUM.length)];
+    const topic = trainTriggerInput.value.trim() || 'Artificial intelligence';
     await deepLearnTopic(topic, 'Web Synthesis');
 };
 
@@ -190,7 +174,7 @@ exportBrainBtn.onclick = () => {
 renderBrainUI();
 
 // ============================================================================
-// 2. SOCIAL & WEB CONNECTORS (No "Shinu Neural AI" Badges)
+// 2. SOCIAL & WEB CONNECTORS
 // ============================================================================
 async function searchSocialPlatform(platformCode, rawQuery) {
     const clean = rawQuery.replace(/^(search\s+)?(instagram|insta|ig|facebook|fb)\s*:?\s*/i, '').trim();
@@ -201,15 +185,12 @@ async function searchSocialPlatform(platformCode, rawQuery) {
         const res = await fetch(`/api/web?source=${platformCode}&q=${encodeURIComponent(clean)}`);
         const data = await res.json();
         let html = `<strong>${label} results for "${escapeHtml(clean)}":</strong>`;
-
         if (data?.results?.length > 0) {
             data.results.forEach(item => {
                 html += `<div class="result-item"><a href="${escapeHtml(item.url)}" target="_blank" rel="noopener">${escapeHtml(item.title)}</a><div class="result-meta">${escapeHtml(item.snippet)}</div></div>`;
             });
         }
-        const directUrl = platformCode === 'insta'
-            ? `https://www.instagram.com/${encodeURIComponent(handleClean)}/`
-            : `https://www.facebook.com/public/${encodeURIComponent(clean)}`;
+        const directUrl = platformCode === 'insta' ? `https://www.instagram.com/${encodeURIComponent(handleClean)}/` : `https://www.facebook.com/public/${encodeURIComponent(clean)}`;
         html += `<div style="margin-top:8px;"><a href="${directUrl}" target="_blank" rel="noopener">Open "${escapeHtml(clean)}" on ${label} ↗</a></div>`;
         return html;
     } catch (e) { return `Could not reach ${label} right now.`; }
@@ -240,7 +221,7 @@ async function searchReddit(rawQuery) {
 }
 
 async function searchWikipedia(rawQuery) {
-    const clean = stripQuestionWords(rawQuery.replace(/^(search\s+)?(wikipedia|wiki)\s*:?\s*/i, ''));
+    const clean = rawQuery.replace(/^(search\s+)?(wikipedia|wiki)\s*:?\s*/i, '').trim();
     if (!clean) return null;
     try {
         const res = await fetch(`/api/web?source=wiki&q=${encodeURIComponent(clean)}`);
@@ -277,32 +258,42 @@ async function searchArchive(rawQuery) {
 }
 
 // ============================================================================
-// 3. FAST INTELLIGENCE ROUTER (< 0.8s Response, Zero Hanging)
+// 3. STRICT PRIORITY ROUTER (Math & Neural Memory First!)
 // ============================================================================
 async function shinuReply(inputMessage, chatHistory) {
     const raw = inputMessage.trim();
     const lower = raw.toLowerCase();
 
-    // 1. Instant Greetings (< 10ms)
-    if (/^(hi+|hey+|hello+|yo|sup|hi bro|hey bro|hello bro)\b[\s!.,?]*$/i.test(lower)) {
-        return { text: "Hey! What are we exploring or building today?", isHtml: false };
+    // 1. INSTANT MATH PARSER FIRST (Fixes "2 divided by 2")
+    let mathStr = lower
+        .replace(/divided by/g, '/')
+        .replace(/plus/g, '+')
+        .replace(/minus/g, '-')
+        .replace(/times|multiplied by/g, '*')
+        .replace(/x/g, '*')
+        .replace(/\^/g, '**');
+
+    if (/^[0-9+\-*/().%\s]+$/.test(mathStr) && /[0-9]/.test(mathStr) && /[+\-*/%]/.test(mathStr)) {
+        try {
+            const val = Function('"use strict"; return (' + mathStr + ')')();
+            if (typeof val === 'number' && isFinite(val)) return { text: `${raw} = ${val}`, isHtml: false };
+        } catch (e) {}
     }
 
-    // 2. Explicit Teaching with '=' ("teach: x = y")
+    // 2. EXPLICIT TEACHING COMMANDS
     const teachPair = raw.match(/^(?:teach|learn|train)\s*:?\s*(.+?)\s*(?:=|=>|->)\s*(.+)$/i);
     if (teachPair) {
         const node = teachShinu(teachPair[1], teachPair[2], 'Custom');
         return { text: `Got it. Learned response for <strong>"${escapeHtml(node.trigger)}"</strong>.`, isHtml: true };
     }
 
-    // 3. Deep Topic Teaching WITHOUT '=' ("teach: curvature")
     const teachTopic = raw.match(/^(?:teach|learn|train)\s*:\s*(.+)$/i);
     if (teachTopic) {
         const node = await deepLearnTopic(teachTopic[1], 'Web Synthesis');
         if (node) return { text: `<strong>${escapeHtml(node.trigger)}</strong> — ${escapeHtml(node.response)}`, isHtml: true };
     }
 
-    // 4. Instant Repetition Command ("Write hello 100 times")
+    // 3. INSTANT REPETITION COMMAND
     const repeatMatch = raw.match(/^(?:write|say|repeat|type|print)\s+(.+?)\s+(\d+)[\s.]*times?\b/i);
     if (repeatMatch) {
         const word = repeatMatch[1].replace(/^["']|["']$/g, '');
@@ -310,22 +301,18 @@ async function shinuReply(inputMessage, chatHistory) {
         return { text: Array(count).fill(word).join(' '), isHtml: false };
     }
 
-    // 5. Instant Math Calculation
-    const mathExpr = lower.replace(/x/g, '*').replace(/\^/g, '**');
-    if (/^[0-9+\-*/().%\s]+$/.test(mathExpr) && /[0-9]/.test(mathExpr) && /[+\-*/%]/.test(mathExpr)) {
-        try {
-            const val = Function('"use strict"; return (' + mathExpr + ')')();
-            if (typeof val === 'number' && isFinite(val)) return { text: `${raw} = ${val}`, isHtml: false };
-        } catch (e) {}
-    }
-
-    // 6. Instant Memory Hit (< 5ms — checks learned & core knowledge first!)
+    // 4. INSTANT NEURAL MEMORY HIT (Checks user-trained & core memory instantly)
     const mem = findMemoryMatch(raw);
     if (mem) {
         return { text: formatCleanMarkdown(mem.response), isHtml: true };
     }
 
-    // 7. Social & Web Prefixes
+    // 5. GREETINGS (< 10ms)
+    if (/^(hi+|hey+|hello+|yo|sup|hi bro|hey bro|hello bro)\b[\s!.,?]*$|^hi$/i.test(lower)) {
+        return { text: "Hey! What are we exploring or building today?", isHtml: false };
+    }
+
+    // 6. SOCIAL & WEB PREFIXES
     if (/^(search\s+)?(instagram|insta|ig)\b/i.test(lower)) return { text: await searchSocialPlatform('insta', raw), isHtml: true };
     if (/^(search\s+)?(facebook|fb)\b/i.test(lower)) return { text: await searchSocialPlatform('fb', raw), isHtml: true };
     if (/^(search\s+)?(reddit|r\/)\b/i.test(lower)) return { text: await searchReddit(raw), isHtml: true };
@@ -335,25 +322,24 @@ async function shinuReply(inputMessage, chatHistory) {
         if (w) return { text: w, isHtml: true };
     }
 
-    // 8. Race AI & Wikipedia in Parallel for Fast, Reliable Context!
+    // 7. CONVERSATIONAL LLM BRAIN
     try {
-        const aiPromise = fetch('/api/web', {
+        const res = await fetch('/api/web', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ source: 'ai', q: raw, history: chatHistory || [], memory: brain })
-        }).then(r => r.json()).catch(() => null);
-
-        const aiData = await aiPromise;
-        if (aiData && aiData.reply && !aiData.rateLimited) {
+        });
+        const data = await res.json();
+        if (data && data.reply && !data.rateLimited) {
             return {
-                text: formatCleanMarkdown(aiData.reply),
-                rawText: aiData.reply,
+                text: formatCleanMarkdown(data.reply),
+                rawText: data.reply,
                 isHtml: true
             };
         }
     } catch (e) {}
 
-    // 9. Instant Wikipedia Fallback if AI is busy (Never shows an error box!)
+    // 8. WIKIPEDIA FALLBACK
     const wikiHtml = await searchWikipedia(raw);
     if (wikiHtml) return { text: wikiHtml, isHtml: true };
 
@@ -436,8 +422,9 @@ quickHelpBtn.onclick = () => {
     chatContainer.classList.add('active');
     addBubble('bot', `
         <strong>Quick Commands:</strong><br>
-        • Ask anything naturally, or prefix with <code>insta</code>, <code>fb</code>, <code>reddit</code>, <code>wiki</code>, or <code>archive</code>.<br>
-        • Teach any concept instantly with <code>teach: topic</code> or <code>teach: question = answer</code>.
+        • Ask math (e.g., <code>2 divided by 2</code>) or chat naturally.<br>
+        • Search platforms with <code>insta</code>, <code>fb</code>, <code>reddit</code>, <code>wiki</code>, or <code>archive</code>.<br>
+        • Teach Shinu with <code>teach: topic = answer</code>.
     `, true);
 };
 
