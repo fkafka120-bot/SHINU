@@ -1,4 +1,4 @@
-// engine.js — Fixed Neural Priority, Strict Math First, Clean Borderless Text
+// engine.js — Desu: neural memory, strict router, grounded AI replies, self-learning hooks
 const menuToggle = document.getElementById('menuToggle');
 const sideDrawer = document.getElementById('sideDrawer');
 const drawerBackdrop = document.getElementById('drawerBackdrop');
@@ -27,11 +27,13 @@ const brainCountBadge = document.getElementById('brainCountBadge');
 function store(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
 function load(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
 function escapeHtml(s) { return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;"); }
+function safeUrl(u) { return /^https?:\/\//i.test(String(u)) ? String(u) : '#'; }
 
 function formatCleanMarkdown(raw) {
     let safe = escapeHtml(raw);
     safe = safe.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
     safe = safe.replace(/`([^`]+)`/g, '<code>$1</code>');
+    safe = safe.replace(/^\s*[-*]\s+/gm, '• ');
     safe = safe.replace(/\n/g, '<br>');
     return safe;
 }
@@ -72,25 +74,30 @@ function teachShinu(triggerRaw, responseRaw, source = 'Trained') {
     if (!trigger || !response) return null;
 
     const idx = brain.findIndex(b => b.trigger === trigger);
-    const node = { id: Date.now().toString(36), trigger, response, source, timestamp: Date.now() };
+    const node = { id: Date.now().toString(36) + Math.random().toString(36).slice(2, 5), trigger, response, source, timestamp: Date.now() };
     if (idx >= 0) brain[idx] = node;
     else brain.push(node);
     saveBrain();
     return node;
 }
 
-function findMemoryMatch(query) {
-    const q = query.toLowerCase().replace(/[?.!,;:]+$/, '').trim();
-    // Check exact match first
-    let match = brain.find(b => b.trigger === q);
-    if (match) return match;
+function forgetTrigger(t) {
+    brain = brain.filter(b => b.trigger !== t);
+    saveBrain();
+}
 
-    // Check if query contains any learned trigger as a distinct keyword phrase
-    for (const node of brain) {
-        if (node.trigger.length >= 3) {
-            const escaped = node.trigger.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-            const regex = new RegExp(`\\b${escaped}\\b`, 'i');
-            if (regex.test(q)) return node;
+// Exact match (after removing "what is / who is / tell me about"), or a short message containing a trigger
+function findMemoryMatch(query) {
+    const q = query.toLowerCase().replace(/[?.!,;:]+$/, '').replace(/\s+/g, ' ').trim();
+    const stripped = Learn.core(query);
+    const hit = brain.find(b => b.trigger === q || b.trigger === stripped);
+    if (hit) return hit;
+
+    if (q.split(/\s+/).length <= 4) {
+        for (const node of brain) {
+            if (node.trigger.length < 3) continue;
+            const esc = node.trigger.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            if (new RegExp(`(^|\\s)${esc}(\\s|$)`, 'i').test(q)) return node;
         }
     }
     return null;
@@ -116,7 +123,7 @@ function renderBrainUI() {
     });
 }
 
-async function deepLearnTopic(topicRaw, sourceLabel = 'Web Synthesis') {
+async function deepLearnTopic(topicRaw, sourceLabel = 'Web Synthesis', strict = false) {
     const topic = topicRaw.replace(/^(teach|learn|train)\s*:?\s*/i, '').trim();
     if (!topic) return null;
 
@@ -124,7 +131,7 @@ async function deepLearnTopic(topicRaw, sourceLabel = 'Web Synthesis') {
     crawlerStatusText.textContent = `⚡ Learning "${topic}"...`;
 
     try {
-        const res = await fetch(`/api/web?source=wiki&q=${encodeURIComponent(topic)}`);
+        const res = await fetch(`/api/web?source=wiki&q=${encodeURIComponent(topic)}${strict ? '&strict=1' : ''}`);
         const data = await res.json();
         if (data?.found && data.summary?.extract) {
             const concise = data.summary.extract.split(/(?<=[.!?])\s+/).slice(0, 3).join(' ');
@@ -132,7 +139,10 @@ async function deepLearnTopic(topicRaw, sourceLabel = 'Web Synthesis') {
             crawlerStatusText.textContent = `🟢 Learned: "${data.summary.title}"`;
             return node;
         }
-    } catch (e) {} finally {
+        crawlerStatusText.textContent = `🟡 Couldn't find "${topic}"`;
+    } catch (e) {
+        crawlerStatusText.textContent = '🔴 Offline, try again';
+    } finally {
         setTimeout(() => headerBrainPill.classList.remove('learning'), 500);
     }
     return null;
@@ -147,14 +157,14 @@ saveTrainBtn.onclick = async () => {
     const resp = trainResponseInput.value.trim();
     if (!trig) return;
     if (resp) teachShinu(trig, resp, 'Custom');
-    else await deepLearnTopic(trig, 'Auto-Learned');
+    else await deepLearnTopic(trig, 'Auto-Learned', true);
     trainTriggerInput.value = '';
     trainResponseInput.value = '';
 };
 
 harvestNowBtn.onclick = async () => {
     const topic = trainTriggerInput.value.trim() || 'Artificial intelligence';
-    await deepLearnTopic(topic, 'Web Synthesis');
+    await deepLearnTopic(topic, 'Web Synthesis', true);
 };
 
 clearJunkBtn.onclick = () => {
@@ -167,7 +177,7 @@ exportBrainBtn.onclick = () => {
     const blob = new Blob([JSON.stringify(brain, null, 2)], { type: 'application/json' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
-    a.download = 'shinu_memory.json';
+    a.download = 'desu_memory.json';
     a.click();
 };
 
@@ -187,7 +197,7 @@ async function searchSocialPlatform(platformCode, rawQuery) {
         let html = `<strong>${label} results for "${escapeHtml(clean)}":</strong>`;
         if (data?.results?.length > 0) {
             data.results.forEach(item => {
-                html += `<div class="result-item"><a href="${escapeHtml(item.url)}" target="_blank" rel="noopener">${escapeHtml(item.title)}</a><div class="result-meta">${escapeHtml(item.snippet)}</div></div>`;
+                html += `<div class="result-item"><a href="${escapeHtml(safeUrl(item.url))}" target="_blank" rel="noopener">${escapeHtml(item.title)}</a><div class="result-meta">${escapeHtml(item.snippet)}</div></div>`;
             });
         }
         const directUrl = platformCode === 'insta' ? `https://www.instagram.com/${encodeURIComponent(handleClean)}/` : `https://www.facebook.com/public/${encodeURIComponent(clean)}`;
@@ -212,7 +222,7 @@ async function searchReddit(rawQuery) {
             let html = `<strong>Community discussions for "${escapeHtml(clean)}":</strong>`;
             data.hnHits.forEach(hit => {
                 const url = hit.url || `https://news.ycombinator.com/item?id=${hit.objectID}`;
-                html += `<div class="result-item"><a href="${escapeHtml(url)}" target="_blank" rel="noopener">${escapeHtml(hit.title)}</a><div class="result-meta">⬆ ${hit.points || 0} • 💬 ${hit.num_comments || 0}</div></div>`;
+                html += `<div class="result-item"><a href="${escapeHtml(safeUrl(url))}" target="_blank" rel="noopener">${escapeHtml(hit.title)}</a><div class="result-meta">⬆ ${hit.points || 0} • 💬 ${hit.num_comments || 0}</div></div>`;
             });
             return html;
         }
@@ -220,11 +230,11 @@ async function searchReddit(rawQuery) {
     return `No Reddit discussions found for "${escapeHtml(clean)}".`;
 }
 
-async function searchWikipedia(rawQuery) {
+async function searchWikipedia(rawQuery, strict = false) {
     const clean = rawQuery.replace(/^(search\s+)?(wikipedia|wiki)\s*:?\s*/i, '').trim();
     if (!clean) return null;
     try {
-        const res = await fetch(`/api/web?source=wiki&q=${encodeURIComponent(clean)}`);
+        const res = await fetch(`/api/web?source=wiki&q=${encodeURIComponent(clean)}${strict ? '&strict=1' : ''}`);
         const data = await res.json();
         if (!data?.found || !data.summary?.extract) return null;
 
@@ -234,10 +244,10 @@ async function searchWikipedia(rawQuery) {
 
         let html = `<strong>${escapeHtml(s.title)}</strong><br>`;
         if (s.thumbnail?.source) {
-            html += `<img class="wiki-thumb" src="${escapeHtml(s.thumbnail.source)}" alt="${escapeHtml(s.title)}" loading="lazy" />`;
+            html += `<img class="wiki-thumb" src="${escapeHtml(safeUrl(s.thumbnail.source))}" alt="${escapeHtml(s.title)}" loading="lazy" />`;
         }
         html += `<div style="margin:6px 0 8px;">${escapeHtml(s.extract)}</div>`;
-        html += `<a href="${escapeHtml(pageUrl)}" target="_blank" rel="noopener">Wikipedia ↗</a>`;
+        html += `<a href="${escapeHtml(safeUrl(pageUrl))}" target="_blank" rel="noopener">Wikipedia ↗</a>`;
         return html;
     } catch (e) { return null; }
 }
@@ -258,13 +268,13 @@ async function searchArchive(rawQuery) {
 }
 
 // ============================================================================
-// 3. STRICT PRIORITY ROUTER (Math & Neural Memory First!)
+// 3. STRICT PRIORITY ROUTER
 // ============================================================================
 async function shinuReply(inputMessage, chatHistory) {
     const raw = inputMessage.trim();
     const lower = raw.toLowerCase();
 
-    // 1. INSTANT MATH PARSER FIRST (Fixes "2 divided by 2")
+    // 1. Math
     let mathStr = lower
         .replace(/divided by/g, '/')
         .replace(/plus/g, '+')
@@ -280,20 +290,22 @@ async function shinuReply(inputMessage, chatHistory) {
         } catch (e) {}
     }
 
-    // 2. EXPLICIT TEACHING COMMANDS
-    const teachPair = raw.match(/^(?:teach|learn|train)\s*:?\s*(.+?)\s*(?:=|=>|->)\s*(.+)$/i);
+    // 2. Explicit teaching commands
+    const teachPair = raw.match(/^(?:teach|learn|train)\s*:?\s*(.+?)\s*(?:=>|->|=)\s*(.+)$/i);
     if (teachPair) {
         const node = teachShinu(teachPair[1], teachPair[2], 'Custom');
+        if (!node) return { text: 'Use: <code>teach: topic = answer</code>', isHtml: true };
         return { text: `Got it. Learned response for <strong>"${escapeHtml(node.trigger)}"</strong>.`, isHtml: true };
     }
 
     const teachTopic = raw.match(/^(?:teach|learn|train)\s*:\s*(.+)$/i);
     if (teachTopic) {
-        const node = await deepLearnTopic(teachTopic[1], 'Web Synthesis');
+        const node = await deepLearnTopic(teachTopic[1], 'Web Synthesis', true);
         if (node) return { text: `<strong>${escapeHtml(node.trigger)}</strong> — ${escapeHtml(node.response)}`, isHtml: true };
+        return { text: `I couldn't find a reliable source for that. Teach me directly with <code>teach: topic = answer</code>.`, isHtml: true };
     }
 
-    // 3. INSTANT REPETITION COMMAND
+    // 3. Repetition command
     const repeatMatch = raw.match(/^(?:write|say|repeat|type|print)\s+(.+?)\s+(\d+)[\s.]*times?\b/i);
     if (repeatMatch) {
         const word = repeatMatch[1].replace(/^["']|["']$/g, '');
@@ -301,18 +313,25 @@ async function shinuReply(inputMessage, chatHistory) {
         return { text: Array(count).fill(word).join(' '), isHtml: false };
     }
 
-    // 4. INSTANT NEURAL MEMORY HIT (Checks user-trained & core memory instantly)
+    // 4. Learn about this user (name, likes, style) and track interests
+    const prof = Learn.observe(raw);
+    if (prof) return prof;
+
+    const isPlatformQuery = /^(search\s+)?(instagram|insta|ig|facebook|fb|reddit|r\/|internet\s+archive|archive|ia|wikipedia|wiki)\b/i.test(lower);
+    const lookup = /^(who|what|when|where|why|how|which|tell me about|explain|define|describe|meaning of)\b/i.test(raw) || raw.split(/\s+/).length <= 3;
+    if (lookup && !isPlatformQuery) Learn.trackInterest(raw);
+
+    // 5. Instant neural memory hit
     const mem = findMemoryMatch(raw);
-    if (mem) {
-        return { text: formatCleanMarkdown(mem.response), isHtml: true };
-    }
+    if (mem) return { text: formatCleanMarkdown(mem.response), isHtml: true };
 
-    // 5. GREETINGS (< 10ms)
+    // 6. Greetings
     if (/^(hi+|hey+|hello+|yo|sup|hi bro|hey bro|hello bro)\b[\s!.,?]*$|^hi$/i.test(lower)) {
-        return { text: "Hey! What are we exploring or building today?", isHtml: false };
+        const who = Learn.userName() ? ' ' + Learn.userName() : '';
+        return { text: `Hey${who}! What are we exploring or building today?`, isHtml: false };
     }
 
-    // 6. SOCIAL & WEB PREFIXES
+    // 7. Social & web prefixes
     if (/^(search\s+)?(instagram|insta|ig)\b/i.test(lower)) return { text: await searchSocialPlatform('insta', raw), isHtml: true };
     if (/^(search\s+)?(facebook|fb)\b/i.test(lower)) return { text: await searchSocialPlatform('fb', raw), isHtml: true };
     if (/^(search\s+)?(reddit|r\/)\b/i.test(lower)) return { text: await searchReddit(raw), isHtml: true };
@@ -322,28 +341,32 @@ async function shinuReply(inputMessage, chatHistory) {
         if (w) return { text: w, isHtml: true };
     }
 
-    // 7. CONVERSATIONAL LLM BRAIN
+    // 8. Conversational AI, grounded with a Wikipedia reference for factual questions
     try {
+        const recent = (chatHistory || []).slice(-6).map(m => ({ role: m.role, rawText: m.rawText || m.text }));
         const res = await fetch('/api/web', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ source: 'ai', q: raw, history: chatHistory || [], memory: brain })
+            body: JSON.stringify({
+                source: 'ai',
+                q: raw,
+                history: recent,
+                memory: brain.filter(n => n.source !== 'Auto').slice(-15),
+                profile: Learn.context(),
+                lookup
+            })
         });
         const data = await res.json();
         if (data && data.reply && !data.rateLimited) {
-            return {
-                text: formatCleanMarkdown(data.reply),
-                rawText: data.reply,
-                isHtml: true
-            };
+            return { text: formatCleanMarkdown(data.reply), rawText: data.reply, isHtml: true, fromAI: true };
         }
     } catch (e) {}
 
-    // 8. WIKIPEDIA FALLBACK
-    const wikiHtml = await searchWikipedia(raw);
+    // 9. Wikipedia fallback only for clear lookups, and only when the article really matches
+    const wikiHtml = lookup ? await searchWikipedia(raw, true) : null;
     if (wikiHtml) return { text: wikiHtml, isHtml: true };
 
-    return { text: `Tell me a bit more about what you'd like to explore, or teach me directly with <code>teach: topic = answer</code>.`, isHtml: true };
+    return { text: `I couldn't reach my AI brain just now, and I'd rather not guess. Try again in a moment, or teach me with <code>teach: topic = answer</code>.`, isHtml: true };
 }
 
 // ============================================================================
@@ -352,17 +375,28 @@ async function shinuReply(inputMessage, chatHistory) {
 let chats = [];
 try { chats = JSON.parse(load('shinu_chats') || '[]'); } catch (e) { chats = []; }
 let currentId = null;
+let busy = false;
 
 function saveChats() { store('shinu_chats', JSON.stringify(chats)); }
 function currentChat() { return chats.find(c => c.id === currentId) || null; }
 
-function addBubble(role, content, isHtml = false) {
+// Bot replies scroll so the START of the reply (the target marker) is in view
+function addBubble(role, content, isHtml = false, autoScroll = true) {
     const div = document.createElement('div');
     div.className = 'message-bubble ' + role;
     if (isHtml) div.innerHTML = content;
     else div.textContent = content;
     chatContainer.appendChild(div);
-    chatContainer.scrollTop = chatContainer.scrollHeight;
+    if (autoScroll) {
+        if (role === 'bot') chatContainer.scrollTo({ top: Math.max(0, div.offsetTop - 8), behavior: 'smooth' });
+        else chatContainer.scrollTop = chatContainer.scrollHeight;
+    }
+    return div;
+}
+
+function closeDrawer() {
+    sideDrawer.classList.remove('open');
+    drawerBackdrop.classList.remove('active');
 }
 
 function renderHistory() {
@@ -382,36 +416,36 @@ function renderHistory() {
             e.stopPropagation();
             chats = chats.filter(c => c.id !== chat.id);
             saveChats();
-            if (chat.id === currentId) startNewChat();
+            if (chat.id === currentId) startNewChat(false);
             else renderHistory();
         };
         item.onclick = () => {
             currentId = chat.id;
             chatContainer.innerHTML = '';
-            chat.messages.forEach(m => addBubble(m.role, m.text, m.isHtml));
+            chat.messages.forEach(m => addBubble(m.role, m.text, m.isHtml, false));
+            chatContainer.scrollTop = chatContainer.scrollHeight;
             centerStage.classList.add('dissolved');
             chatContainer.classList.add('active');
-            topicText.textContent = chat.topic || 'Shinu';
+            topicText.textContent = chat.topic || Learn.botName();
             renderHistory();
-            sideDrawer.classList.remove('open');
-            drawerBackdrop.classList.remove('active');
+            closeDrawer();
         };
         item.appendChild(del);
         historyList.appendChild(item);
     });
 }
 
-function startNewChat() {
+function startNewChat(close = true) {
     currentId = null;
     chatContainer.innerHTML = '';
     centerStage.classList.remove('dissolved');
     chatContainer.classList.remove('active');
-    topicText.textContent = 'Shinu';
+    topicText.textContent = Learn.botName();
     renderHistory();
-    sideDrawer.classList.remove('open');
-    drawerBackdrop.classList.remove('active');
+    if (close) closeDrawer();
 }
-newChatBtn.onclick = startNewChat;
+newChatBtn.onclick = () => startNewChat(true);
+
 userInput.addEventListener('focus', () => {
     centerStage.classList.add('dissolved');
     chatContainer.classList.add('active');
@@ -423,49 +457,64 @@ quickHelpBtn.onclick = () => {
     addBubble('bot', `
         <strong>Quick Commands:</strong><br>
         • Ask math (e.g., <code>2 divided by 2</code>) or chat naturally.<br>
-        • Search platforms with <code>insta</code>, <code>fb</code>, <code>reddit</code>, <code>wiki</code>, or <code>archive</code>.<br>
-        • Teach Shinu with <code>teach: topic = answer</code>.
+        • Tell me about yourself: <code>my name is …</code>, <code>I like …</code>, <code>keep it short</code>.<br>
+        • Rename me: <code>your name is …</code>.<br>
+        • Search with <code>insta</code>, <code>fb</code>, <code>reddit</code>, <code>wiki</code>, or <code>archive</code>.<br>
+        • Teach me with <code>teach: topic = answer</code>, or tap 👍 / 👎 under my replies.
     `, true);
 };
 
 async function handleSend() {
     const text = userInput.value.trim();
-    if (!text) return;
+    if (!text || busy) return;
+    busy = true;
 
-    centerStage.classList.add('dissolved');
-    chatContainer.classList.add('active');
+    try {
+        centerStage.classList.add('dissolved');
+        chatContainer.classList.add('active');
 
-    let chat = currentChat();
-    if (!chat) {
-        chat = { id: Date.now().toString(36), topic: text.slice(0, 24), messages: [] };
-        chats.push(chat);
-        currentId = chat.id;
-        chatContainer.innerHTML = '';
+        let chat = currentChat();
+        if (!chat) {
+            chat = { id: Date.now().toString(36), topic: Learn.makeTopic(text), messages: [] };
+            chats.push(chat);
+            currentId = chat.id;
+            chatContainer.innerHTML = '';
+        }
+        topicText.textContent = chat.topic;
+
+        const historySnapshot = [...chat.messages];
+        chat.messages.push({ role: 'user', text, rawText: text, isHtml: false });
+        addBubble('user', text, false);
+        saveChats();
+        renderHistory();
+
+        userInput.value = '';
+
+        const typing = document.createElement('div');
+        typing.className = 'message-bubble bot';
+        typing.innerHTML = '<span class="typing"><i></i><i></i><i></i></span>';
+        chatContainer.appendChild(typing);
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+
+        let replyObj;
+        try { replyObj = await shinuReply(text, historySnapshot); }
+        catch (e) { replyObj = { text: 'Something went wrong on my side. Please try again.', isHtml: false }; }
+        typing.remove();
+
+        chat.messages.push({ role: 'bot', text: replyObj.text, rawText: replyObj.rawText || replyObj.text, isHtml: replyObj.isHtml });
+        saveChats();
+        const bubble = addBubble('bot', replyObj.text, replyObj.isHtml);
+
+        if (replyObj.fromAI) {
+            Learn.cacheReply(text, replyObj.rawText);
+            Learn.attachFeedback(bubble, text, replyObj.rawText);
+        }
+    } finally {
+        busy = false;
     }
-    topicText.textContent = chat.topic;
-
-    const historySnapshot = [...chat.messages];
-    chat.messages.push({ role: 'user', text, rawText: text, isHtml: false });
-    addBubble('user', text, false);
-    saveChats();
-    renderHistory();
-
-    userInput.value = '';
-
-    const typing = document.createElement('div');
-    typing.className = 'message-bubble bot';
-    typing.innerHTML = '<span class="typing"><i></i><i></i><i></i></span>';
-    chatContainer.appendChild(typing);
-    chatContainer.scrollTop = chatContainer.scrollHeight;
-
-    const replyObj = await shinuReply(text, historySnapshot);
-    typing.remove();
-
-    chat.messages.push({ role: 'bot', text: replyObj.text, rawText: replyObj.rawText || replyObj.text, isHtml: replyObj.isHtml });
-    saveChats();
-    addBubble('bot', replyObj.text, replyObj.isHtml);
 }
 
 document.getElementById('sendBtn').onclick = handleSend;
 userInput.addEventListener('keydown', e => { if (e.key === 'Enter') handleSend(); });
 renderHistory();
+topicText.textContent = Learn.botName();
