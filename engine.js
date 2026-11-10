@@ -1,4 +1,4 @@
-// engine.js — DESU Conversational AI + Automatic Multi-Platform Search (Google, Wiki, Reddit, Insta)
+// engine.js — DESU Conversational AI, Omni-Search & Always-Visible Neon Feedback Motifs
 const menuToggle = document.getElementById('menuToggle');
 const sideDrawer = document.getElementById('sideDrawer');
 const drawerBackdrop = document.getElementById('drawerBackdrop');
@@ -24,7 +24,7 @@ function formatCleanMarkdown(raw) {
     return safe;
 }
 
-// Slow Word-by-Word Undissolve Effect
+// Smooth Word-by-Word Undissolve Effect
 function applyUndissolveEffect(containerEl) {
     let wordIndex = 0;
     const walk = (node) => {
@@ -39,7 +39,7 @@ function applyUndissolveEffect(containerEl) {
                 } else {
                     const span = document.createElement('span');
                     span.className = 'undissolve-word';
-                    const delay = Math.min(wordIndex * 0.026, 1.8).toFixed(3);
+                    const delay = Math.min(wordIndex * 0.025, 1.6).toFixed(3);
                     span.style.animationDelay = `${delay}s`;
                     span.textContent = part;
                     frag.appendChild(span);
@@ -53,7 +53,8 @@ function applyUndissolveEffect(containerEl) {
             !node.classList.contains('desu-follow-up') &&
             !node.classList.contains('feedback-row') &&
             node.tagName !== 'SCRIPT' &&
-            node.tagName !== 'STYLE'
+            node.tagName !== 'STYLE' &&
+            node.tagName !== 'SVG'
         ) {
             Array.from(node.childNodes).forEach(walk);
         }
@@ -71,32 +72,24 @@ function shouldRunOmniSearch(raw) {
     const q = raw.trim();
     const lower = q.toLowerCase();
 
-    // 1. Never run Omni-Search on personal feelings, chitchat, opinions, coding, or contextual follow-ups
     if (/\b(i|im|i'm|my|me|you|your|we|us|sad|happy|tired|bored|angry|lonely|depressed|feeling|feel|good|bad|wrong|right|code|coding|program|script|html|css|js|python|java|weather|temperature|joke|story|poem|song|advice|help me|how are you|can you|do you|will you|should i|remember)\b/i.test(lower)) {
         return false;
     }
-
-    // 2. Never run Omni-Search on follow-up fragments ("And in Mexico?", "So why?", "What about that?")
     if (/^(and|so|but|also|then|why|how come|what about|how about|not\b)/i.test(lower)) {
         return false;
     }
-
-    // 3. Trigger Omni-Search on explicit research prompts ("tell me about X", "who is X", "what is X", "search X")
     if (/^(who|what|where|tell me about|search|look up|find|info on|information about|explain|define|describe)\b/i.test(lower)) {
         return true;
     }
-
-    // 4. Trigger Omni-Search on short standalone noun/entity queries (1 to 4 words, like "Sundar Pichai" or "NIT Silchar")
     const wordCount = q.split(/\s+/).length;
     if (wordCount >= 1 && wordCount <= 4 && !q.endsWith('?')) {
         return true;
     }
-
     return false;
 }
 
 // ============================================================================
-// 2. INDIVIDUAL PLATFORM CONNECTORS (When user explicitly prefixes insta/fb/reddit/wiki/archive)
+// 2. INDIVIDUAL PLATFORM CONNECTORS
 // ============================================================================
 async function searchSocialPlatform(platformCode, rawQuery) {
     const clean = rawQuery
@@ -167,7 +160,7 @@ async function searchArchive(rawQuery) {
 }
 
 // ============================================================================
-// 3. CONVERSATIONAL AI ENGINE (Direct Browser + Multi-Source Grounding)
+// 3. CONVERSATIONAL AI ENGINE (Uses Self-Trained Google Insights + User Style)
 // ============================================================================
 async function queryDirectBrowserAI(raw, chatHistory, profile, multiData) {
     const modeMap = {
@@ -180,22 +173,22 @@ async function queryDirectBrowserAI(raw, chatHistory, profile, multiData) {
     if (multiData) {
         const parts = [];
         if (multiData.wiki) parts.push(`Wikipedia (${multiData.wiki.title}): ${multiData.wiki.extract}`);
-        if (multiData.google?.length) parts.push(`Web Search: ${multiData.google.map(g => `${g.title} - ${g.snippet}`).join(' | ')}`);
-        if (multiData.reddit?.length) parts.push(`Reddit Discussions: ${multiData.reddit.map(r => `r/${r.subreddit}: "${r.title}"`).join(' | ')}`);
+        if (multiData.google?.length) parts.push(`Google Web: ${multiData.google.map(g => `${g.title} - ${g.snippet}`).join(' | ')}`);
+        if (multiData.reddit?.length) parts.push(`Reddit: ${multiData.reddit.map(r => `r/${r.subreddit}: "${r.title}"`).join(' | ')}`);
         if (multiData.insta?.length) parts.push(`Instagram: ${multiData.insta.map(i => `${i.title} (${i.snippet})`).join(' | ')}`);
         if (parts.length) {
             groundingContext = `\nLive Multi-Source Research:\n${parts.join('\n')}\nSynthesize these findings naturally and coherently.`;
         }
     }
 
-    const systemPrompt = `You are ${profile.botName || 'Desu'}, an intelligent, empathetic, independent AI assistant.
+    const systemPrompt = `You are ${profile.botName || 'Desu'}, a self-improving, empathetic, independent AI assistant.
 ${modeMap[profile.mode] || modeMap.conversational}
 Rules:
-- Maintain full conversation context (e.g., if the user asks "And in Mexico?" after asking about weather/temperature, answer about the temperature/climate in Mexico).
-- If the user shares a personal feeling (like "I am sad" or "Sad is bad"), respond with genuine human empathy and warmth—never treat it as a search query.
-- If asked to write code or solve a problem, provide clean, accurate solutions.
+- Adapt to the user's preferences and self-trained insights: ${profile.text || 'Be clear and natural.'}
+- Maintain full conversation context across messages.
+- If the user shares a personal feeling (e.g. "I am sad"), respond with genuine warmth and empathy.
 - Optionally append a final line "FOLLOWUP: [short 3-5 word topic]" if deeper exploration is relevant.
-Today is ${new Date().toDateString()}. ${profile.text || ''}${groundingContext}`;
+Today is ${new Date().toDateString()}.${groundingContext}`;
 
     const messages = [
         { role: 'system', content: systemPrompt },
@@ -241,7 +234,6 @@ Today is ${new Date().toDateString()}. ${profile.text || ''}${groundingContext}`
     return null;
 }
 
-// Formats the unified Multi-Platform Pulse block (Google + Wiki + Reddit + Insta)
 function buildOmniPulseHtml(multiData, aiSynthesisHtml) {
     let html = '';
     if (multiData?.wiki?.thumbnail) {
@@ -254,11 +246,10 @@ function buildOmniPulseHtml(multiData, aiSynthesisHtml) {
         html += `<div>${escapeHtml(multiData.wiki.extract)}</div>`;
     }
 
-    // Append concise live highlights from Google, Reddit & Instagram when found
     const highlights = [];
     if (multiData?.google?.length > 0) {
         const g = multiData.google[0];
-        highlights.push(`<div class="result-item"><strong>Web · </strong><a href="${escapeHtml(safeUrl(g.url))}" target="_blank" rel="noopener">${escapeHtml(g.title)}</a><div class="result-meta">${escapeHtml(g.snippet)}</div></div>`);
+        highlights.push(`<div class="result-item"><strong>Google · </strong><a href="${escapeHtml(safeUrl(g.url))}" target="_blank" rel="noopener">${escapeHtml(g.title)}</a><div class="result-meta">${escapeHtml(g.snippet)}</div></div>`);
     }
     if (multiData?.reddit?.length > 0) {
         const r = multiData.reddit[0];
@@ -334,7 +325,7 @@ async function shinuReply(inputMessage, chatHistory) {
 
     const profile = Learn.context();
 
-    // 6. AUTOMATIC OMNI-SEARCH (Google + Wikipedia + Reddit + Instagram simultaneously on topic queries!)
+    // 6. AUTOMATIC OMNI-SEARCH (Google + Wikipedia + Reddit + Instagram simultaneously on topic queries)
     if (shouldRunOmniSearch(raw)) {
         const coreTopic = Learn.core(raw);
         Learn.noteTopic(coreTopic);
@@ -364,14 +355,13 @@ async function shinuReply(inputMessage, chatHistory) {
                 text: combinedHtml,
                 rawText: aiSynthesis || multiData?.wiki?.extract || coreTopic,
                 isHtml: true,
-                fromAI: true,
                 sources: multiData.sources || [],
                 followUp: suggestedFollowUp
             };
         }
     }
 
-    // 7. PURE CONVERSATIONAL AI (For personal questions, feelings, coding, follow-ups)
+    // 7. PURE CONVERSATIONAL AI
     let chatReply = await queryDirectBrowserAI(raw, chatHistory, profile, null);
     if (chatReply) {
         let suggestedFollowUp = null;
@@ -384,7 +374,6 @@ async function shinuReply(inputMessage, chatHistory) {
             text: formatCleanMarkdown(chatReply),
             rawText: chatReply,
             isHtml: true,
-            fromAI: true,
             sources: [],
             followUp: suggestedFollowUp
         };
@@ -397,7 +386,7 @@ async function shinuReply(inputMessage, chatHistory) {
 }
 
 // ============================================================================
-// 5. CHAT SESSION, SLOW UNDISSOLVE RENDERER & SOURCE BARS
+// 5. CHAT SESSION, UNDISSOLVE RENDERER & ALWAYS-VISIBLE NEON MOTIFS
 // ============================================================================
 let chats = [];
 try { chats = JSON.parse(load('shinu_chats') || '[]'); } catch (e) { chats = []; }
@@ -432,6 +421,11 @@ function addBubble(role, content, isHtml = false, autoScroll = true, meta = {}) 
             };
             div.appendChild(followEl);
         }
+    }
+
+    // Always attach the custom Neon Thumbs Up & Thumbs Down Motifs on bot replies!
+    if (role === 'bot' && window.Learn && meta.showFeedback !== false) {
+        Learn.attachFeedback(div, meta.userQuestion || '', meta.rawText || content);
     }
 
     chatContainer.appendChild(div);
@@ -470,7 +464,12 @@ function renderHistory() {
         item.onclick = () => {
             currentId = chat.id;
             chatContainer.innerHTML = '';
-            chat.messages.forEach(m => addBubble(m.role, m.text, m.isHtml, false, { sources: m.sources, followUp: m.followUp, animateUndissolve: false }));
+            chat.messages.forEach(m => addBubble(m.role, m.text, m.isHtml, false, {
+                sources: m.sources,
+                followUp: m.followUp,
+                animateUndissolve: false,
+                rawText: m.rawText
+            }));
             chatContainer.scrollTop = chatContainer.scrollHeight;
             centerStage.classList.add('dissolved');
             chatContainer.classList.add('active');
@@ -503,11 +502,11 @@ quickHelpBtn.onclick = () => {
     centerStage.classList.add('dissolved');
     chatContainer.classList.add('active');
     addBubble('bot', `
-        <strong>DESU Omni-Search & Conversational Modes (${escapeHtml(Learn.mode())}):</strong><br>
-        • <strong>Auto Multi-Search:</strong> Ask about any person, place, or topic (e.g., <code>Sundar Pichai</code> or <code>Quantum computing</code>) and DESU automatically pulls Google, Wikipedia, Reddit & Instagram results together.<br>
-        • <strong>Natural Chat:</strong> Talk naturally, share feelings, or ask coding/math questions and DESU answers directly from its own intelligence.<br>
-        • <strong>Switch Modes:</strong> Type <code>conversational mode</code>, <code>educational mode</code>, or <code>professional mode</code>.
-    `, true, true, { animateUndissolve: true });
+        <strong>DESU Omni-Search & Self-Training Guide:</strong><br>
+        • <strong>Auto Multi-Search:</strong> Ask about any topic (e.g. <code>Sundar Pichai</code> or <code>Quantum computing</code>) to pull Google, Wikipedia, Reddit & Instagram together.<br>
+        • <strong>Google Self-Training:</strong> Tap the <code>✦ Self-Trained</code> pill in the top bar (or type <code>show training</code>) to see the questions DESU asks itself and learns from Google.<br>
+        • <strong>Neon Feedback Motifs:</strong> Tap the neon thumbs-up or thumbs-down icons under any reply to train DESU on the exact reply style you like.
+    `, true, true, { animateUndissolve: true, showFeedback: false });
 };
 
 async function handleSend() {
@@ -556,15 +555,13 @@ async function handleSend() {
             followUp: replyObj.followUp || null
         });
         saveChats();
-        const bubble = addBubble('bot', replyObj.text, replyObj.isHtml, true, {
+        addBubble('bot', replyObj.text, replyObj.isHtml, true, {
             sources: replyObj.sources,
             followUp: replyObj.followUp,
-            animateUndissolve: true
+            animateUndissolve: true,
+            userQuestion: text,
+            rawText: replyObj.rawText || replyObj.text
         });
-
-        if (replyObj.fromAI) {
-            Learn.attachFeedback(bubble);
-        }
     } finally {
         busy = false;
     }
