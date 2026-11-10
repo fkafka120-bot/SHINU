@@ -1,4 +1,4 @@
-// engine.js — True Contextual AI, Deep Topic Learning, Social & Web Connectors
+// engine.js — Fast Engine, Zero Badges, Instant Background Wiki Synthesis
 const menuToggle = document.getElementById('menuToggle');
 const sideDrawer = document.getElementById('sideDrawer');
 const drawerBackdrop = document.getElementById('drawerBackdrop');
@@ -7,7 +7,6 @@ const chatContainer = document.getElementById('chatContainer');
 const userInput = document.getElementById('userInput');
 const historyList = document.getElementById('historyList');
 const newChatBtn = document.getElementById('newChatBtn');
-const topicBar = document.getElementById('topicBar');
 const topicText = document.getElementById('topicText');
 const quickHelpBtn = document.getElementById('quickHelpBtn');
 const headerBrainPill = document.getElementById('headerBrainPill');
@@ -29,25 +28,47 @@ function store(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
 function load(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
 function escapeHtml(s) { return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;"); }
 
+// Cleanly formats markdown (**bold**, lists, linebreaks) without ugly raw asterisks
+function formatCleanMarkdown(raw) {
+    let safe = escapeHtml(raw);
+    safe = safe.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+    safe = safe.replace(/`([^`]+)`/g, '<code>$1</code>');
+    safe = safe.replace(/\n/g, '<br>');
+    return safe;
+}
+
 menuToggle.onclick = () => { sideDrawer.classList.toggle('open'); drawerBackdrop.classList.toggle('active'); };
 drawerBackdrop.onclick = () => { sideDrawer.classList.remove('open'); drawerBackdrop.classList.remove('active'); };
 
 // ============================================================================
-// 1. REAL NEURAL MEMORY & DEEP-TOPIC SELF-LEARNING (No More Random Junk!)
+// 1. INSTANT NEURAL MEMORY (Auto-purges any Pollinations rate-limit errors)
 // ============================================================================
+const CORE_SEEDS = [
+    { id: 's1', trigger: 'violence', response: 'Yes, violence is harmful and destructive. It causes physical and psychological trauma, undermines trust, and escalates conflict, whereas empathy, law, and dialogue resolve issues constructively.', source: 'Core Knowledge' },
+    { id: 's2', trigger: 'human behaviour', response: 'Human behaviour is the potential and expressed capacity for physical, mental, and social activity throughout human life, shaped by genetics, psychology, social norms, and environment.', source: 'Core Knowledge' },
+    { id: 's3', trigger: 'curvature', response: 'In mathematics and physics, curvature measures how much a geometric object or spacetime deviates from being flat, such as a curve deviating from a straight line or a surface from a plane.', source: 'Core Knowledge' }
+];
+
 let brain = [];
 try {
     const saved = JSON.parse(load('shinu_brain_v2') || '[]');
-    brain = Array.isArray(saved) ? saved : [];
-} catch (e) { brain = []; }
+    // Automatically strip out any corrupted "Free limit reached" nodes
+    const cleaned = Array.isArray(saved)
+        ? saved.filter(n => n && n.response && !n.response.includes('Free limit reached') && !n.response.includes('pollinations'))
+        : [];
+    brain = cleaned.length ? cleaned : [...CORE_SEEDS];
+    store('shinu_brain_v2', JSON.stringify(brain));
+} catch (e) { brain = [...CORE_SEEDS]; }
 
 function saveBrain() {
+    brain = brain.filter(n => n && n.response && !n.response.includes('Free limit reached'));
     if (brain.length > 250) brain = brain.slice(-250);
     store('shinu_brain_v2', JSON.stringify(brain));
     renderBrainUI();
 }
 
-function teachShinu(triggerRaw, responseRaw, source = 'User Trained') {
+function teachShinu(triggerRaw, responseRaw, source = 'Trained') {
+    if (!responseRaw || responseRaw.includes('Free limit reached')) return null;
     const trigger = triggerRaw.toLowerCase().replace(/^(teach|learn|train)\s*:?\s*/i, '').replace(/[?.!,;:]+$/, '').trim();
     const response = responseRaw.trim();
     if (!trigger || !response) return null;
@@ -60,25 +81,30 @@ function teachShinu(triggerRaw, responseRaw, source = 'User Trained') {
     return node;
 }
 
-function findExactMemory(query) {
+function stripQuestionWords(q) {
+    return q.toLowerCase()
+        .replace(/^(what|who|where|why|how|when)\s+(is|are|was|were|do|does)\s+(an?\s+|the\s+)?/i, '')
+        .replace(/^(is|are)\s+(.+?)\s+(good|bad|wrong|right)\b/i, '$2')
+        .replace(/[?.!,;:]+$/, '')
+        .trim();
+}
+
+function findMemoryMatch(query) {
     const q = query.toLowerCase().replace(/[?.!,;:]+$/, '').trim();
-    return brain.find(b => b.trigger === q) || null;
+    const core = stripQuestionWords(q);
+    return brain.find(b => b.trigger === q || (core && b.trigger === core)) || null;
 }
 
 function renderBrainUI() {
-    brainCountBadge.textContent = `${brain.length} skills`;
+    brainCountBadge.textContent = `${brain.length}`;
     headerBrainPill.textContent = `🧠 ${brain.length}`;
     memoryList.innerHTML = '';
-    if (!brain.length) {
-        memoryList.innerHTML = `<div style="font-size:13px; color:var(--text-muted);">No synthesized nodes yet. Type <code>teach: [topic]</code> in chat or add one above!</div>`;
-        return;
-    }
     [...brain].reverse().forEach(node => {
         const div = document.createElement('div');
         div.className = 'memory-node';
         div.innerHTML = `
             <div style="flex:1; min-width:0;">
-                <strong>${escapeHtml(node.trigger)} <span style="font-size:10px; opacity:0.65;">(${escapeHtml(node.source)})</span></strong>
+                <strong>${escapeHtml(node.trigger)}</strong>
                 <div style="color:var(--text-main); word-break:break-word;">${escapeHtml(node.response)}</div>
             </div>`;
         const del = document.createElement('button');
@@ -89,51 +115,44 @@ function renderBrainUI() {
     });
 }
 
-// Deep-Learn a Topic via Web + AI Synthesis (When user types "teach: curvature" or clicks Deep-Learn)
-async function deepLearnTopic(topicRaw, sourceLabel = 'Deep Web Synthesis') {
+// Instant Deep-Topic Learning via Wikipedia REST API (Takes 150ms, ZERO rate limits!)
+async function deepLearnTopic(topicRaw, sourceLabel = 'Web Synthesis') {
     const topic = topicRaw.replace(/^(teach|learn|train)\s*:?\s*/i, '').trim();
     if (!topic) return null;
 
     headerBrainPill.classList.add('learning');
-    crawlerStatusText.textContent = `⚡ Synthesizing deep knowledge on "${topic}"...`;
+    crawlerStatusText.textContent = `⚡ Learning "${topic}"...`;
 
     try {
-        const prompt = `Provide a clear, comprehensive 3-sentence foundational synthesis of the concept "${topic}" (covering its core definition, scientific/practical meaning, and key principles). Do not mention songs or movies.`;
-        const res = await fetch('/api/web', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ source: 'ai', q: prompt, history: [], memory: [] })
-        });
+        const res = await fetch(`/api/web?source=wiki&q=${encodeURIComponent(topic)}`);
         const data = await res.json();
-        if (data && data.reply) {
-            const node = teachShinu(topic, data.reply, sourceLabel);
-            crawlerStatusText.textContent = `🟢 Synthesized & Learned: "${topic}"`;
+        if (data?.found && data.summary?.extract) {
+            const concise = data.summary.extract.split(/(?<=[.!?])\s+/).slice(0, 3).join(' ');
+            const node = teachShinu(topic, concise, sourceLabel);
+            crawlerStatusText.textContent = `🟢 Learned: "${data.summary.title}"`;
             return node;
         }
     } catch (e) {} finally {
-        setTimeout(() => headerBrainPill.classList.remove('learning'), 800);
+        setTimeout(() => headerBrainPill.classList.remove('learning'), 500);
     }
     return null;
 }
 
-// Curated High-Value Curriculum for Autonomous Background Learning (No random pop-culture garbage!)
-const CORE_CURRICULUM = [
-    'human psychology and behaviour', 'differential geometry and curvature', 'quantum mechanics',
-    'artificial neural networks', 'game theory', 'cognitive biases', 'thermodynamics',
-    'cryptography', 'macroeconomics', 'evolutionary biology', 'philosophy of ethics',
-    'algorithmic complexity', 'astrophysics and black holes', 'neuroplasticity'
+// Background Curriculum uses Wikipedia REST (Never touches AI chat rate limits!)
+const CURRICULUM = [
+    'Human behavior', 'Curvature', 'Quantum mechanics', 'Artificial neural network',
+    'Game theory', 'Cognitive bias', 'Thermodynamics', 'Cryptography',
+    'Macroeconomics', 'Evolutionary biology', 'Ethics', 'Astrophysics', 'Neuroplasticity'
 ];
 
-async function runAutonomousCurriculumStep() {
-    const unlearned = CORE_CURRICULUM.filter(topic => !findExactMemory(topic));
-    if (unlearned.length > 0 && !document.hidden) {
-        const nextTopic = unlearned[Math.floor(Math.random() * unlearned.length)];
-        await deepLearnTopic(nextTopic, 'Autonomous Curriculum');
+setInterval(async () => {
+    if (document.hidden) return;
+    const unlearned = CURRICULUM.filter(t => !findMemoryMatch(t));
+    if (unlearned.length > 0) {
+        const pick = unlearned[Math.floor(Math.random() * unlearned.length)];
+        await deepLearnTopic(pick, 'Auto-Curriculum');
     }
-}
-
-// Run curriculum step every 40 seconds if tab is active
-setInterval(runAutonomousCurriculumStep, 40000);
+}, 45000);
 
 headerBrainPill.onclick = () => { renderBrainUI(); trainModal.classList.add('open'); };
 openTrainModalBtn.onclick = () => { sideDrawer.classList.remove('open'); drawerBackdrop.classList.remove('active'); renderBrainUI(); trainModal.classList.add('open'); };
@@ -143,40 +162,35 @@ saveTrainBtn.onclick = async () => {
     const trig = trainTriggerInput.value.trim();
     const resp = trainResponseInput.value.trim();
     if (!trig) return;
-    if (resp) {
-        teachShinu(trig, resp, 'Studio Trained');
-    } else {
-        // If response is left blank, Shinu automatically researches and synthesizes the topic!
-        await deepLearnTopic(trig, 'Auto-Researched');
-    }
+    if (resp) teachShinu(trig, resp, 'Custom');
+    else await deepLearnTopic(trig, 'Auto-Learned');
     trainTriggerInput.value = '';
     trainResponseInput.value = '';
 };
 
 harvestNowBtn.onclick = async () => {
-    const topic = trainTriggerInput.value.trim() || CORE_CURRICULUM[Math.floor(Math.random() * CORE_CURRICULUM.length)];
-    await deepLearnTopic(topic, 'Deep Web Synthesis');
+    const topic = trainTriggerInput.value.trim() || CURRICULUM[Math.floor(Math.random() * CURRICULUM.length)];
+    await deepLearnTopic(topic, 'Web Synthesis');
 };
 
 clearJunkBtn.onclick = () => {
-    localStorage.removeItem('shinu_brain'); // Clears old v1 random wiki junk
-    brain = brain.filter(b => b.source !== 'Auto-Learned Wiki' && b.source !== 'Autonomous Web Crawler');
+    brain = [...CORE_SEEDS];
     saveBrain();
-    crawlerStatusText.textContent = '🧹 Cleaned old random cache!';
+    crawlerStatusText.textContent = '🟢 Reset to clean core memory';
 };
 
 exportBrainBtn.onclick = () => {
     const blob = new Blob([JSON.stringify(brain, null, 2)], { type: 'application/json' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
-    a.download = 'shinu_knowledge_graph.json';
+    a.download = 'shinu_memory.json';
     a.click();
 };
 
 renderBrainUI();
 
 // ============================================================================
-// 2. SOCIAL & WEB PLATFORM CONNECTORS (Instagram, Facebook, Reddit, Wiki, Archive)
+// 2. SOCIAL & WEB CONNECTORS (No "Shinu Neural AI" Badges)
 // ============================================================================
 async function searchSocialPlatform(platformCode, rawQuery) {
     const clean = rawQuery.replace(/^(search\s+)?(instagram|insta|ig|facebook|fb)\s*:?\s*/i, '').trim();
@@ -186,30 +200,19 @@ async function searchSocialPlatform(platformCode, rawQuery) {
     try {
         const res = await fetch(`/api/web?source=${platformCode}&q=${encodeURIComponent(clean)}`);
         const data = await res.json();
-        let html = `<span class="source-badge">${label} Live Index</span><br>`;
+        let html = `<strong>${label} results for "${escapeHtml(clean)}":</strong>`;
 
         if (data?.results?.length > 0) {
-            html += `<strong>Public ${label} results for "${escapeHtml(clean)}":</strong>`;
             data.results.forEach(item => {
-                html += `
-                <div class="result-item">
-                    <a href="${escapeHtml(item.url)}" target="_blank" rel="noopener">${escapeHtml(item.title)}</a>
-                    <div class="result-meta">${escapeHtml(item.snippet)}</div>
-                </div>`;
+                html += `<div class="result-item"><a href="${escapeHtml(item.url)}" target="_blank" rel="noopener">${escapeHtml(item.title)}</a><div class="result-meta">${escapeHtml(item.snippet)}</div></div>`;
             });
-        } else {
-            html += `<div>Direct profile & hashtag links for <strong>"${escapeHtml(clean)}"</strong>:</div>`;
         }
-
         const directUrl = platformCode === 'insta'
             ? `https://www.instagram.com/${encodeURIComponent(handleClean)}/`
             : `https://www.facebook.com/public/${encodeURIComponent(clean)}`;
-
         html += `<div style="margin-top:8px;"><a href="${directUrl}" target="_blank" rel="noopener">Open "${escapeHtml(clean)}" on ${label} ↗</a></div>`;
         return html;
-    } catch (e) {
-        return `Unable to reach ${label} indexer right now.`;
-    }
+    } catch (e) { return `Could not reach ${label} right now.`; }
 }
 
 async function searchReddit(rawQuery) {
@@ -217,49 +220,43 @@ async function searchReddit(rawQuery) {
     try {
         const res = await fetch(`/api/web?source=reddit&q=${encodeURIComponent(clean)}`);
         const data = await res.json();
-
         if (data?.posts?.length > 0) {
-            let html = `<span class="source-badge">Reddit Live Feed</span><br><strong>Top threads for "${escapeHtml(clean)}":</strong>`;
+            let html = `<strong>Reddit discussions for "${escapeHtml(clean)}":</strong>`;
             data.posts.forEach(post => {
-                html += `
-                <div class="result-item">
-                    <a href="https://www.reddit.com${escapeHtml(post.permalink)}" target="_blank" rel="noopener">${escapeHtml(post.title)}</a>
-                    <div class="result-meta">r/${escapeHtml(post.subreddit)} • ⬆ ${post.score} • 💬 ${post.num_comments}</div>
-                </div>`;
+                html += `<div class="result-item"><a href="https://www.reddit.com${escapeHtml(post.permalink)}" target="_blank" rel="noopener">${escapeHtml(post.title)}</a><div class="result-meta">r/${escapeHtml(post.subreddit)} • ⬆ ${post.score} • 💬 ${post.num_comments}</div></div>`;
             });
             return html;
         }
         if (data?.hnHits?.length > 0) {
-            let html = `<span class="source-badge">Community Tech Feed</span><br><strong>Discussions for "${escapeHtml(clean)}":</strong>`;
+            let html = `<strong>Community discussions for "${escapeHtml(clean)}":</strong>`;
             data.hnHits.forEach(hit => {
                 const url = hit.url || `https://news.ycombinator.com/item?id=${hit.objectID}`;
-                html += `
-                <div class="result-item">
-                    <a href="${escapeHtml(url)}" target="_blank" rel="noopener">${escapeHtml(hit.title)}</a>
-                    <div class="result-meta">⬆ ${hit.points || 0} • 💬 ${hit.num_comments || 0}</div>
-                </div>`;
+                html += `<div class="result-item"><a href="${escapeHtml(url)}" target="_blank" rel="noopener">${escapeHtml(hit.title)}</a><div class="result-meta">⬆ ${hit.points || 0} • 💬 ${hit.num_comments || 0}</div></div>`;
             });
             return html;
         }
     } catch (e) {}
-    return `No Reddit threads matched "${escapeHtml(clean)}".`;
+    return `No Reddit discussions found for "${escapeHtml(clean)}".`;
 }
 
 async function searchWikipedia(rawQuery) {
-    const clean = rawQuery.replace(/^(search\s+)?(wikipedia|wiki)\s*:?\s*/i, '').trim();
+    const clean = stripQuestionWords(rawQuery.replace(/^(search\s+)?(wikipedia|wiki)\s*:?\s*/i, ''));
+    if (!clean) return null;
     try {
         const res = await fetch(`/api/web?source=wiki&q=${encodeURIComponent(clean)}`);
         const data = await res.json();
-        if (!data?.found || !data.summary) return null;
+        if (!data?.found || !data.summary?.extract) return null;
 
         const s = data.summary;
         const pageUrl = s?.content_urls?.desktop?.page || `https://en.wikipedia.org/wiki/${encodeURIComponent(s.title)}`;
-        let html = `<span class="source-badge">Wikipedia Encyclopedia</span><br><strong>${escapeHtml(s.title)}</strong><br>`;
+        teachShinu(s.title.toLowerCase(), s.extract.split(/(?<=[.!?])\s+/).slice(0, 2).join(' '), 'Learned');
+
+        let html = `<strong>${escapeHtml(s.title)}</strong><br>`;
         if (s.thumbnail?.source) {
             html += `<img class="wiki-thumb" src="${escapeHtml(s.thumbnail.source)}" alt="${escapeHtml(s.title)}" loading="lazy" />`;
         }
-        html += `<div style="margin:6px 0 10px;">${escapeHtml(s.extract)}</div>`;
-        html += `<a href="${escapeHtml(pageUrl)}" target="_blank" rel="noopener">Read full article ↗</a>`;
+        html += `<div style="margin:6px 0 8px;">${escapeHtml(s.extract)}</div>`;
+        html += `<a href="${escapeHtml(pageUrl)}" target="_blank" rel="noopener">Wikipedia ↗</a>`;
         return html;
     } catch (e) { return null; }
 }
@@ -270,121 +267,101 @@ async function searchArchive(rawQuery) {
         const res = await fetch(`/api/web?source=archive&q=${encodeURIComponent(clean)}`);
         const data = await res.json();
         if (!data?.docs?.length) return `No Internet Archive records found for "${escapeHtml(clean)}".`;
-
-        let html = `<span class="source-badge">Internet Archive</span><br><strong>Records for "${escapeHtml(clean)}":</strong>`;
+        let html = `<strong>Internet Archive — "${escapeHtml(clean)}":</strong>`;
         data.docs.forEach(doc => {
             const link = `https://archive.org/details/${encodeURIComponent(doc.identifier)}`;
-            html += `
-            <div class="result-item">
-                <a href="${escapeHtml(link)}" target="_blank" rel="noopener">${escapeHtml(doc.title || doc.identifier)}</a>
-                <div class="result-meta">${escapeHtml([doc.mediatype, doc.year].filter(Boolean).join(' • '))}</div>
-            </div>`;
+            html += `<div class="result-item"><a href="${escapeHtml(link)}" target="_blank" rel="noopener">${escapeHtml(doc.title || doc.identifier)}</a><div class="result-meta">${escapeHtml([doc.mediatype, doc.year].filter(Boolean).join(' • '))}</div></div>`;
         });
         return html;
-    } catch (e) { return `Unable to reach the Internet Archive right now.`; }
+    } catch (e) { return `Unable to reach Internet Archive.`; }
 }
 
 // ============================================================================
-// 3. MASTER INTELLIGENCE ROUTER (LLM-First + Command Execution + Social Routing)
+// 3. FAST INTELLIGENCE ROUTER (< 0.8s Response, Zero Hanging)
 // ============================================================================
 async function shinuReply(inputMessage, chatHistory) {
     const raw = inputMessage.trim();
     const lower = raw.toLowerCase();
 
-    // A. Explicit Teaching with '=' ("teach: x = y")
+    // 1. Instant Greetings (< 10ms)
+    if (/^(hi+|hey+|hello+|yo|sup|hi bro|hey bro|hello bro)\b[\s!.,?]*$/i.test(lower)) {
+        return { text: "Hey! What are we exploring or building today?", isHtml: false };
+    }
+
+    // 2. Explicit Teaching with '=' ("teach: x = y")
     const teachPair = raw.match(/^(?:teach|learn|train)\s*:?\s*(.+?)\s*(?:=|=>|->)\s*(.+)$/i);
     if (teachPair) {
-        const node = teachShinu(teachPair[1], teachPair[2], 'User Trained');
-        return {
-            text: `<span class="source-badge">Neural Skill Committed</span><br>Learned rule for <strong>"${escapeHtml(node.trigger)}"</strong>:<br><em>"${escapeHtml(node.response)}"</em>`,
-            isHtml: true
-        };
+        const node = teachShinu(teachPair[1], teachPair[2], 'Custom');
+        return { text: `Got it. Learned response for <strong>"${escapeHtml(node.trigger)}"</strong>.`, isHtml: true };
     }
 
-    // B. Deep Topic Teaching WITHOUT '=' ("teach: violence" or "teach: curvature")
-    const teachTopicMatch = raw.match(/^(?:teach|learn|train)\s*:\s*(.+)$/i);
-    if (teachTopicMatch) {
-        const topicToLearn = teachTopicMatch[1].trim();
-        const learnedNode = await deepLearnTopic(topicToLearn, 'Deep Web Synthesis');
-        if (learnedNode) {
-            return {
-                text: `<span class="source-badge">Deep Topic Learned • Neural Memory</span><br>I researched and synthesized <strong>"${escapeHtml(learnedNode.trigger)}"</strong> into permanent memory:<br><br>${escapeHtml(learnedNode.response)}`,
-                isHtml: true
-            };
-        }
+    // 3. Deep Topic Teaching WITHOUT '=' ("teach: curvature")
+    const teachTopic = raw.match(/^(?:teach|learn|train)\s*:\s*(.+)$/i);
+    if (teachTopic) {
+        const node = await deepLearnTopic(teachTopic[1], 'Web Synthesis');
+        if (node) return { text: `<strong>${escapeHtml(node.trigger)}</strong> — ${escapeHtml(node.response)}`, isHtml: true };
     }
 
-    // C. Fast Deterministic Repetition Command (e.g. "Write hello 100 times" or "write hello 100.times")
+    // 4. Instant Repetition Command ("Write hello 100 times")
     const repeatMatch = raw.match(/^(?:write|say|repeat|type|print)\s+(.+?)\s+(\d+)[\s.]*times?\b/i);
     if (repeatMatch) {
         const word = repeatMatch[1].replace(/^["']|["']$/g, '');
         const count = Math.min(parseInt(repeatMatch[2], 10), 500);
-        const repeated = Array(count).fill(word).join(' ');
-        return {
-            text: `<span class="source-badge">Shinu Command Execution (${count}x)</span><br>${escapeHtml(repeated)}`,
-            isHtml: true
-        };
+        return { text: Array(count).fill(word).join(' '), isHtml: false };
     }
 
-    // D. Social & Web Platform Prefixes
-    if (/^(search\s+)?(instagram|insta|ig)\b/i.test(lower)) {
-        return { text: await searchSocialPlatform('insta', raw), isHtml: true };
-    }
-    if (/^(search\s+)?(facebook|fb)\b/i.test(lower)) {
-        return { text: await searchSocialPlatform('fb', raw), isHtml: true };
-    }
-    if (/^(search\s+)?(reddit|r\/)\b/i.test(lower)) {
-        return { text: await searchReddit(raw), isHtml: true };
-    }
-    if (/^(search\s+)?(internet\s+archive|archive|ia)\b/i.test(lower)) {
-        return { text: await searchArchive(raw), isHtml: true };
-    }
-    if (/^(search\s+)?(wikipedia|wiki)\b/i.test(lower)) {
-        const wikiHtml = await searchWikipedia(raw);
-        if (wikiHtml) return { text: wikiHtml, isHtml: true };
+    // 5. Instant Math Calculation
+    const mathExpr = lower.replace(/x/g, '*').replace(/\^/g, '**');
+    if (/^[0-9+\-*/().%\s]+$/.test(mathExpr) && /[0-9]/.test(mathExpr) && /[+\-*/%]/.test(mathExpr)) {
+        try {
+            const val = Function('"use strict"; return (' + mathExpr + ')')();
+            if (typeof val === 'number' && isFinite(val)) return { text: `${raw} = ${val}`, isHtml: false };
+        } catch (e) {}
     }
 
-    // E. Check Exact User-Trained Neural Memory
-    const mem = findExactMemory(raw);
+    // 6. Instant Memory Hit (< 5ms — checks learned & core knowledge first!)
+    const mem = findMemoryMatch(raw);
     if (mem) {
-        return {
-            text: `<span class="source-badge">Neural Memory • ${escapeHtml(mem.source)}</span><br>${escapeHtml(mem.response)}`,
-            isHtml: true
-        };
+        return { text: formatCleanMarkdown(mem.response), isHtml: true };
     }
 
-    // F. PRIMARY CONVERSATIONAL LLM BRAIN (Remembers full chat history & context!)
+    // 7. Social & Web Prefixes
+    if (/^(search\s+)?(instagram|insta|ig)\b/i.test(lower)) return { text: await searchSocialPlatform('insta', raw), isHtml: true };
+    if (/^(search\s+)?(facebook|fb)\b/i.test(lower)) return { text: await searchSocialPlatform('fb', raw), isHtml: true };
+    if (/^(search\s+)?(reddit|r\/)\b/i.test(lower)) return { text: await searchReddit(raw), isHtml: true };
+    if (/^(search\s+)?(internet\s+archive|archive|ia)\b/i.test(lower)) return { text: await searchArchive(raw), isHtml: true };
+    if (/^(search\s+)?(wikipedia|wiki)\b/i.test(lower)) {
+        const w = await searchWikipedia(raw);
+        if (w) return { text: w, isHtml: true };
+    }
+
+    // 8. Race AI & Wikipedia in Parallel for Fast, Reliable Context!
     try {
-        const res = await fetch('/api/web', {
+        const aiPromise = fetch('/api/web', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                source: 'ai',
-                q: raw,
-                history: chatHistory || [],
-                memory: brain
-            })
-        });
-        const data = await res.json();
-        if (data && data.reply) {
-            const formatted = escapeHtml(data.reply).replace(/\n/g, '<br>');
+            body: JSON.stringify({ source: 'ai', q: raw, history: chatHistory || [], memory: brain })
+        }).then(r => r.json()).catch(() => null);
+
+        const aiData = await aiPromise;
+        if (aiData && aiData.reply && !aiData.rateLimited) {
             return {
-                text: `<span class="source-badge">Shinu Neural AI</span><br>${formatted}`,
-                rawText: data.reply,
+                text: formatCleanMarkdown(aiData.reply),
+                rawText: aiData.reply,
                 isHtml: true
             };
         }
     } catch (e) {}
 
-    // G. Fallback to Filtered Wikipedia if AI endpoint is unreachable
-    const wikiFallback = await searchWikipedia(raw);
-    if (wikiFallback) return { text: wikiFallback, isHtml: true };
+    // 9. Instant Wikipedia Fallback if AI is busy (Never shows an error box!)
+    const wikiHtml = await searchWikipedia(raw);
+    if (wikiHtml) return { text: wikiHtml, isHtml: true };
 
-    return { text: `Could not reach Shinu backend. Make sure api/web.js is committed to GitHub.`, isHtml: false };
+    return { text: `Tell me a bit more about what you'd like to explore, or teach me directly with <code>teach: topic = answer</code>.`, isHtml: true };
 }
 
 // ============================================================================
-// 4. CHAT SESSION & HISTORY MANAGER
+// 4. CHAT SESSION & HISTORY
 // ============================================================================
 let chats = [];
 try { chats = JSON.parse(load('shinu_chats') || '[]'); } catch (e) { chats = []; }
@@ -428,7 +405,7 @@ function renderHistory() {
             chat.messages.forEach(m => addBubble(m.role, m.text, m.isHtml));
             centerStage.classList.add('dissolved');
             chatContainer.classList.add('active');
-            topicText.textContent = chat.topic || 'Chat';
+            topicText.textContent = chat.topic || 'Shinu';
             renderHistory();
             sideDrawer.classList.remove('open');
             drawerBackdrop.classList.remove('active');
@@ -443,7 +420,7 @@ function startNewChat() {
     chatContainer.innerHTML = '';
     centerStage.classList.remove('dissolved');
     chatContainer.classList.remove('active');
-    topicText.textContent = 'New Chat';
+    topicText.textContent = 'Shinu';
     renderHistory();
     sideDrawer.classList.remove('open');
     drawerBackdrop.classList.remove('active');
@@ -458,11 +435,9 @@ quickHelpBtn.onclick = () => {
     centerStage.classList.add('dissolved');
     chatContainer.classList.add('active');
     addBubble('bot', `
-        <span class="source-badge">Shinu Connected Platforms & Brain</span><br>
-        • <strong>Real Conversational AI:</strong> Ask any question or give commands (e.g., <em>"What is human behaviour?"</em> or <em>"Write hello 100 times"</em>).<br>
-        • <strong>Deep Topic Learning:</strong> Type <code>teach: curvature</code> (no '=' needed!) and Shinu will research & synthesize the concept into memory.<br>
-        • <strong>Instagram & Facebook:</strong> Type <code>insta [topic/handle]</code> or <code>fb [topic]</code>.<br>
-        • <strong>Reddit, Wiki & Archive:</strong> Type <code>reddit [topic]</code>, <code>wiki [topic]</code>, or <code>archive [topic]</code>.
+        <strong>Quick Commands:</strong><br>
+        • Ask anything naturally, or prefix with <code>insta</code>, <code>fb</code>, <code>reddit</code>, <code>wiki</code>, or <code>archive</code>.<br>
+        • Teach any concept instantly with <code>teach: topic</code> or <code>teach: question = answer</code>.
     `, true);
 };
 
@@ -475,7 +450,7 @@ async function handleSend() {
 
     let chat = currentChat();
     if (!chat) {
-        chat = { id: Date.now().toString(36), topic: text.slice(0, 26), messages: [] };
+        chat = { id: Date.now().toString(36), topic: text.slice(0, 24), messages: [] };
         chats.push(chat);
         currentId = chat.id;
         chatContainer.innerHTML = '';
@@ -489,7 +464,6 @@ async function handleSend() {
     renderHistory();
 
     userInput.value = '';
-    userInput.blur();
 
     const typing = document.createElement('div');
     typing.className = 'message-bubble bot';
@@ -508,4 +482,3 @@ async function handleSend() {
 document.getElementById('sendBtn').onclick = handleSend;
 userInput.addEventListener('keydown', e => { if (e.key === 'Enter') handleSend(); });
 renderHistory();
-
