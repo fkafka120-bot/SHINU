@@ -1,4 +1,4 @@
-// engine.js — DESU Orchestration, DESUCore Source & Follow-Up Integration
+// engine.js — DESU Conversational AI + Automatic Multi-Platform Search (Google, Wiki, Reddit, Insta)
 const menuToggle = document.getElementById('menuToggle');
 const sideDrawer = document.getElementById('sideDrawer');
 const drawerBackdrop = document.getElementById('drawerBackdrop');
@@ -9,20 +9,6 @@ const historyList = document.getElementById('historyList');
 const newChatBtn = document.getElementById('newChatBtn');
 const topicText = document.getElementById('topicText');
 const quickHelpBtn = document.getElementById('quickHelpBtn');
-const headerBrainPill = document.getElementById('headerBrainPill');
-
-const trainModal = document.getElementById('trainModal');
-const openTrainModalBtn = document.getElementById('openTrainModalBtn');
-const closeTrainModal = document.getElementById('closeTrainModal');
-const trainTriggerInput = document.getElementById('trainTriggerInput');
-const trainResponseInput = document.getElementById('trainResponseInput');
-const saveTrainBtn = document.getElementById('saveTrainBtn');
-const harvestNowBtn = document.getElementById('harvestNowBtn');
-const clearJunkBtn = document.getElementById('clearJunkBtn');
-const exportBrainBtn = document.getElementById('exportBrainBtn');
-const crawlerStatusText = document.getElementById('crawlerStatusText');
-const memoryList = document.getElementById('memoryList');
-const brainCountBadge = document.getElementById('brainCountBadge');
 
 function store(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
 function load(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
@@ -38,151 +24,81 @@ function formatCleanMarkdown(raw) {
     return safe;
 }
 
+// Slow Word-by-Word Undissolve Effect
+function applyUndissolveEffect(containerEl) {
+    let wordIndex = 0;
+    const walk = (node) => {
+        if (node.nodeType === Node.TEXT_NODE) {
+            const text = node.nodeValue;
+            if (!text || !text.trim()) return;
+            const frag = document.createDocumentFragment();
+            const parts = text.split(/(\s+)/);
+            parts.forEach(part => {
+                if (/^\s+$/.test(part) || !part) {
+                    frag.appendChild(document.createTextNode(part));
+                } else {
+                    const span = document.createElement('span');
+                    span.className = 'undissolve-word';
+                    const delay = Math.min(wordIndex * 0.026, 1.8).toFixed(3);
+                    span.style.animationDelay = `${delay}s`;
+                    span.textContent = part;
+                    frag.appendChild(span);
+                    wordIndex++;
+                }
+            });
+            node.parentNode.replaceChild(frag, node);
+        } else if (
+            node.nodeType === Node.ELEMENT_NODE &&
+            !node.classList.contains('desu-source-bar') &&
+            !node.classList.contains('desu-follow-up') &&
+            !node.classList.contains('feedback-row') &&
+            node.tagName !== 'SCRIPT' &&
+            node.tagName !== 'STYLE'
+        ) {
+            Array.from(node.childNodes).forEach(walk);
+        }
+    };
+    Array.from(containerEl.childNodes).forEach(walk);
+}
+
 menuToggle.onclick = () => { sideDrawer.classList.toggle('open'); drawerBackdrop.classList.toggle('active'); };
 drawerBackdrop.onclick = () => { sideDrawer.classList.remove('open'); drawerBackdrop.classList.remove('active'); };
 
 // ============================================================================
-// 1. NEURAL MEMORY DATABASE
+// 1. INTENT CLASSIFIER: Conversational vs. Multi-Platform Topic Search
 // ============================================================================
-const CORE_SEEDS = [
-    { id: 's1', trigger: 'violence', response: 'Violence causes physical and psychological harm, erodes trust, and escalates conflict. Constructive dialogue, empathy, and the rule of law are the foundation of lasting resolution.', source: 'Core Knowledge' },
-    { id: 's2', trigger: 'human behaviour', response: 'Human behaviour is the potential and expressed capacity for physical, mental, and social activity throughout human life, shaped by biology, psychology, culture, and environment.', source: 'Core Knowledge' },
-    { id: 's3', trigger: 'curvature', response: 'In mathematics and physics, curvature measures how much a geometric object or spacetime deviates from being flat.', source: 'Core Knowledge' },
-    { id: 's4', trigger: 'ai', response: 'Artificial intelligence (AI) is the capability of computational systems to perform tasks associated with human intelligence—such as learning, reasoning, problem-solving, perception, and decision-making.', source: 'Core Knowledge' }
-];
+function shouldRunOmniSearch(raw) {
+    const q = raw.trim();
+    const lower = q.toLowerCase();
 
-let brain = [];
-try {
-    const saved = JSON.parse(load('shinu_brain_v3') || '[]');
-    const cleaned = Array.isArray(saved)
-        ? saved.filter(n => n && n.response && !n.response.includes('Free limit reached') && !n.response.includes('pollinations'))
-        : [];
-    brain = cleaned.length ? cleaned : [...CORE_SEEDS];
-    store('shinu_brain_v3', JSON.stringify(brain));
-} catch (e) { brain = [...CORE_SEEDS]; }
-
-function saveBrain() {
-    brain = brain.filter(n => n && n.response && !n.response.includes('Free limit reached'));
-    if (brain.length > 250) brain = brain.slice(-250);
-    store('shinu_brain_v3', JSON.stringify(brain));
-    renderBrainUI();
-}
-
-function teachShinu(triggerRaw, responseRaw, source = 'Trained') {
-    if (!responseRaw || responseRaw.includes('Free limit reached')) return null;
-    const trigger = triggerRaw.toLowerCase().replace(/^(teach|learn|train)\s*:?\s*/i, '').replace(/[?.!,;:]+$/, '').trim();
-    const response = responseRaw.trim();
-    if (!trigger || !response) return null;
-
-    const idx = brain.findIndex(b => b.trigger === trigger);
-    const node = { id: Date.now().toString(36) + Math.random().toString(36).slice(2, 5), trigger, response, source, timestamp: Date.now() };
-    if (idx >= 0) brain[idx] = node;
-    else brain.push(node);
-    saveBrain();
-    return node;
-}
-
-function forgetTrigger(t) {
-    brain = brain.filter(b => b.trigger !== t);
-    saveBrain();
-}
-
-// Only matches direct concept lookups (so "How do I play the violin?" goes to AI instead of repeating the "violin" definition!)
-function findMemoryMatch(query) {
-    const q = query.toLowerCase().replace(/[?.!,;:]+$/, '').replace(/\s+/g, ' ').trim();
-    if (/^(how|why|when|where|can|could|should|would|write|code|compare|difference)\b/i.test(q)) {
-        return brain.find(b => b.trigger === q) || null;
+    // 1. Never run Omni-Search on personal feelings, chitchat, opinions, coding, or contextual follow-ups
+    if (/\b(i|im|i'm|my|me|you|your|we|us|sad|happy|tired|bored|angry|lonely|depressed|feeling|feel|good|bad|wrong|right|code|coding|program|script|html|css|js|python|java|weather|temperature|joke|story|poem|song|advice|help me|how are you|can you|do you|will you|should i|remember)\b/i.test(lower)) {
+        return false;
     }
-    const stripped = Learn.core(query);
-    return brain.find(b => b.trigger === q || b.trigger === stripped) || null;
-}
 
-function renderBrainUI() {
-    brainCountBadge.textContent = `${brain.length}`;
-    headerBrainPill.textContent = `🧠 ${brain.length}`;
-    memoryList.innerHTML = '';
-    [...brain].reverse().forEach(node => {
-        const div = document.createElement('div');
-        div.className = 'memory-node';
-        div.innerHTML = `
-            <div style="flex:1; min-width:0;">
-                <strong>${escapeHtml(node.trigger)} <span style="font-size:10px; opacity:0.6;">(${escapeHtml(node.source || 'Memory')})</span></strong>
-                <div style="color:var(--text-main); word-break:break-word;">${escapeHtml(node.response)}</div>
-            </div>`;
-        const del = document.createElement('button');
-        del.textContent = '✕';
-        del.onclick = () => { brain = brain.filter(b => b.id !== node.id); saveBrain(); };
-        div.appendChild(del);
-        memoryList.appendChild(div);
-    });
-}
-
-async function deepLearnTopic(topicRaw, sourceLabel = 'Web Synthesis', strict = false) {
-    const topic = topicRaw.replace(/^(teach\s+me\s+|teach|learn|train)\s*:?\s*/i, '').trim();
-    if (!topic) return null;
-
-    headerBrainPill.classList.add('learning');
-    crawlerStatusText.textContent = `⚡ Learning "${topic}"...`;
-
-    try {
-        const res = await fetch(`/api/web?source=wiki&q=${encodeURIComponent(topic)}${strict ? '&strict=1' : ''}`);
-        const data = await res.json();
-        if (data?.found && data.summary?.extract) {
-            const concise = data.summary.extract.split(/(?<=[.!?])\s+/).slice(0, 3).join(' ');
-            const node = teachShinu(topic, concise, sourceLabel);
-            crawlerStatusText.textContent = `🟢 Learned: "${data.summary.title}"`;
-            const pageUrl = data.summary?.content_urls?.desktop?.page || `https://en.wikipedia.org/wiki/${encodeURIComponent(data.summary.title)}`;
-            return { ...node, sourceUrl: pageUrl, sourceTitle: `Wikipedia · ${data.summary.title}`, relatedTopic: data.relatedTopic };
-        }
-        crawlerStatusText.textContent = `🟡 Couldn't find "${topic}"`;
-    } catch (e) {
-        crawlerStatusText.textContent = '🔴 Offline, try again';
-    } finally {
-        setTimeout(() => headerBrainPill.classList.remove('learning'), 500);
+    // 2. Never run Omni-Search on follow-up fragments ("And in Mexico?", "So why?", "What about that?")
+    if (/^(and|so|but|also|then|why|how come|what about|how about|not\b)/i.test(lower)) {
+        return false;
     }
-    return null;
+
+    // 3. Trigger Omni-Search on explicit research prompts ("tell me about X", "who is X", "what is X", "search X")
+    if (/^(who|what|where|tell me about|search|look up|find|info on|information about|explain|define|describe)\b/i.test(lower)) {
+        return true;
+    }
+
+    // 4. Trigger Omni-Search on short standalone noun/entity queries (1 to 4 words, like "Sundar Pichai" or "NIT Silchar")
+    const wordCount = q.split(/\s+/).length;
+    if (wordCount >= 1 && wordCount <= 4 && !q.endsWith('?')) {
+        return true;
+    }
+
+    return false;
 }
-
-headerBrainPill.onclick = () => { renderBrainUI(); trainModal.classList.add('open'); };
-openTrainModalBtn.onclick = () => { sideDrawer.classList.remove('open'); drawerBackdrop.classList.remove('active'); renderBrainUI(); trainModal.classList.add('open'); };
-closeTrainModal.onclick = () => trainModal.classList.remove('open');
-
-saveTrainBtn.onclick = async () => {
-    const trig = trainTriggerInput.value.trim();
-    const resp = trainResponseInput.value.trim();
-    if (!trig) return;
-    if (resp) teachShinu(trig, resp, 'Custom');
-    else await deepLearnTopic(trig, 'Auto-Learned', true);
-    trainTriggerInput.value = '';
-    trainResponseInput.value = '';
-};
-
-harvestNowBtn.onclick = async () => {
-    const topic = trainTriggerInput.value.trim() || 'Artificial intelligence';
-    await deepLearnTopic(topic, 'Web Synthesis', true);
-};
-
-clearJunkBtn.onclick = () => {
-    brain = [...CORE_SEEDS];
-    saveBrain();
-    crawlerStatusText.textContent = '🟢 Reset to clean core memory';
-};
-
-exportBrainBtn.onclick = () => {
-    const blob = new Blob([JSON.stringify(brain, null, 2)], { type: 'application/json' });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = 'desu_memory.json';
-    a.click();
-};
-
-renderBrainUI();
 
 // ============================================================================
-// 2. SOCIAL & WEB CONNECTORS (With Source Attribution Metadata)
+// 2. INDIVIDUAL PLATFORM CONNECTORS (When user explicitly prefixes insta/fb/reddit/wiki/archive)
 // ============================================================================
 async function searchSocialPlatform(platformCode, rawQuery) {
-    // Strip conversational filler like "Instagram I'd of salman khan" -> "salman khan"
     const clean = rawQuery
         .replace(/^(search\s+)?(instagram|insta|ig|facebook|fb)\s*:?\s*/i, '')
         .replace(/^(?:id|i'd|account|profile|handle|page)\s+(?:of|for)\s+/i, '')
@@ -190,11 +106,13 @@ async function searchSocialPlatform(platformCode, rawQuery) {
     const label = platformCode === 'insta' ? 'Instagram' : 'Facebook';
     const handleClean = clean.replace(/^@/, '').replace(/\s+/g, '');
 
+    if (!clean) return { text: `Type <code>${platformCode} [name or topic]</code> to search ${label}.`, isHtml: true };
+
     try {
         const res = await fetch(`/api/web?source=${platformCode}&q=${encodeURIComponent(clean)}`);
         const data = await res.json();
         const sources = [];
-        let html = `Here are the top public ${label} profiles and posts for <strong>${escapeHtml(clean)}</strong>:`;
+        let html = `Public ${label} results for <strong>${escapeHtml(clean)}</strong>:`;
 
         if (data?.results?.length > 0) {
             data.results.forEach(item => {
@@ -213,6 +131,7 @@ async function searchSocialPlatform(platformCode, rawQuery) {
 
 async function searchReddit(rawQuery) {
     const clean = rawQuery.replace(/^(search\s+)?(reddit|r\/)\s*:?\s*/i, '').trim();
+    if (!clean) return { text: `Type <code>reddit [topic]</code> to search live community threads.`, isHtml: true };
     try {
         const res = await fetch(`/api/web?source=reddit&q=${encodeURIComponent(clean)}`);
         const data = await res.json();
@@ -220,55 +139,18 @@ async function searchReddit(rawQuery) {
         if (data?.posts?.length > 0) {
             let html = `Top Reddit discussions on <strong>${escapeHtml(clean)}</strong>:`;
             data.posts.forEach(post => {
-                const url = `https://www.reddit.com${post.permalink}`;
-                sources.push({ title: `r/${post.subreddit}`, url });
-                html += `<div class="result-item"><a href="${escapeHtml(url)}" target="_blank" rel="noopener">${escapeHtml(post.title)}</a><div class="result-meta">r/${escapeHtml(post.subreddit)} • ⬆ ${post.score} • 💬 ${post.num_comments}</div></div>`;
+                sources.push({ title: `r/${post.subreddit}`, url: post.url });
+                html += `<div class="result-item"><a href="${escapeHtml(safeUrl(post.url))}" target="_blank" rel="noopener">${escapeHtml(post.title)}</a><div class="result-meta">r/${escapeHtml(post.subreddit)} • ⬆ ${post.score} • 💬 ${post.comments}</div></div>`;
             });
             return { text: html, isHtml: true, sources, followUp: `${clean} community opinions` };
-        }
-        if (data?.hnHits?.length > 0) {
-            let html = `Community discussions for <strong>${escapeHtml(clean)}</strong>:`;
-            data.hnHits.forEach(hit => {
-                const url = hit.url || `https://news.ycombinator.com/item?id=${hit.objectID}`;
-                sources.push({ title: hit.title, url });
-                html += `<div class="result-item"><a href="${escapeHtml(safeUrl(url))}" target="_blank" rel="noopener">${escapeHtml(hit.title)}</a><div class="result-meta">⬆ ${hit.points || 0} • 💬 ${hit.num_comments || 0}</div></div>`;
-            });
-            return { text: html, isHtml: true, sources };
         }
     } catch (e) {}
     return { text: `No Reddit discussions found for "${escapeHtml(clean)}".`, isHtml: false };
 }
 
-async function searchWikipedia(rawQuery, strict = false) {
-    const clean = Learn.core(rawQuery.replace(/^(search\s+)?(wikipedia|wiki)\s*:?\s*/i, ''));
-    if (!clean) return null;
-    try {
-        const res = await fetch(`/api/web?source=wiki&q=${encodeURIComponent(clean)}${strict ? '&strict=1' : ''}`);
-        const data = await res.json();
-        if (!data?.found || !data.summary?.extract) return null;
-
-        const s = data.summary;
-        const pageUrl = s?.content_urls?.desktop?.page || `https://en.wikipedia.org/wiki/${encodeURIComponent(s.title)}`;
-        teachShinu(s.title.toLowerCase(), s.extract.split(/(?<=[.!?])\s+/).slice(0, 2).join(' '), 'Learned');
-
-        // Natural human-like paragraph (No search-engine title header)
-        let html = '';
-        if (s.thumbnail?.source) {
-            html += `<img class="wiki-thumb" src="${escapeHtml(safeUrl(s.thumbnail.source))}" alt="${escapeHtml(s.title)}" loading="lazy" />`;
-        }
-        html += `<div>${escapeHtml(s.extract)}</div>`;
-        return {
-            text: html,
-            rawText: s.extract,
-            isHtml: true,
-            sources: [{ title: `Wikipedia · ${s.title}`, url: pageUrl }],
-            followUp: data.relatedTopic || `how ${s.title} works`
-        };
-    } catch (e) { return null; }
-}
-
 async function searchArchive(rawQuery) {
     const clean = rawQuery.replace(/^(search\s+)?(internet\s+archive|archive|ia)\s*:?\s*/i, '').trim();
+    if (!clean) return { text: `Type <code>archive [topic]</code> to search the Internet Archive.`, isHtml: true };
     try {
         const res = await fetch(`/api/web?source=archive&q=${encodeURIComponent(clean)}`);
         const data = await res.json();
@@ -285,13 +167,122 @@ async function searchArchive(rawQuery) {
 }
 
 // ============================================================================
-// 3. STRICT PRIORITY ROUTER
+// 3. CONVERSATIONAL AI ENGINE (Direct Browser + Multi-Source Grounding)
+// ============================================================================
+async function queryDirectBrowserAI(raw, chatHistory, profile, multiData) {
+    const modeMap = {
+        conversational: 'Use a warm, natural, human-like conversational tone. Be concise, supportive, and clear.',
+        educational: 'Use an Educational Mode: explain step-by-step with clear structure and examples.',
+        professional: 'Use a Professional Mode: deliver precise, executive, well-structured answers.'
+    };
+
+    let groundingContext = '';
+    if (multiData) {
+        const parts = [];
+        if (multiData.wiki) parts.push(`Wikipedia (${multiData.wiki.title}): ${multiData.wiki.extract}`);
+        if (multiData.google?.length) parts.push(`Web Search: ${multiData.google.map(g => `${g.title} - ${g.snippet}`).join(' | ')}`);
+        if (multiData.reddit?.length) parts.push(`Reddit Discussions: ${multiData.reddit.map(r => `r/${r.subreddit}: "${r.title}"`).join(' | ')}`);
+        if (multiData.insta?.length) parts.push(`Instagram: ${multiData.insta.map(i => `${i.title} (${i.snippet})`).join(' | ')}`);
+        if (parts.length) {
+            groundingContext = `\nLive Multi-Source Research:\n${parts.join('\n')}\nSynthesize these findings naturally and coherently.`;
+        }
+    }
+
+    const systemPrompt = `You are ${profile.botName || 'Desu'}, an intelligent, empathetic, independent AI assistant.
+${modeMap[profile.mode] || modeMap.conversational}
+Rules:
+- Maintain full conversation context (e.g., if the user asks "And in Mexico?" after asking about weather/temperature, answer about the temperature/climate in Mexico).
+- If the user shares a personal feeling (like "I am sad" or "Sad is bad"), respond with genuine human empathy and warmth—never treat it as a search query.
+- If asked to write code or solve a problem, provide clean, accurate solutions.
+- Optionally append a final line "FOLLOWUP: [short 3-5 word topic]" if deeper exploration is relevant.
+Today is ${new Date().toDateString()}. ${profile.text || ''}${groundingContext}`;
+
+    const messages = [
+        { role: 'system', content: systemPrompt },
+        ...(chatHistory || []).slice(-6).map(m => ({
+            role: m.role === 'user' ? 'user' : 'assistant',
+            content: String(m.rawText || m.text || '').replace(/<[^>]+>/g, '').slice(0, 900)
+        })),
+        { role: 'user', content: raw }
+    ];
+
+    const isBad = t => !t || t.length < 2 || t.includes('Free limit reached') || t.includes('enter.pollinations.ai') || t.includes('45 seconds');
+
+    for (const model of ['openai', 'mistral']) {
+        try {
+            const controller = new AbortController();
+            const timer = setTimeout(() => controller.abort(), 5200);
+            const r = await fetch('https://text.pollinations.ai/openai', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ model, messages, seed: Math.floor(Math.random() * 999999) }),
+                signal: controller.signal
+            });
+            clearTimeout(timer);
+            if (r.ok) {
+                const d = await r.json();
+                const reply = (d?.choices?.[0]?.message?.content || '').trim();
+                if (!isBad(reply)) return reply;
+            }
+        } catch (e) {}
+    }
+
+    try {
+        const lastTurns = (chatHistory || []).slice(-4).map(m => `${m.role === 'user' ? 'User' : 'Desu'}: ${String(m.rawText || m.text).replace(/<[^>]+>/g, '').slice(0, 180)}`).join('\n');
+        const fullPrompt = lastTurns ? `Context:\n${lastTurns}\n\nUser: ${raw}` : raw;
+        const url = `https://text.pollinations.ai/${encodeURIComponent(fullPrompt)}?model=openai&seed=${Math.floor(Math.random() * 99999)}&system=${encodeURIComponent(systemPrompt.slice(0, 500))}`;
+        const r = await fetch(url);
+        if (r.ok) {
+            const reply = (await r.text()).trim();
+            if (!isBad(reply)) return reply;
+        }
+    } catch (e) {}
+
+    return null;
+}
+
+// Formats the unified Multi-Platform Pulse block (Google + Wiki + Reddit + Insta)
+function buildOmniPulseHtml(multiData, aiSynthesisHtml) {
+    let html = '';
+    if (multiData?.wiki?.thumbnail) {
+        html += `<img class="wiki-thumb" src="${escapeHtml(safeUrl(multiData.wiki.thumbnail))}" alt="${escapeHtml(multiData.wiki.title)}" loading="lazy" />`;
+    }
+
+    if (aiSynthesisHtml) {
+        html += `<div>${aiSynthesisHtml}</div>`;
+    } else if (multiData?.wiki?.extract) {
+        html += `<div>${escapeHtml(multiData.wiki.extract)}</div>`;
+    }
+
+    // Append concise live highlights from Google, Reddit & Instagram when found
+    const highlights = [];
+    if (multiData?.google?.length > 0) {
+        const g = multiData.google[0];
+        highlights.push(`<div class="result-item"><strong>Web · </strong><a href="${escapeHtml(safeUrl(g.url))}" target="_blank" rel="noopener">${escapeHtml(g.title)}</a><div class="result-meta">${escapeHtml(g.snippet)}</div></div>`);
+    }
+    if (multiData?.reddit?.length > 0) {
+        const r = multiData.reddit[0];
+        highlights.push(`<div class="result-item"><strong>Reddit · </strong><a href="${escapeHtml(safeUrl(r.url))}" target="_blank" rel="noopener">${escapeHtml(r.title)}</a><div class="result-meta">r/${escapeHtml(r.subreddit)} • ⬆ ${r.score} • 💬 ${r.comments}</div></div>`);
+    }
+    if (multiData?.insta?.length > 0) {
+        const ig = multiData.insta[0];
+        highlights.push(`<div class="result-item"><strong>Instagram · </strong><a href="${escapeHtml(safeUrl(ig.url))}" target="_blank" rel="noopener">${escapeHtml(ig.title)}</a><div class="result-meta">${escapeHtml(ig.snippet)}</div></div>`);
+    }
+
+    if (highlights.length > 0) {
+        html += `<div style="margin-top: 10px;">${highlights.join('')}</div>`;
+    }
+    return html;
+}
+
+// ============================================================================
+// 4. MASTER ROUTER
 // ============================================================================
 async function shinuReply(inputMessage, chatHistory) {
     const raw = inputMessage.trim();
     const lower = raw.toLowerCase();
 
-    // 1. Multiplication Tables ("Table of 2", "Write table of 2") & Math Expressions
+    // 1. Multiplication Tables & Math Expressions
     const tableMatch = raw.match(/^(?:write\s+|print\s+|show\s+|give\s+me\s+)?(?:the\s+)?table\s+of\s+(\d+)$/i);
     if (tableMatch) {
         const n = parseInt(tableMatch[1], 10);
@@ -317,33 +308,7 @@ async function shinuReply(inputMessage, chatHistory) {
         } catch (e) {}
     }
 
-    // 2. Explicit Teaching Commands ("teach: x = y", "teach: calculus", "teach me violin")
-    if (/^teach\s+me\s*$/i.test(raw)) {
-        return { text: `What topic would you like to explore or teach me? Try <code>teach: calculus</code> or <code>teach: topic = answer</code>.`, isHtml: true };
-    }
-
-    const teachPair = raw.match(/^(?:teach|learn|train)\s*:?\s*(.+?)\s*(?:=>|->|=)\s*(.+)$/i);
-    if (teachPair) {
-        const node = teachShinu(teachPair[1], teachPair[2], 'Custom');
-        if (!node) return { text: 'Use: <code>teach: topic = answer</code>', isHtml: true };
-        return { text: `Got it. I've committed <strong>"${escapeHtml(node.trigger)}"</strong> to my neural memory.`, isHtml: true };
-    }
-
-    const teachTopic = raw.match(/^(?:teach\s+me|teach|learn|train)\s*:?\s+(.+)$/i);
-    if (teachTopic) {
-        const node = await deepLearnTopic(teachTopic[1], 'Web Synthesis', false);
-        if (node) {
-            return {
-                text: `${escapeHtml(node.response)}`,
-                isHtml: true,
-                sources: node.sourceUrl ? [{ title: node.sourceTitle, url: node.sourceUrl }] : [],
-                followUp: node.relatedTopic || `practical applications of ${node.trigger}`
-            };
-        }
-        return { text: `I couldn't find a verified source for that topic yet. You can teach me directly with <code>teach: ${escapeHtml(teachTopic[1])} = answer</code>.`, isHtml: true };
-    }
-
-    // 3. Repetition Command
+    // 2. Repetition Command
     const repeatMatch = raw.match(/^(?:write|say|repeat|type|print)\s+(.+?)\s+(\d+)[\s.]*times?\b/i);
     if (repeatMatch) {
         const word = repeatMatch[1].replace(/^["']|["']$/g, '');
@@ -351,94 +316,88 @@ async function shinuReply(inputMessage, chatHistory) {
         return { text: Array(count).fill(word).join(' '), isHtml: false };
     }
 
-    // 4. Identity, User Profile Recall & Response Modes (Handles "What's your name", "Which subject I like", "mode: educational")
+    // 3. Identity, Personal Profile & Mode Switching
     const prof = Learn.observe(raw);
     if (prof) return prof;
 
-    // 5. Greetings
+    // 4. Greetings
     if (/^(hi+|hey+|hello+|yo|sup|hi bro|hey bro|hello bro)\b[\s!.,?]*$|^hi$/i.test(lower)) {
         const who = Learn.userName() ? ' ' + Learn.userName() : '';
         return { text: `Hey${who}! What are we exploring or building today?`, isHtml: false };
     }
 
-    // 6. Explicit Social & Web Prefixes
+    // 5. Explicit Single-Platform Prefixes
     if (/^(search\s+)?(instagram|insta|ig)\b/i.test(lower)) return await searchSocialPlatform('insta', raw);
     if (/^(search\s+)?(facebook|fb)\b/i.test(lower)) return await searchSocialPlatform('fb', raw);
     if (/^(search\s+)?(reddit|r\/)\b/i.test(lower)) return await searchReddit(raw);
     if (/^(search\s+)?(internet\s+archive|archive|ia)\b/i.test(lower)) return await searchArchive(raw);
-    if (/^(search\s+)?(wikipedia|wiki)\b/i.test(lower)) {
-        const w = await searchWikipedia(raw);
-        if (w) return w;
+
+    const profile = Learn.context();
+
+    // 6. AUTOMATIC OMNI-SEARCH (Google + Wikipedia + Reddit + Instagram simultaneously on topic queries!)
+    if (shouldRunOmniSearch(raw)) {
+        const coreTopic = Learn.core(raw);
+        Learn.noteTopic(coreTopic);
+
+        let multiData = null;
+        try {
+            const mRes = await fetch(`/api/web?source=multisearch&q=${encodeURIComponent(coreTopic)}`);
+            multiData = await mRes.json();
+        } catch (e) {}
+
+        const hasMultiContent = multiData && (multiData.wiki || multiData.google?.length || multiData.reddit?.length || multiData.insta?.length);
+
+        let aiSynthesis = await queryDirectBrowserAI(raw, chatHistory, profile, hasMultiContent ? multiData : null);
+        let suggestedFollowUp = multiData?.wiki?.relatedTopic || null;
+
+        if (aiSynthesis) {
+            const fwMatch = aiSynthesis.match(/\n*FOLLOWUP:\s*(.+)$/i);
+            if (fwMatch) {
+                suggestedFollowUp = fwMatch[1].replace(/[?.!]+$/, '').trim();
+                aiSynthesis = aiSynthesis.replace(/\n*FOLLOWUP:\s*(.+)$/i, '').trim();
+            }
+        }
+
+        if (hasMultiContent) {
+            const combinedHtml = buildOmniPulseHtml(multiData, aiSynthesis ? formatCleanMarkdown(aiSynthesis) : null);
+            return {
+                text: combinedHtml,
+                rawText: aiSynthesis || multiData?.wiki?.extract || coreTopic,
+                isHtml: true,
+                fromAI: true,
+                sources: multiData.sources || [],
+                followUp: suggestedFollowUp
+            };
+        }
     }
 
-    // Track interest for non-personal factual topics
-    const isPersonalOrMeta = /\b(i|my|me|you|your|desu|shinu|earlier|mentioned)\b/i.test(lower);
-    const lookup = !isPersonalOrMeta && (/^(who|what|when|where|why|how|which|tell me about|explain|define|describe|meaning of)\b/i.test(raw) || raw.split(/\s+/).length <= 3);
-    if (lookup) Learn.trackInterest(raw);
-
-    // 7. Instant Neural Memory Hit (for direct definitions/rules)
-    const mem = findMemoryMatch(raw);
-    if (mem) {
+    // 7. PURE CONVERSATIONAL AI (For personal questions, feelings, coding, follow-ups)
+    let chatReply = await queryDirectBrowserAI(raw, chatHistory, profile, null);
+    if (chatReply) {
+        let suggestedFollowUp = null;
+        const fwMatch = chatReply.match(/\n*FOLLOWUP:\s*(.+)$/i);
+        if (fwMatch) {
+            suggestedFollowUp = fwMatch[1].replace(/[?.!]+$/, '').trim();
+            chatReply = chatReply.replace(/\n*FOLLOWUP:\s*(.+)$/i, '').trim();
+        }
         return {
-            text: formatCleanMarkdown(mem.response),
+            text: formatCleanMarkdown(chatReply),
+            rawText: chatReply,
             isHtml: true,
-            followUp: `deeper concepts in ${mem.trigger}`
+            fromAI: true,
+            sources: [],
+            followUp: suggestedFollowUp
         };
     }
 
-    // 8. Provider-Independent Conversational AI (Grounded with Wikipedia reference + History + Profile)
-    try {
-        const recent = (chatHistory || []).slice(-6).map(m => ({ role: m.role, rawText: m.rawText || m.text }));
-        const res = await fetch('/api/web', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                source: 'ai',
-                q: raw,
-                history: recent,
-                memory: brain.filter(n => n.source !== 'Auto').slice(-15),
-                profile: Learn.context(),
-                lookup
-            })
-        });
-        const data = await res.json();
-        if (data && data.reply && !data.rateLimited) {
-            return {
-                text: formatCleanMarkdown(data.reply),
-                rawText: data.reply,
-                isHtml: true,
-                fromAI: true,
-                sources: data.sources || [],
-                followUp: data.followUp || null
-            };
-        }
-    } catch (e) {}
-
-    // 9. Smart Context Fallback for Conversation History Questions ("Which subject did I mention earlier?")
-    if (isPersonalOrMeta && chatHistory && chatHistory.length) {
-        const prevUserMsgs = chatHistory.filter(m => m.role === 'user').map(m => m.rawText || m.text);
-        if (prevUserMsgs.length) {
-            return {
-                text: `Earlier in our conversation, you mentioned: <em>"${escapeHtml(prevUserMsgs.slice(-3).join('", "'))}"</em>.`,
-                isHtml: true
-            };
-        }
-    }
-
-    // 10. Verified Wikipedia Synthesis Fallback (Only for non-personal factual lookups)
-    if (lookup) {
-        const wikiReply = await searchWikipedia(raw, false);
-        if (wikiReply) return wikiReply;
-    }
-
     return {
-        text: `I'm ready to learn about <strong>${escapeHtml(raw)}</strong>. Teach me directly with <code>teach: ${escapeHtml(raw)} = [explanation]</code>, or ask me to look up a specific concept!`,
-        isHtml: true
+        text: `I'm right here with you — tell me a bit more about what you're thinking or what topic we should dive into.`,
+        isHtml: false
     };
 }
 
 // ============================================================================
-// 4. CHAT SESSION, DESUCORE SOURCE BARS & CLICKABLE FOLLOW-UPS
+// 5. CHAT SESSION, SLOW UNDISSOLVE RENDERER & SOURCE BARS
 // ============================================================================
 let chats = [];
 try { chats = JSON.parse(load('shinu_chats') || '[]'); } catch (e) { chats = []; }
@@ -454,13 +413,15 @@ function addBubble(role, content, isHtml = false, autoScroll = true, meta = {}) 
     if (isHtml) div.innerHTML = content;
     else div.textContent = content;
 
-    // Attach DESUCore Source Attribution Bar (if sources were actually used)
+    if (role === 'bot' && meta.animateUndissolve) {
+        applyUndissolveEffect(div);
+    }
+
     if (role === 'bot' && window.DESUCore && Array.isArray(meta.sources) && meta.sources.length > 0) {
         const sourceBar = window.DESUCore.createSourceBar(meta.sources);
         if (sourceBar) div.appendChild(sourceBar);
     }
 
-    // Attach DESUCore Smart Follow-Up Suggestion (clickable to continue conversation!)
     if (role === 'bot' && window.DESUCore && meta.followUp) {
         const followEl = window.DESUCore.createFollowUp(meta.followUp);
         if (followEl) {
@@ -509,7 +470,7 @@ function renderHistory() {
         item.onclick = () => {
             currentId = chat.id;
             chatContainer.innerHTML = '';
-            chat.messages.forEach(m => addBubble(m.role, m.text, m.isHtml, false, { sources: m.sources, followUp: m.followUp }));
+            chat.messages.forEach(m => addBubble(m.role, m.text, m.isHtml, false, { sources: m.sources, followUp: m.followUp, animateUndissolve: false }));
             chatContainer.scrollTop = chatContainer.scrollHeight;
             centerStage.classList.add('dissolved');
             chatContainer.classList.add('active');
@@ -542,12 +503,11 @@ quickHelpBtn.onclick = () => {
     centerStage.classList.add('dissolved');
     chatContainer.classList.add('active');
     addBubble('bot', `
-        <strong>DESU Guide & Modes (Current: ${escapeHtml(Learn.mode())}):</strong><br>
-        • <strong>Switch Modes:</strong> Type <code>conversational mode</code>, <code>educational mode</code>, or <code>professional mode</code>.<br>
-        • <strong>Personal Memory:</strong> Say <code>my name is …</code>, <code>I like physics</code>, or ask <code>which subject do I like?</code><br>
-        • <strong>Web & Social:</strong> Prefix with <code>insta</code>, <code>fb</code>, <code>reddit</code>, <code>wiki</code>, or <code>archive</code>.<br>
-        • <strong>Knowledge Training:</strong> Type <code>teach: topic</code> or <code>teach: topic = answer</code>.
-    `, true);
+        <strong>DESU Omni-Search & Conversational Modes (${escapeHtml(Learn.mode())}):</strong><br>
+        • <strong>Auto Multi-Search:</strong> Ask about any person, place, or topic (e.g., <code>Sundar Pichai</code> or <code>Quantum computing</code>) and DESU automatically pulls Google, Wikipedia, Reddit & Instagram results together.<br>
+        • <strong>Natural Chat:</strong> Talk naturally, share feelings, or ask coding/math questions and DESU answers directly from its own intelligence.<br>
+        • <strong>Switch Modes:</strong> Type <code>conversational mode</code>, <code>educational mode</code>, or <code>professional mode</code>.
+    `, true, true, { animateUndissolve: true });
 };
 
 async function handleSend() {
@@ -598,12 +558,12 @@ async function handleSend() {
         saveChats();
         const bubble = addBubble('bot', replyObj.text, replyObj.isHtml, true, {
             sources: replyObj.sources,
-            followUp: replyObj.followUp
+            followUp: replyObj.followUp,
+            animateUndissolve: true
         });
 
         if (replyObj.fromAI) {
-            Learn.cacheReply(text, replyObj.rawText);
-            Learn.attachFeedback(bubble, text, replyObj.rawText);
+            Learn.attachFeedback(bubble);
         }
     } finally {
         busy = false;
