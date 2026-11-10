@@ -1,21 +1,30 @@
-// learn.js — per-user profile, self-training and feedback. Loads before engine.js.
+// learn.js — DESU Identity, User Profile, Response Modes, Self-Training & Feedback
 const Learn = (() => {
     const KEY = 'shinu_profile_v1';
-    let p = { botName: 'Desu', name: '', facts: [], interests: {}, style: '', blocked: [], studied: [] };
+    let p = {
+        botName: 'Desu',
+        name: '',
+        facts: [],
+        interests: {},
+        style: '',
+        mode: 'conversational',
+        blocked: [],
+        studied: []
+    };
     try { Object.assign(p, JSON.parse(localStorage.getItem(KEY) || '{}')); } catch (e) {}
     const save = () => { try { localStorage.setItem(KEY, JSON.stringify(p)); } catch (e) {} };
     const cap = s => s.replace(/(^|\s)([a-z])/g, (m, a, c) => a + c.toUpperCase());
     const norm = s => String(s).toLowerCase().replace(/[?.!,;:]+$/, '').replace(/\s+/g, ' ').trim();
     const clean = s => s.replace(/[.!?]+$/, '').trim();
+    const esc = s => (window.DESUCore ? window.DESUCore.escapeHTML(s) : String(s));
     const say = html => ({ text: html, isHtml: true });
 
-    // "what is X" / "tell me about X" / "X" all become the same key
     const core = s => norm(s).replace(/^(what is|what are|what was|what were|what's|who is|who are|who was|who's|tell me about|tell me|explain|define|describe|meaning of|information about|info on)\s+(an?\s+|the\s+)?/, '');
 
     function makeTopic(raw) {
         let t = raw.trim().replace(/\s+/g, ' ');
-        if (/^[0-9+\-*/().%\s]+$/.test(t)) return 'Quick Calculation';
-        if (/^(hello|hi+|hey+|yo|sup)\b[\s!.,?]*$/i.test(t)) return 'Greeting';
+        if (/^[0-9+\-*/().%\s]+$/.test(t) || /\btable of \d+/i.test(t)) return 'Mathematics';
+        if (/^(hello|hi+|hey+|yo|sup)\b[\s!.,?]*$/i.test(t)) return 'Conversation';
         const lead = /^(please\s+|can you\s+|could you\s+|tell me\s+(about\s+)?|(who|what)\s+(is|are|was|were)\s+(an?\s+|the\s+)?|what'?s\s+|who'?s\s+|how\s+(do|can|to|does)\s+(i\s+|you\s+)?|why\s+(is|are|do|does)\s+|explain\s+|define\s+|describe\s+|show me\s+|give me\s+)/i;
         let prev;
         do { prev = t; t = t.replace(lead, ''); } while (t !== prev && t);
@@ -25,46 +34,93 @@ const Learn = (() => {
     }
 
     function applyBotName() {
-        const n = p.botName;
+        const n = p.botName || 'Desu';
         document.querySelectorAll('.brand-title, .drawer-brand span').forEach(el => { el.textContent = n.toUpperCase(); });
         const inp = document.getElementById('userInput');
-        if (inp) inp.placeholder = 'Message ' + n + '...';
+        if (inp) inp.placeholder = `Message ${n} (${p.mode} mode)...`;
         document.title = n;
     }
 
-    // Learns from plain statements: "my name is…", "I like…", "keep it short"
+    // Handles both setting AND querying identity, user profile, and response modes
     function observe(raw) {
-        if (raw.includes('?') || raw.split(/\s+/).length > 14) return null;
+        const q = raw.trim();
+        const lower = norm(q);
         let m;
 
-        if ((m = raw.match(/\byour name is\s+([a-z0-9][a-z0-9_-]{0,14})/i))) {
-            p.botName = cap(m[1].toLowerCase()); save(); applyBotName();
-            return say(`Got it, from now on I'm <strong>${escapeHtml(p.botName)}</strong>.`);
-        }
-        if ((m = raw.match(/\b(?:my name is|call me|i am called)\s+([a-z][a-z'-]{1,19})/i))) {
-            p.name = cap(m[1].toLowerCase()); save();
-            return say(`Nice to meet you, <strong>${escapeHtml(p.name)}</strong>! I'll remember that.`);
-        }
-        if (/^forget (my name|everything about me)/i.test(raw)) {
-            p.name = ''; p.facts = []; save();
-            return say("Done, I've forgotten what I knew about you.");
+        // 1. Response Mode Switching (Roadmap Item #4: Conversational, Educational, Professional)
+        if ((m = lower.match(/^(?:set\s+)?(?:mode\s*:?\s*)?(conversational|educational|professional)(?:\s+mode)?$/i))) {
+            p.mode = m[1].toLowerCase();
+            save();
+            applyBotName();
+            return say(`Switched to <strong>${cap(p.mode)} Mode</strong>.`);
         }
 
-        const asking = /\b(explain|tell me|how|what|why|write|show|give|can you|could you|please|teach|learn)\b/i.test(raw);
+        // 2. Questions about DESU's own identity ("What's your name?", "Hi what is your name?", "Who are you?")
+        if (/^(?:hi\s+|hey\s+|hello\s+)?(?:what(?:'s|\s+is)\s+your\s+name|who\s+are\s+you|what\s+are\s+youCalled)$/i.test(lower)) {
+            const userGreeting = p.name ? `, ${esc(p.name)}` : '';
+            return say(`I'm <strong>${esc(p.botName)}</strong>${userGreeting} — your independent AI assistant. Currently running in <strong>${esc(p.mode)}</strong> mode.`);
+        }
+
+        // 3. Questions about the User's own stored profile ("What is my name?", "Which subject I like?", "Do I like physics?")
+        if (/^(?:what(?:'s|\s+is)\s+my\s+name|who\s+am\s+i)$/i.test(lower)) {
+            if (p.name) return say(`Your name is <strong>${esc(p.name)}</strong>.`);
+            return say(`You haven't told me your name yet! Tell me with <code>my name is ...</code>`);
+        }
+
+        if (/^(?:what|which)\s+(?:subject|topic|thing)s?\s+(?:do\s+)?i\s+(?:like|love|study|mentioned)/i.test(lower) ||
+            /^what\s+do\s+you\s+know\s+about\s+me/i.test(lower) ||
+            /^do\s+i\s+(?:like|love)\s+(.+)/i.test(lower)) {
+            const doILikeMatch = lower.match(/^do\s+i\s+(?:like|love)\s+(.+)/i);
+            const allInterests = Object.keys(p.interests);
+            if (doILikeMatch) {
+                const subj = doILikeMatch[1].trim();
+                const foundInFacts = p.facts.some(f => f.toLowerCase().includes(subj));
+                const foundInTopics = allInterests.some(t => t.toLowerCase().includes(subj));
+                if (foundInFacts || foundInTopics) {
+                    return say(`Yes! You've mentioned an interest in <strong>${esc(subj)}</strong>.`);
+                }
+            }
+            const summaryBits = [];
+            if (p.name) summaryBits.push(`Your name is <strong>${esc(p.name)}</strong>`);
+            if (p.facts.length) summaryBits.push(`You told me you ${p.facts.map(esc).join(', ')}`);
+            if (allInterests.length) summaryBits.push(`Topics we've explored: <strong>${allInterests.slice(-5).map(esc).join(', ')}</strong>`);
+            if (summaryBits.length) return say(summaryBits.join('. ') + '.');
+            return say(`You haven't shared your favourite subjects with me yet! Try saying <code>I like physics</code>.`);
+        }
+
+        // 4. Statements that teach DESU about its name or the user's profile
+        if (q.includes('?') || q.split(/\s+/).length > 14) return null;
+
+        if ((m = q.match(/\byour name is\s+([a-z0-9][a-z0-9_-]{0,14})/i))) {
+            p.botName = cap(m[1].toLowerCase()); save(); applyBotName();
+            return say(`Got it, from now on I'm <strong>${esc(p.botName)}</strong>.`);
+        }
+        if ((m = q.match(/\b(?:my name is|call me|i am called)\s+([a-z][a-z'-]{1,19})/i))) {
+            p.name = cap(m[1].toLowerCase()); save();
+            return say(`Nice to meet you, <strong>${esc(p.name)}</strong>! I'll remember that.`);
+        }
+        if (/^forget (my name|everything about me)/i.test(q)) {
+            p.name = ''; p.facts = []; p.interests = {}; save();
+            return say("Done, I've cleared your personal profile memory.");
+        }
+
+        const asking = /\b(explain|tell me|how|what|why|write|show|give|can you|could you|please|teach|learn)\b/i.test(q);
         if (!asking) {
             const rules = [
-                [/\bi (?:live|stay) in\s+(.+)/i, 'lives in'],
-                [/\bi(?:'m| am) from\s+(.+)/i, 'is from'],
-                [/\bi (?:like|love|enjoy)\s+(.+)/i, 'likes'],
-                [/\bi (?:work as|work at|study)\s+(.+)/i, 'works/studies'],
+                [/\bi (?:live|stay) in\s+(.+)/i, 'live in'],
+                [/\bi(?:'m| am) from\s+(.+)/i, 'are from'],
+                [/\bi (?:like|love|enjoy)\s+(.+)/i, 'like'],
+                [/\bi (?:work as|work at|study)\s+(.+)/i, 'study/work in'],
                 [/\bmy favou?rite (\w+) is\s+(.+)/i, null]
             ];
             for (const [re, label] of rules) {
-                if ((m = raw.match(re))) {
-                    const fact = label ? `${label} ${clean(m[1])}` : `favourite ${m[1]} is ${clean(m[2])}`;
+                if ((m = q.match(re))) {
+                    const item = clean(m[2] || m[1]);
+                    const fact = label ? `${label} ${item}` : `favourite ${m[1]} is ${item}`;
                     if (!p.facts.includes(fact)) p.facts = [...p.facts, fact].slice(-12);
+                    p.interests[item.toLowerCase()] = (p.interests[item.toLowerCase()] || 0) + 2;
                     save();
-                    return say("Noted, I'll remember that.");
+                    return say(`Noted! I'll remember that you ${esc(fact)}.`);
                 }
             }
         }
@@ -75,25 +131,24 @@ const Learn = (() => {
             [/\b(explain (it )?simply|like i'?m 5|eli5)\b/i, 'simple']
         ];
         for (const [re, s] of styles) {
-            if (re.test(raw)) { p.style = s; save(); return say(`Okay, I'll keep my answers ${s}.`); }
+            if (re.test(q)) { p.style = s; save(); return say(`Okay, I'll keep my answers <strong>${s}</strong>.`); }
         }
         return null;
     }
 
-    // Short profile sent to the AI so it personalizes replies
     function context() {
         const bits = [];
         if (p.name) bits.push(`The user's name is ${p.name}.`);
-        if (p.facts.length) bits.push('About the user: ' + p.facts.join('; ') + '.');
+        if (p.facts.length) bits.push('User facts: ' + p.facts.join('; ') + '.');
         const top = Object.entries(p.interests).sort((a, b) => b[1] - a[1]).slice(0, 5).map(e => e[0]);
-        if (top.length) bits.push('Topics they often ask about: ' + top.join(', ') + '.');
+        if (top.length) bits.push('User interests: ' + top.join(', ') + '.');
         if (p.style) bits.push(`Preferred answer style: ${p.style}.`);
-        return { botName: p.botName, text: bits.join(' ') };
+        return { botName: p.botName, mode: p.mode || 'conversational', text: bits.join(' ') };
     }
 
     function trackInterest(raw) {
         const t = makeTopic(raw);
-        if (t === 'Greeting' || t === 'Quick Calculation') return;
+        if (t === 'Conversation' || t === 'Mathematics') return;
         const k = t.toLowerCase();
         p.interests[k] = (p.interests[k] || 0) + 1;
         const keys = Object.keys(p.interests);
@@ -104,16 +159,14 @@ const Learn = (() => {
         save();
     }
 
-    // Saves good AI answers so repeat questions get instant, consistent replies
     function cacheReply(q, a) {
         const key = core(q);
         if (!key || key.length > 60 || !a || a.length < 20 || a.length > 700) return;
         if (p.blocked.includes(key)) return;
         if (/\b(today|now|current|currently|latest|recent|news|weather|price|score|time|date|year|president|ceo|minister|champion|winner|won|released|newest|my|me|i|we|you|your)\b/i.test(key)) return;
-        teachShinu(key, a, 'Auto');
+        if (typeof teachShinu === 'function') teachShinu(key, a, 'Auto');
     }
 
-    // 👍 / 👎 under AI replies
     function attachFeedback(div, question, answer) {
         const key = core(question);
         const row = document.createElement('div'); row.className = 'feedback-row';
@@ -123,14 +176,14 @@ const Learn = (() => {
 
         up.onclick = () => {
             p.blocked = p.blocked.filter(b => b !== key); save();
-            if (key && key.length <= 60) teachShinu(key, answer, 'Liked');
-            note.textContent = 'Learned, thanks!';
+            if (key && key.length <= 60 && typeof teachShinu === 'function') teachShinu(key, answer, 'Verified');
+            note.textContent = 'Verified & saved to memory';
             up.remove(); down.remove();
         };
         down.onclick = () => {
-            forgetTrigger(key);
+            if (typeof forgetTrigger === 'function') forgetTrigger(key);
             p.blocked = [...p.blocked, key].slice(-100); save();
-            note.textContent = 'Thanks! Teach me the right answer below.';
+            note.textContent = 'Removed. Teach the correct response below:';
             up.remove(); down.remove();
             const inp = document.getElementById('userInput');
             inp.value = `teach: ${key} = `;
@@ -140,16 +193,15 @@ const Learn = (() => {
         div.appendChild(row);
     }
 
-    // Background self-study: learns topics the user keeps asking about
     async function selfStudy() {
-        if (document.hidden || !navigator.onLine) return;
+        if (document.hidden || !navigator.onLine || typeof brain === 'undefined') return;
         if (brain.filter(n => n.source === 'Self-Trained').length >= 40) return;
         const next = Object.entries(p.interests)
             .filter(([t, c]) => c >= 2 && !p.studied.includes(t) && !brain.some(b => b.trigger === t))
             .sort((a, b) => b[1] - a[1])[0];
         if (!next) return;
         p.studied = [...p.studied, next[0]].slice(-100); save();
-        await deepLearnTopic(next[0], 'Self-Trained', true);
+        if (typeof deepLearnTopic === 'function') await deepLearnTopic(next[0], 'Self-Trained', true);
     }
     setInterval(selfStudy, 90000);
 
@@ -158,6 +210,7 @@ const Learn = (() => {
     return {
         core, makeTopic, observe, context, trackInterest, cacheReply, attachFeedback, applyBotName,
         botName: () => p.botName,
-        userName: () => p.name
+        userName: () => p.name,
+        mode: () => p.mode
     };
 })();
