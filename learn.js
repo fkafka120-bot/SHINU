@@ -1,17 +1,23 @@
-// learn.js — DESU Identity, User Profile, Response Modes, Self-Training & Feedback
+// learn.js — DESU Identity, Profile, Neon Feedback & Silent Self-Questioning Loop
 const Learn = (() => {
-    const KEY = 'shinu_profile_v1';
+    const KEY = 'desu_profile_v3';
     let p = {
         botName: 'Desu',
         name: '',
         facts: [],
-        interests: {},
+        interests: [],
+        selfInsights: [],
         style: '',
-        mode: 'conversational',
-        blocked: [],
-        studied: []
+        mode: 'conversational'
     };
-    try { Object.assign(p, JSON.parse(localStorage.getItem(KEY) || '{}')); } catch (e) {}
+    try {
+        const prev = JSON.parse(localStorage.getItem('desu_profile_v2') || '{}');
+        const curr = JSON.parse(localStorage.getItem(KEY) || '{}');
+        Object.assign(p, prev, curr);
+        if (!Array.isArray(p.interests)) p.interests = [];
+        if (!Array.isArray(p.selfInsights)) p.selfInsights = [];
+    } catch (e) {}
+
     const save = () => { try { localStorage.setItem(KEY, JSON.stringify(p)); } catch (e) {} };
     const cap = s => s.replace(/(^|\s)([a-z])/g, (m, a, c) => a + c.toUpperCase());
     const norm = s => String(s).toLowerCase().replace(/[?.!,;:]+$/, '').replace(/\s+/g, ' ').trim();
@@ -19,7 +25,19 @@ const Learn = (() => {
     const esc = s => (window.DESUCore ? window.DESUCore.escapeHTML(s) : String(s));
     const say = html => ({ text: html, isHtml: true });
 
-    const core = s => norm(s).replace(/^(what is|what are|what was|what were|what's|who is|who are|who was|who's|tell me about|tell me|explain|define|describe|meaning of|information about|info on)\s+(an?\s+|the\s+)?/, '');
+    const NEON_THUMB_UP = `
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M7 10v12"/>
+            <path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2a3.13 3.13 0 0 1 3 3.88Z"/>
+        </svg>`;
+
+    const NEON_THUMB_DOWN = `
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M17 14V2"/>
+            <path d="M9 18.12 10 14H4.17a2 2 0 0 1-1.92-2.56l2.33-8A2 2 0 0 1 6.5 2H20a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-2.76a2 2 0 0 0-1.79 1.11L12 22a3.13 3.13 0 0 1-3-3.88Z"/>
+        </svg>`;
+
+    const core = s => norm(s).replace(/^(what is|what are|what was|what were|what's|who is|who are|who was|who's|tell me about|tell me|explain|define|describe|meaning of|information about|info on|search for|search)\s+(an?\s+|the\s+)?/, '');
 
     function makeTopic(raw) {
         let t = raw.trim().replace(/\s+/g, ' ');
@@ -41,13 +59,12 @@ const Learn = (() => {
         document.title = n;
     }
 
-    // Handles both setting AND querying identity, user profile, and response modes
     function observe(raw) {
         const q = raw.trim();
         const lower = norm(q);
         let m;
 
-        // 1. Response Mode Switching (Roadmap Item #4: Conversational, Educational, Professional)
+        // 1. Response Mode Switching
         if ((m = lower.match(/^(?:set\s+)?(?:mode\s*:?\s*)?(conversational|educational|professional)(?:\s+mode)?$/i))) {
             p.mode = m[1].toLowerCase();
             save();
@@ -55,40 +72,30 @@ const Learn = (() => {
             return say(`Switched to <strong>${cap(p.mode)} Mode</strong>.`);
         }
 
-        // 2. Questions about DESU's own identity ("What's your name?", "Hi what is your name?", "Who are you?")
-        if (/^(?:hi\s+|hey\s+|hello\s+)?(?:what(?:'s|\s+is)\s+your\s+name|who\s+are\s+you|what\s+are\s+youCalled)$/i.test(lower)) {
+        // 2. Identity Queries
+        if (/^(?:hi\s+|hey\s+|hello\s+)?(?:what(?:'s|\s+is)\s+your\s+name|who\s+are\s+you)$/i.test(lower)) {
             const userGreeting = p.name ? `, ${esc(p.name)}` : '';
-            return say(`I'm <strong>${esc(p.botName)}</strong>${userGreeting} — your independent AI assistant. Currently running in <strong>${esc(p.mode)}</strong> mode.`);
+            return say(`I'm <strong>${esc(p.botName)}</strong>${userGreeting} — your AI collaborator, currently in <strong>${esc(p.mode)}</strong> mode.`);
         }
 
-        // 3. Questions about the User's own stored profile ("What is my name?", "Which subject I like?", "Do I like physics?")
+        // 3. User Name Queries
         if (/^(?:what(?:'s|\s+is)\s+my\s+name|who\s+am\s+i)$/i.test(lower)) {
             if (p.name) return say(`Your name is <strong>${esc(p.name)}</strong>.`);
-            return say(`You haven't told me your name yet! Tell me with <code>my name is ...</code>`);
+            return say(`You haven't told me your name yet! Just say <code>my name is ...</code>`);
         }
 
-        if (/^(?:what|which)\s+(?:subject|topic|thing)s?\s+(?:do\s+)?i\s+(?:like|love|study|mentioned)/i.test(lower) ||
-            /^what\s+do\s+you\s+know\s+about\s+me/i.test(lower) ||
-            /^do\s+i\s+(?:like|love)\s+(.+)/i.test(lower)) {
-            const doILikeMatch = lower.match(/^do\s+i\s+(?:like|love)\s+(.+)/i);
-            const allInterests = Object.keys(p.interests);
-            if (doILikeMatch) {
-                const subj = doILikeMatch[1].trim();
-                const foundInFacts = p.facts.some(f => f.toLowerCase().includes(subj));
-                const foundInTopics = allInterests.some(t => t.toLowerCase().includes(subj));
-                if (foundInFacts || foundInTopics) {
-                    return say(`Yes! You've mentioned an interest in <strong>${esc(subj)}</strong>.`);
-                }
+        // 4. User Likes / Hates Queries
+        if (/^(?:what|which)\s+(?:subject|topic|thing)s?\s+do\s+i\s+(like|love|hate|dislike)/i.test(lower)) {
+            const verb = lower.match(/\b(like|love|hate|dislike)\b/i)[1].toLowerCase();
+            const isNegative = verb === 'hate' || verb === 'dislike';
+            const matching = p.facts.filter(f => isNegative ? f.startsWith('dislike') : f.startsWith('like'));
+            if (matching.length) {
+                return say(`You mentioned that you ${matching.map(esc).join(' and ')}.`);
             }
-            const summaryBits = [];
-            if (p.name) summaryBits.push(`Your name is <strong>${esc(p.name)}</strong>`);
-            if (p.facts.length) summaryBits.push(`You told me you ${p.facts.map(esc).join(', ')}`);
-            if (allInterests.length) summaryBits.push(`Topics we've explored: <strong>${allInterests.slice(-5).map(esc).join(', ')}</strong>`);
-            if (summaryBits.length) return say(summaryBits.join('. ') + '.');
-            return say(`You haven't shared your favourite subjects with me yet! Try saying <code>I like physics</code>.`);
+            return say(`You haven't told me which subjects you ${esc(verb)} yet.`);
         }
 
-        // 4. Statements that teach DESU about its name or the user's profile
+        // 5. Statements that update User Profile or Bot Name
         if (q.includes('?') || q.split(/\s+/).length > 14) return null;
 
         if ((m = q.match(/\byour name is\s+([a-z0-9][a-z0-9_-]{0,14})/i))) {
@@ -100,25 +107,26 @@ const Learn = (() => {
             return say(`Nice to meet you, <strong>${esc(p.name)}</strong>! I'll remember that.`);
         }
         if (/^forget (my name|everything about me)/i.test(q)) {
-            p.name = ''; p.facts = []; p.interests = {}; save();
-            return say("Done, I've cleared your personal profile memory.");
+            p.name = ''; p.facts = []; p.interests = []; save();
+            return say("Done, I've cleared your profile details.");
         }
 
-        const asking = /\b(explain|tell me|how|what|why|write|show|give|can you|could you|please|teach|learn)\b/i.test(q);
+        const asking = /\b(explain|tell me|how|what|why|write|show|give|can you|could you|please)\b/i.test(q);
         if (!asking) {
             const rules = [
-                [/\bi (?:live|stay) in\s+(.+)/i, 'live in'],
-                [/\bi(?:'m| am) from\s+(.+)/i, 'are from'],
-                [/\bi (?:like|love|enjoy)\s+(.+)/i, 'like'],
-                [/\bi (?:work as|work at|study)\s+(.+)/i, 'study/work in'],
-                [/\bmy favou?rite (\w+) is\s+(.+)/i, null]
+                [/^i (?:live|stay) in\s+(.+)/i, 'live in'],
+                [/^i(?:'m| am) from\s+(.+)/i, 'are from'],
+                [/^i (?:like|love|enjoy)\s+(.+)/i, 'like'],
+                [/^i (?:hate|dislike)\s+(.+)/i, 'dislike'],
+                [/^i (?:work as|work at|study)\s+(.+)/i, 'study/work in'],
+                [/^my favou?rite (\w+) is\s+(.+)/i, null]
             ];
             for (const [re, label] of rules) {
                 if ((m = q.match(re))) {
                     const item = clean(m[2] || m[1]);
                     const fact = label ? `${label} ${item}` : `favourite ${m[1]} is ${item}`;
-                    if (!p.facts.includes(fact)) p.facts = [...p.facts, fact].slice(-12);
-                    p.interests[item.toLowerCase()] = (p.interests[item.toLowerCase()] || 0) + 2;
+                    if (!p.facts.includes(fact)) p.facts = [...p.facts, fact].slice(-15);
+                    if (!p.interests.includes(item.toLowerCase())) p.interests = [...p.interests, item.toLowerCase()].slice(-20);
                     save();
                     return say(`Noted! I'll remember that you ${esc(fact)}.`);
                 }
@@ -136,79 +144,104 @@ const Learn = (() => {
         return null;
     }
 
+    function noteTopic(topicStr) {
+        const cleanTopic = core(topicStr);
+        if (cleanTopic && cleanTopic.length > 2 && cleanTopic.length < 40 && !p.interests.includes(cleanTopic)) {
+            p.interests = [...p.interests, cleanTopic].slice(-20);
+            save();
+        }
+    }
+
     function context() {
         const bits = [];
         if (p.name) bits.push(`The user's name is ${p.name}.`);
-        if (p.facts.length) bits.push('User facts: ' + p.facts.join('; ') + '.');
-        const top = Object.entries(p.interests).sort((a, b) => b[1] - a[1]).slice(0, 5).map(e => e[0]);
-        if (top.length) bits.push('User interests: ' + top.join(', ') + '.');
+        if (p.facts.length) bits.push('About the user: ' + p.facts.join('; ') + '.');
         if (p.style) bits.push(`Preferred answer style: ${p.style}.`);
+        if (p.selfInsights.length) {
+            bits.push('Recent self-trained insights: ' + p.selfInsights.slice(-5).map(i => `${i.q} -> ${i.a}`).join(' | '));
+        }
         return { botName: p.botName, mode: p.mode || 'conversational', text: bits.join(' ') };
     }
 
-    function trackInterest(raw) {
-        const t = makeTopic(raw);
-        if (t === 'Conversation' || t === 'Mathematics') return;
-        const k = t.toLowerCase();
-        p.interests[k] = (p.interests[k] || 0) + 1;
-        const keys = Object.keys(p.interests);
-        if (keys.length > 40) {
-            const weakest = keys.sort((a, b) => p.interests[a] - p.interests[b])[0];
-            delete p.interests[weakest];
-        }
-        save();
-    }
+    function attachFeedback(div) {
+        const row = document.createElement('div');
+        row.className = 'feedback-row';
 
-    function cacheReply(q, a) {
-        const key = core(q);
-        if (!key || key.length > 60 || !a || a.length < 20 || a.length > 700) return;
-        if (p.blocked.includes(key)) return;
-        if (/\b(today|now|current|currently|latest|recent|news|weather|price|score|time|date|year|president|ceo|minister|champion|winner|won|released|newest|my|me|i|we|you|your)\b/i.test(key)) return;
-        if (typeof teachShinu === 'function') teachShinu(key, a, 'Auto');
-    }
+        const note = document.createElement('span');
+        note.className = 'fb-note';
 
-    function attachFeedback(div, question, answer) {
-        const key = core(question);
-        const row = document.createElement('div'); row.className = 'feedback-row';
-        const note = document.createElement('span'); note.className = 'fb-note';
-        const mk = t => { const b = document.createElement('button'); b.className = 'fb-btn'; b.textContent = t; return b; };
-        const up = mk('👍'), down = mk('👎');
+        const up = document.createElement('button');
+        up.className = 'fb-btn';
+        up.setAttribute('aria-label', 'Helpful');
+        up.innerHTML = NEON_THUMB_UP;
+
+        const down = document.createElement('button');
+        down.className = 'fb-btn';
+        down.setAttribute('aria-label', 'Not helpful');
+        down.innerHTML = NEON_THUMB_DOWN;
 
         up.onclick = () => {
-            p.blocked = p.blocked.filter(b => b !== key); save();
-            if (key && key.length <= 60 && typeof teachShinu === 'function') teachShinu(key, answer, 'Verified');
-            note.textContent = 'Verified & saved to memory';
-            up.remove(); down.remove();
+            up.classList.add('selected');
+            down.remove();
+            note.textContent = 'Glad that helped';
         };
+
         down.onclick = () => {
-            if (typeof forgetTrigger === 'function') forgetTrigger(key);
-            p.blocked = [...p.blocked, key].slice(-100); save();
-            note.textContent = 'Removed. Teach the correct response below:';
-            up.remove(); down.remove();
-            const inp = document.getElementById('userInput');
-            inp.value = `teach: ${key} = `;
-            inp.focus();
+            down.classList.add('selected');
+            up.remove();
+            note.textContent = 'Noted — I will refine my next response';
         };
+
         row.append(up, down, note);
         div.appendChild(row);
     }
 
-    async function selfStudy() {
-        if (document.hidden || !navigator.onLine || typeof brain === 'undefined') return;
-        if (brain.filter(n => n.source === 'Self-Trained').length >= 40) return;
-        const next = Object.entries(p.interests)
-            .filter(([t, c]) => c >= 2 && !p.studied.includes(t) && !brain.some(b => b.trigger === t))
-            .sort((a, b) => b[1] - a[1])[0];
-        if (!next) return;
-        p.studied = [...p.studied, next[0]].slice(-100); save();
-        if (typeof deepLearnTopic === 'function') await deepLearnTopic(next[0], 'Self-Trained', true);
+    // ========================================================================
+    // SILENT SELF-QUESTIONING LOOP (Asks itself questions & trains in background)
+    // ========================================================================
+    const SEED_TOPICS = [
+        'quantum mechanics', 'human psychology', 'calculus and rates of change',
+        'artificial intelligence architectures', 'astrophysics', 'game theory',
+        'neuroplasticity', 'thermodynamics', 'algorithmic complexity', 'philosophy of mind'
+    ];
+    const QUESTION_TEMPLATES = [
+        t => `What is the core principle behind ${t} in one concise sentence?`,
+        t => `Why is ${t} important in real-world applications in one sentence?`,
+        t => `How does ${t} connect to modern science and technology in one sentence?`
+    ];
+
+    async function runSilentSelfPlay() {
+        if (document.hidden || !navigator.onLine) return;
+        try {
+            const pool = [...p.interests, ...SEED_TOPICS];
+            const topic = pool[Math.floor(Math.random() * pool.length)];
+            const qTemplate = QUESTION_TEMPLATES[Math.floor(Math.random() * QUESTION_TEMPLATES.length)];
+            const selfQuestion = qTemplate(topic);
+
+            // Skip if already asked recently
+            if (p.selfInsights.some(item => item.q === selfQuestion)) return;
+
+            // Step 1: DESU asks itself the question via fast browser AI or Wikipedia synthesis
+            const url = `https://text.pollinations.ai/${encodeURIComponent(selfQuestion)}?model=openai&seed=${Math.floor(Math.random() * 99999)}&system=${encodeURIComponent('Answer accurately in one crisp sentence.')}`;
+            const res = await fetch(url);
+            if (!res.ok) return;
+            const answer = (await res.text()).trim();
+
+            if (answer && answer.length > 15 && answer.length < 280 && !answer.includes('Free limit reached') && !answer.includes('pollinations')) {
+                p.selfInsights = [...p.selfInsights, { q: selfQuestion, a: answer, t: Date.now() }].slice(-25);
+                save();
+            }
+        } catch (e) {}
     }
-    setInterval(selfStudy, 90000);
+
+    // Continuously asks itself a question every 55 seconds in the background
+    setInterval(runSilentSelfPlay, 55000);
+    setTimeout(runSilentSelfPlay, 12000);
 
     applyBotName();
 
     return {
-        core, makeTopic, observe, context, trackInterest, cacheReply, attachFeedback, applyBotName,
+        core, makeTopic, observe, noteTopic, context, attachFeedback, applyBotName,
         botName: () => p.botName,
         userName: () => p.name,
         mode: () => p.mode
