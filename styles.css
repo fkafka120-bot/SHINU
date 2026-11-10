@@ -251,3 +251,46 @@ header {
 .input-dock input::placeholder { color: var(--text-muted); }
 .send-icon-btn { background: var(--accent-purple); border: none; color: #050308; width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; }
 .send-icon-btn svg { width: 15px; height: 15px; fill: currentColor; }
+
+/* DESU — Source attribution */
+.desu-source-bar {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 7px;
+    margin-top: 12px;
+}
+
+.desu-source-label {
+    color: var(--text-muted, #999);
+    font-size: 11px;
+}
+
+.desu-source-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 9px;
+    border: 1px solid var(--border, #383838);
+    border-radius: 20px;
+    color: var(--text-main);
+    text-decoration: none;
+    font-size: 11px;
+    transition: background 0.2s ease;
+}
+
+.desu-source-chip:hover {
+    background: rgba(255,255,255,0.08);
+}
+
+.desu-source-chip img {
+    object-fit: contain;
+    border-radius: 50%;
+}
+
+.desu-follow-up {
+    margin-top: 10px;
+    color: var(--text-main);
+    opacity: 0.85;
+    font-size: 13px;
+}
