@@ -1,44 +1,93 @@
-// api/web.js — Fast Vercel Serverless Backend (Zero Rate-Limit Hang)
+// api/web.js — Vercel serverless backend for Desu
+const headers = {
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/124.0.0.0 Safari/537.36'
+};
+
+const fetchWithTimeout = async (url, options = {}, ms = 3800) => {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), ms);
+    try {
+        return await fetch(url, { ...options, signal: controller.signal });
+    } finally {
+        clearTimeout(timer);
+    }
+};
+
+const withCap = (promise, ms) => Promise.race([promise, new Promise(resolve => setTimeout(() => resolve(null), ms))]);
+
+const STOP = new Set('a an the is are was were of in on at to for from and or your my me you i it this that what who how why when where which do does did can tell about explain define describe'.split(' '));
+const toks = s => (String(s).toLowerCase().match(/[a-z0-9]+/g) || []).filter(w => w.length > 1 && !STOP.has(w));
+
+// Finds the Wikipedia article that really matches the query (strict = must share words with the title)
+async function wikiLookup(q, strict, ms = 3000) {
+    const qt = toks(q);
+    const searchTerm = qt.length ? qt.join(' ') : q;
+    const searchUrl = `https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(searchTerm)}&utf8=&format=json&srlimit=5`;
+    const searchRes = await fetchWithTimeout(searchUrl, { headers }, ms);
+    const searchData = await searchRes.json();
+    const results = searchData?.query?.search || [];
+    if (!results.length) return { found: false };
+
+    const score = r => {
+        const tt = toks(r.title);
+        return qt.length ? qt.filter(w => tt.includes(w)).length / qt.length : 0;
+    };
+
+    const wantsMedia = /\b(song|album|movie|film|series|band|singer)\b/i.test(q);
+    const nonMedia = results.filter(r =>
+        !/\((song|album|EP|film|TV series|band)\)/i.test(r.title) &&
+        !/\b(studio album|lead single|television series|recording artist)\b/i.test(r.snippet)
+    );
+    const pool = (!wantsMedia && nonMedia.length) ? nonMedia : results;
+    const best = pool.map(r => ({ r, s: score(r) })).sort((a, b) => b.s - a.s)[0];
+    if (strict && best.s < 0.5) return { found: false };
+
+    const sumUrl = `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(best.r.title)}`;
+    const sumRes = await fetchWithTimeout(sumUrl, { headers }, ms);
+    const sumData = await sumRes.json();
+    if (!sumData || !sumData.extract) return { found: false };
+    if (strict && sumData.type === 'disambiguation') return { found: false };
+    return { found: true, summary: sumData };
+}
+
 export default async function handler(req, res) {
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
     if (req.method === 'OPTIONS') return res.status(200).end();
 
-    const headers = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/124.0.0.0 Safari/537.36'
-    };
-
-    const fetchWithTimeout = async (url, options = {}, ms = 3800) => {
-        const controller = new AbortController();
-        const timer = setTimeout(() => controller.abort(), ms);
-        try {
-            return await fetch(url, { ...options, signal: controller.signal });
-        } finally {
-            clearTimeout(timer);
-        }
-    };
-
     try {
         const source = req.query.source || (req.body && req.body.source);
-        const q = req.query.q || (req.body && req.body.q);
+        const q = String(req.query.q || (req.body && req.body.q) || '').trim().slice(0, 600);
+        if (!q) return res.status(400).json({ error: 'Missing q' });
 
-        // 1. ULTRA-FAST MULTI-MODEL AI (Blocks 45s rate-limit errors)
+        // 1. AI (grounded with a Wikipedia reference, personalized with the user's profile)
         if (source === 'ai') {
-            const history = (req.body && req.body.history) || [];
-            const memory = (req.body && req.body.memory) || [];
+            const body = req.body || {};
+            const history = Array.isArray(body.history) ? body.history : [];
+            const memory = Array.isArray(body.memory) ? body.memory : [];
+            const profile = body.profile || {};
 
             const memoryContext = memory.length
                 ? `\nKey facts:\n` + memory.slice(-15).map(m => `- ${m.trigger}: ${m.response}`).join('\n')
                 : '';
 
-            const systemPrompt = `You are Shinu, a fast, natural, intelligent AI assistant. Answer directly, warmly, and concisely in plain conversational paragraphs or short bullet points. Never mention rate limits.${memoryContext}`;
+            let reference = '';
+            if (body.lookup) {
+                const w = await withCap(wikiLookup(q, true, 2000).catch(() => null), 2500);
+                if (w && w.found) {
+                    reference = `\nReference (Wikipedia, "${w.summary.title}"): ${String(w.summary.extract).slice(0, 700)}\nUse the reference only if it is clearly about what the user asked; otherwise ignore it.`;
+                }
+            }
+
+            const botName = String(profile.botName || 'Desu').slice(0, 20);
+            const systemPrompt = `You are ${botName}, a fast, natural, accurate AI assistant. Answer directly and concisely in plain conversational paragraphs or short bullet points. Accuracy comes first: if you are not sure, say so briefly instead of guessing, and never invent facts, names, numbers or sources. If the user tells you something about themselves or gives you an instruction (like a new name for you), acknowledge it naturally. Today is ${new Date().toDateString()}. ${String(profile.text || '').slice(0, 600)} Never mention rate limits.${reference}${memoryContext}`;
 
             const messages = [
                 { role: 'system', content: systemPrompt },
                 ...history.slice(-6).map(m => ({
                     role: m.role === 'user' ? 'user' : 'assistant',
-                    content: String(m.rawText || m.text || '').replace(/<[^>]+>/g, '')
+                    content: String(m.rawText || m.text || '').replace(/<[^>]+>/g, '').slice(0, 1500)
                 })),
                 { role: 'user', content: q }
             ];
@@ -46,7 +95,6 @@ export default async function handler(req, res) {
             const isRateLimitedText = (txt) =>
                 !txt || txt.includes('Free limit reached') || txt.includes('enter.pollinations.ai') || txt.includes('45 seconds');
 
-            // Try fast models in sequence with short timeout
             for (const modelName of ['openai-fast', 'mistral', 'openai']) {
                 try {
                     const aiRes = await fetchWithTimeout('https://text.pollinations.ai/', {
@@ -57,7 +105,7 @@ export default async function handler(req, res) {
                             model: modelName,
                             seed: Math.floor(Math.random() * 100000)
                         })
-                    }, 3600);
+                    }, 3200);
 
                     if (aiRes.ok) {
                         const text = (await aiRes.text()).trim();
@@ -71,7 +119,7 @@ export default async function handler(req, res) {
             return res.status(200).json({ rateLimited: true });
         }
 
-        // 2. INSTAGRAM & FACEBOOK PUBLIC INDEXER
+        // 2. Instagram & Facebook public indexer
         if (source === 'insta' || source === 'fb') {
             const domain = source === 'insta' ? 'instagram.com' : 'facebook.com';
             const ddgUrl = `https://html.duckduckgo.com/html/?q=${encodeURIComponent(`site:${domain} ${q}`)}`;
@@ -87,12 +135,12 @@ export default async function handler(req, res) {
                 if (uddg) rawUrl = decodeURIComponent(uddg[1]);
                 const title = match[2].replace(/<[^>]+>/g, '').trim();
                 const snippet = match[3].replace(/<[^>]+>/g, '').trim();
-                if (title && rawUrl.includes(domain)) results.push({ title, url: rawUrl, snippet });
+                if (title && /^https?:\/\//i.test(rawUrl) && rawUrl.includes(domain)) results.push({ title, url: rawUrl, snippet });
             }
             return res.status(200).json({ results });
         }
 
-        // 3. REDDIT
+        // 3. Reddit (falls back to Hacker News)
         if (source === 'reddit') {
             try {
                 const r = await fetchWithTimeout(`https://www.reddit.com/search.json?q=${encodeURIComponent(q)}&sort=relevance&limit=4&raw_json=1`, { headers }, 3500);
@@ -108,31 +156,13 @@ export default async function handler(req, res) {
             return res.status(200).json({ hnHits: hnData.hits || [] });
         }
 
-        // 4. FILTERED WIKIPEDIA (Instant 150ms Knowledge Lookup)
+        // 4. Wikipedia (add &strict=1 to require a close title match)
         if (source === 'wiki') {
-            const searchUrl = `https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(q)}&utf8=&format=json&srlimit=5`;
-            const searchRes = await fetchWithTimeout(searchUrl, { headers }, 3000);
-            const searchData = await searchRes.json();
-            const results = searchData?.query?.search || [];
-            if (!results.length) return res.status(200).json({ found: false });
-
-            const wantsMedia = /\b(song|album|movie|film|series|band|singer)\b/i.test(q);
-            let chosen = results[0];
-            if (!wantsMedia) {
-                const nonMedia = results.find(r =>
-                    !/\((song|album|EP|film|TV series|band)\)/i.test(r.title) &&
-                    !/\b(studio album|lead single|television series|recording artist)\b/i.test(r.snippet)
-                );
-                if (nonMedia) chosen = nonMedia;
-            }
-
-            const sumUrl = `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(chosen.title)}`;
-            const sumRes = await fetchWithTimeout(sumUrl, { headers }, 3000);
-            const sumData = await sumRes.json();
-            return res.status(200).json({ found: true, summary: sumData });
+            const result = await wikiLookup(q, req.query.strict === '1', 3000);
+            return res.status(200).json(result);
         }
 
-        // 5. INTERNET ARCHIVE
+        // 5. Internet Archive
         if (source === 'archive') {
             const url = `https://archive.org/advancedsearch.php?q=${encodeURIComponent(q)}&fl[]=identifier&fl[]=title&fl[]=mediatype&fl[]=year&rows=4&page=1&output=json`;
             const r = await fetchWithTimeout(url, { headers }, 3500);
