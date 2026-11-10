@@ -17,7 +17,6 @@
         <div class="topic-bar idle" id="topicBar">
             <span class="topic-dot"></span>
             <span class="topic-text" id="topicText">Desu</span>
-            <span class="auto-train-pill" id="headerBrainPill" title="Neural Memory">🧠 0</span>
         </div>
     </header>
 
@@ -42,15 +41,10 @@
             </div>
         </div>
         <div>
-            <div class="drawer-section-title">Neural Memory</div>
-            <div class="drawer-item" id="openTrainModalBtn">
-                <span>Training Studio</span>
-                <span class="brain-badge" id="brainCountBadge">0</span>
-            </div>
-        </div>
-        <div>
-            <div class="drawer-section-title">Web & Social</div>
+            <div class="drawer-section-title">Studio & Web</div>
             <div class="platform-pills">
+                <span class="plat-pill" data-prefix="image ">✨ Image</span>
+                <span class="plat-pill" data-prefix="video ">🎬 Video</span>
                 <span class="plat-pill" data-prefix="insta ">Instagram</span>
                 <span class="plat-pill" data-prefix="fb ">Facebook</span>
                 <span class="plat-pill" data-prefix="reddit ">Reddit</span>
@@ -64,30 +58,6 @@
         </div>
     </div>
     <div class="backdrop" id="drawerBackdrop"></div>
-
-    <!-- Neural Training Studio Modal -->
-    <div class="modal-overlay" id="trainModal">
-        <div class="modal-card">
-            <div class="modal-header">
-                <h2>Neural Memory</h2>
-                <button class="close-modal" id="closeTrainModal">✕</button>
-            </div>
-            <div class="auto-status-bar">
-                <span id="crawlerStatusText">🟢 Instant Knowledge Sync: Ready</span>
-                <button class="train-secondary-btn" id="harvestNowBtn">+ Learn Topic</button>
-            </div>
-            <div class="train-form">
-                <input type="text" class="train-input" id="trainTriggerInput" placeholder="Topic or trigger (e.g. curvature, violence)..." />
-                <input type="text" class="train-input" id="trainResponseInput" placeholder="Custom response (or leave blank to auto-learn)" />
-                <div class="train-btn-row">
-                    <button class="train-save-btn" id="saveTrainBtn">+ Save</button>
-                    <button class="train-secondary-btn" id="clearJunkBtn">Clean</button>
-                    <button class="train-secondary-btn" id="exportBrainBtn">Export</button>
-                </div>
-            </div>
-            <div class="memory-list" id="memoryList"></div>
-        </div>
-    </div>
 
     <!-- Central Stage -->
     <div class="center-stage" id="centerStage">
