@@ -14,6 +14,11 @@
             --text-main: #f4ecff;
             --text-muted: #8d7b9e;
             --drawer-bg: rgba(8, 6, 14, 0.94);
+            /* Neutral chiaroscuro eye palette with subtle theme tint */
+            --eye-highlight: #d8d2e2;
+            --eye-mid: #6e6878;
+            --eye-dark: #141118;
+            --eye-iris: #16141c;
         }
 
         body.theme-amber {
@@ -25,6 +30,10 @@
             --text-main: #fff5ec;
             --text-muted: #9e8c7a;
             --drawer-bg: rgba(14, 10, 8, 0.94);
+            --eye-highlight: #e2dad0;
+            --eye-mid: #786e64;
+            --eye-dark: #18130e;
+            --eye-iris: #1c1712;
         }
 
         body.theme-pink {
@@ -36,6 +45,10 @@
             --text-main: #ffecfa;
             --text-muted: #9e7a8e;
             --drawer-bg: rgba(14, 6, 11, 0.94);
+            --eye-highlight: #e4d2dc;
+            --eye-mid: #7a6672;
+            --eye-dark: #181015;
+            --eye-iris: #1c1318;
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; -webkit-tap-highlight-color: transparent; }
@@ -163,39 +176,39 @@
         .topic-bar.idle .topic-text { color: var(--text-muted); font-weight: 500; }
         .topic-bar.idle .topic-dot { opacity: 0.4; animation: none; }
 
-        /* ---------- Natural eye ---------- */
+        /* ---------- Moody Chiaroscuro Neutral Eye ---------- */
         .eye-svg { width: 100%; height: 100%; display: block; overflow: visible; }
-        .eye-svg .crease { fill: none; stroke: var(--accent-purple); stroke-width: 1; stroke-linecap: round; opacity: 0.3; }
-        .eye-svg .caruncle { fill: var(--accent-purple); opacity: 0.45; }
-        .eye-svg .iris-base { fill: var(--accent-purple); }
-        .eye-svg .fibers { fill: none; stroke: #fff; stroke-opacity: 0.28; stroke-width: 4; stroke-dasharray: 0.6 1.6; }
-        .eye-svg .fibers-dark { fill: none; stroke: #000; stroke-opacity: 0.3; stroke-width: 2.4; stroke-dasharray: 0.5 1.9; }
-        .eye-svg .collarette { fill: none; stroke: #fff; stroke-opacity: 0.18; stroke-width: 0.7; }
-        .eye-svg .limbal { fill: none; stroke: #000; stroke-opacity: 0.55; stroke-width: 1.4; }
-        .eye-svg .pupil circle { fill: #06030c; }
-        .eye-svg .pupil { transform-box: fill-box; transform-origin: center; animation: pupilBreathe 6s ease-in-out infinite; }
-        @keyframes pupilBreathe {
-            0%, 100% { transform: scale(0.9); }
-            50% { transform: scale(1.08); }
-        }
         .eye-svg .iris-move {
             transform: translate(var(--ex, 0px), var(--ey, 0px));
-            transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+            transition: transform 0.35s cubic-bezier(0.2, 0.8, 0.2, 1);
         }
         .eye-svg .glint-move {
-            transform: translate(calc(var(--ex, 0px) * 0.55), calc(var(--ey, 0px) * 0.55));
-            transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+            transform: translate(calc(var(--ex, 0px) * 0.45), calc(var(--ey, 0px) * 0.45));
+            transition: transform 0.35s cubic-bezier(0.2, 0.8, 0.2, 1);
         }
-        .eye-svg .lid-fill { fill: color-mix(in srgb, var(--accent-purple) 16%, var(--bg-color)); }
-        .eye-svg .lid-edge { fill: none; stroke: var(--accent-purple); stroke-width: 2.4; stroke-linecap: round; }
-        .eye-svg .lid { animation: eyeBlink 5.5s infinite ease-in-out; }
-        @keyframes eyeBlink {
-            0%, 90%, 100% { transform: translateY(0); }
-            93.5% { transform: translateY(35px); }
-            97% { transform: translateY(0); }
+        .eye-svg .iris-fibers {
+            fill: none;
+            stroke: var(--eye-highlight);
+            stroke-opacity: 0.08;
+            stroke-width: 7;
+            stroke-dasharray: 0.7 2.2;
         }
-        .eye-svg .lash-top { fill: none; stroke: var(--accent-purple); stroke-width: 2.6; stroke-linecap: round; }
-        .eye-svg .lash-bottom { fill: none; stroke: var(--accent-purple); stroke-width: 1.2; stroke-linecap: round; opacity: 0.7; }
+        .eye-svg .pupil {
+            transform-box: fill-box;
+            transform-origin: center;
+            animation: pupilBreathe 6.5s ease-in-out infinite;
+        }
+        @keyframes pupilBreathe {
+            0%, 100% { transform: scale(0.94); }
+            50% { transform: scale(1.06); }
+        }
+        .eye-svg .blink-lid {
+            animation: moodyBlink 6s infinite ease-in-out;
+        }
+        @keyframes moodyBlink {
+            0%, 91%, 100% { transform: translateY(0); }
+            95% { transform: translateY(38px); }
+        }
 
         /* ---------- Drawer ---------- */
         .drawer {
@@ -215,14 +228,14 @@
             padding: max(22px, env(safe-area-inset-top)) 20px max(20px, env(safe-area-inset-bottom));
             display: flex;
             flex-direction: column;
-            gap: 22px;
+            gap: 20px;
             box-shadow: 20px 0 60px rgba(0,0,0,0.8);
             overflow-y: auto;
         }
         .drawer.open { transform: translateX(0); }
 
         .drawer-brand { display: flex; align-items: center; gap: 14px; }
-        .mini-eye { width: 48px; height: 24px; flex-shrink: 0; filter: drop-shadow(0 0 8px var(--accent-glow)); }
+        .mini-eye { width: 58px; height: 28px; flex-shrink: 0; filter: drop-shadow(0 2px 10px rgba(0,0,0,0.8)); }
         .drawer-brand span { font-size: 18px; letter-spacing: 6px; font-weight: 300; text-shadow: 0 0 20px var(--accent-glow); }
 
         .new-chat-btn {
@@ -231,7 +244,7 @@
             justify-content: center;
             gap: 10px;
             width: 100%;
-            padding: 14px 16px;
+            padding: 13px 16px;
             background: var(--accent-purple);
             color: #050308;
             border: none;
@@ -301,7 +314,7 @@
             display: flex;
             flex-direction: column;
             gap: 8px;
-            max-height: 32vh;
+            max-height: 26vh;
             overflow-y: auto;
         }
         .history-empty { font-size: 13.5px; color: var(--text-muted); }
@@ -328,6 +341,31 @@
         }
         .history-item .del:hover { color: var(--text-main); background: rgba(255,255,255,0.08); }
 
+        .drawer-item {
+            padding: 13px 16px;
+            background: rgba(255,255,255,0.03);
+            border: 1px solid var(--panel-border);
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-main);
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .drawer-item:hover { background: rgba(255,255,255,0.07); transform: translateX(4px); }
+        .brain-badge {
+            font-size: 11px;
+            padding: 2px 8px;
+            border-radius: 10px;
+            background: rgba(255,255,255,0.07);
+            color: var(--accent-purple);
+            border: 1px solid var(--panel-border);
+            font-weight: 700;
+        }
+
         .backdrop {
             position: fixed;
             inset: 0;
@@ -340,6 +378,111 @@
             z-index: 40;
         }
         .backdrop.active { opacity: 1; pointer-events: auto; }
+
+        /* ---------- Training Studio Modal ---------- */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.78);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            z-index: 60;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+        .modal-overlay.open { opacity: 1; pointer-events: auto; }
+        .modal-card {
+            width: 100%;
+            max-width: 440px;
+            max-height: 82vh;
+            background: var(--drawer-bg);
+            border: 1px solid var(--panel-border);
+            border-radius: 22px;
+            padding: 22px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            box-shadow: 0 24px 60px rgba(0,0,0,0.9), 0 0 30px var(--accent-glow);
+        }
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .modal-header h2 {
+            font-size: 16px;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: var(--accent-purple);
+        }
+        .close-modal {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-size: 20px;
+            cursor: pointer;
+            padding: 4px 8px;
+        }
+        .train-form {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .train-input {
+            width: 100%;
+            padding: 12px 14px;
+            background: rgba(255,255,255,0.04);
+            border: 1px solid var(--panel-border);
+            border-radius: 12px;
+            color: var(--text-main);
+            font-size: 14px;
+            outline: none;
+        }
+        .train-input:focus { border-color: var(--accent-purple); }
+        .train-save-btn {
+            padding: 12px;
+            background: var(--accent-purple);
+            color: #050308;
+            border: none;
+            border-radius: 12px;
+            font-weight: 700;
+            font-size: 14px;
+            cursor: pointer;
+            box-shadow: 0 4px 18px var(--accent-glow);
+        }
+        .memory-list {
+            flex: 1;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            max-height: 32vh;
+            padding-right: 4px;
+        }
+        .memory-node {
+            padding: 10px 12px;
+            background: rgba(255,255,255,0.03);
+            border: 1px solid var(--panel-border);
+            border-radius: 10px;
+            font-size: 13px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 10px;
+        }
+        .memory-node strong { color: var(--accent-purple); display: block; margin-bottom: 2px; }
+        .memory-node button {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            font-size: 13px;
+        }
 
         /* ---------- Center stage ---------- */
         .center-stage {
@@ -358,10 +501,10 @@
         .center-stage.dissolved { opacity: 0; pointer-events: none; }
 
         .eye-container {
-            width: 132px;
-            height: 66px;
-            margin-bottom: 22px;
-            filter: drop-shadow(0 0 25px var(--accent-glow));
+            width: 190px;
+            height: 86px;
+            margin-bottom: 18px;
+            filter: drop-shadow(0 12px 28px rgba(0, 0, 0, 0.95)) drop-shadow(0 0 18px rgba(255, 255, 255, 0.04));
         }
 
         .brand-title {
@@ -417,7 +560,7 @@
         .chat-container::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 4px; }
 
         .message-bubble {
-            max-width: 82%;
+            max-width: 85%;
             padding: 14px 18px;
             border-radius: 20px;
             font-size: 14.5px;
@@ -447,7 +590,57 @@
             border-bottom-left-radius: 6px;
             box-shadow: 0 8px 24px rgba(0,0,0,0.35);
         }
-        .message-bubble.bot a { color: var(--accent-purple); text-decoration: underline; }
+        .message-bubble.bot a {
+            color: var(--accent-purple);
+            text-decoration: none;
+            font-weight: 600;
+            border-bottom: 1px dashed var(--accent-purple);
+        }
+        .message-bubble.bot a:hover { opacity: 0.85; }
+
+        .source-badge {
+            display: inline-block;
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            color: var(--accent-purple);
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--panel-border);
+            padding: 3px 8px;
+            border-radius: 8px;
+            margin-bottom: 8px;
+        }
+        .teach-quick-btn {
+            display: inline-block;
+            margin-top: 8px;
+            padding: 5px 10px;
+            font-size: 11.5px;
+            font-weight: 600;
+            color: var(--accent-purple);
+            background: rgba(255,255,255,0.05);
+            border: 1px solid var(--panel-border);
+            border-radius: 8px;
+            cursor: pointer;
+        }
+        .wiki-thumb {
+            width: 100%;
+            max-height: 180px;
+            object-fit: cover;
+            border-radius: 12px;
+            margin: 8px 0;
+            border: 1px solid var(--panel-border);
+        }
+        .result-item {
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+        }
+        .result-item:last-child { border-bottom: none; padding-bottom: 0; }
+        .result-meta {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-top: 3px;
+        }
 
         .typing { display: inline-flex; gap: 5px; padding: 4px 0; }
         .typing i {
@@ -530,37 +723,60 @@
         .send-icon-btn svg { width: 16px; height: 16px; fill: currentColor; }
 
         @media (prefers-reduced-motion: reduce) {
-            .eye-svg .lid, .eye-svg .pupil, .typing i, .topic-dot { animation: none; }
+            .eye-svg .blink-lid, .eye-svg .pupil, .typing i, .topic-dot { animation: none; }
         }
     </style>
 </head>
 <body>
 
+    <!-- Shared Chiaroscuro Neutral Eye Gradients & Clipping Path -->
     <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
         <defs>
-            <clipPath id="eyeClip">
-                <path d="M6 32C28 8 92 8 114 32C94 48 26 48 6 32Z"/>
+            <!-- Almond eye opening matching the reference silhouette -->
+            <clipPath id="eyeOpeningClip">
+                <path d="M 32 45 C 58 23, 122 23, 148 42 C 124 61, 60 61, 32 45 Z"/>
             </clipPath>
-            <radialGradient id="eyeSclera" cx="50%" cy="50%" r="55%">
-                <stop offset="0" style="stop-color: var(--text-main)" stop-opacity="0.95"/>
-                <stop offset="0.62" style="stop-color: var(--text-main)" stop-opacity="0.82"/>
-                <stop offset="1" style="stop-color: var(--accent-purple)" stop-opacity="0.55"/>
+
+            <!-- Soft matte shading across the sweeping upper eyelid hood -->
+            <linearGradient id="hoodGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stop-color="#000000" stop-opacity="0"/>
+                <stop offset="22%" stop-color="var(--eye-mid)" stop-opacity="0.38"/>
+                <stop offset="50%" stop-color="var(--eye-highlight)" stop-opacity="0.68"/>
+                <stop offset="78%" stop-color="var(--eye-mid)" stop-opacity="0.38"/>
+                <stop offset="100%" stop-color="#000000" stop-opacity="0"/>
+            </linearGradient>
+
+            <!-- Realistic shadowed sclera gradient (brightest near bottom-right, deep shadow at corners) -->
+            <radialGradient id="scleraGrad" cx="52%" cy="58%" r="52%">
+                <stop offset="0%" stop-color="var(--eye-highlight)" stop-opacity="0.88"/>
+                <stop offset="55%" stop-color="var(--eye-mid)" stop-opacity="0.65"/>
+                <stop offset="85%" stop-color="var(--eye-dark)" stop-opacity="0.92"/>
+                <stop offset="100%" stop-color="#000000" stop-opacity="1"/>
             </radialGradient>
-            <radialGradient id="irisShade" cx="50%" cy="50%" r="50%">
-                <stop offset="0" stop-color="#000" stop-opacity="0"/>
-                <stop offset="0.55" stop-color="#000" stop-opacity="0"/>
-                <stop offset="0.85" stop-color="#000" stop-opacity="0.3"/>
-                <stop offset="1" stop-color="#000" stop-opacity="0.7"/>
+
+            <!-- Top shadow cast by the upper lid over the eyeball -->
+            <linearGradient id="topCastShadow" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stop-color="#000000" stop-opacity="0.92"/>
+                <stop offset="38%" stop-color="#000000" stop-opacity="0.35"/>
+                <stop offset="75%" stop-color="#000000" stop-opacity="0"/>
+                <stop offset="100%" stop-color="#000000" stop-opacity="0.45"/>
+            </linearGradient>
+
+            <!-- Deep dark charcoal iris gradient -->
+            <radialGradient id="darkIrisGrad" cx="50%" cy="55%" r="50%">
+                <stop offset="0%" stop-color="#000000"/>
+                <stop offset="45%" stop-color="#070609"/>
+                <stop offset="80%" stop-color="var(--eye-iris)"/>
+                <stop offset="100%" stop-color="#020203"/>
             </radialGradient>
-            <radialGradient id="irisGlow" cx="50%" cy="78%" r="55%">
-                <stop offset="0" stop-color="#fff" stop-opacity="0.4"/>
-                <stop offset="1" stop-color="#fff" stop-opacity="0"/>
-            </radialGradient>
-            <linearGradient id="lidShadow" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0.18" stop-color="#000" stop-opacity="0.6"/>
-                <stop offset="0.5" stop-color="#000" stop-opacity="0"/>
-                <stop offset="0.8" stop-color="#000" stop-opacity="0"/>
-                <stop offset="0.95" stop-color="#000" stop-opacity="0.3"/>
+
+            <!-- Crisp lower-lid rim highlight gradient -->
+            <linearGradient id="lowerRimGrad" x1="15%" y1="0%" x2="85%" y2="0%">
+                <stop offset="0%" stop-color="var(--eye-highlight)" stop-opacity="0"/>
+                <stop offset="35%" stop-color="var(--eye-highlight)" stop-opacity="0.45"/>
+                <stop offset="55%" stop-color="#ffffff" stop-opacity="0.85"/>
+                <stop offset="80%" stop-color="var(--eye-highlight)" stop-opacity="0.4"/>
+                <stop offset="100%" stop-color="var(--eye-highlight)" stop-opacity="0"/>
             </linearGradient>
         </defs>
     </svg>
@@ -592,7 +808,7 @@
         </button>
 
         <div>
-            <div class="drawer-section-title">Theme Options</div>
+            <div class="drawer-section-title">1. Theme Options</div>
             <div class="theme-submenu">
                 <button class="theme-sub-item active" data-theme="purple"><span class="dot" style="--dot:#c496ff"></span>Cosmic Purple</button>
                 <button class="theme-sub-item" data-theme="amber"><span class="dot" style="--dot:#ffaa50"></span>Neon Amber</button>
@@ -600,15 +816,42 @@
             </div>
         </div>
         <div>
-            <div class="drawer-section-title">History</div>
+            <div class="drawer-section-title">2. Self-Teaching Brain</div>
+            <div class="drawer-item" id="openTrainModalBtn">
+                <span>Neural Training Studio</span>
+                <span class="brain-badge" id="brainCountBadge">0 nodes</span>
+            </div>
+        </div>
+        <div>
+            <div class="drawer-section-title">3. History</div>
             <div class="chat-history-list" id="historyList"></div>
         </div>
         <div>
-            <div class="drawer-section-title">Account Setting</div>
+            <div class="drawer-section-title">4. Account Setting</div>
             <div class="drawer-item">Configure Profile</div>
         </div>
     </div>
     <div class="backdrop" id="drawerBackdrop"></div>
+
+    <!-- Self-Teaching / Neural Training Studio Modal -->
+    <div class="modal-overlay" id="trainModal">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h2>Neural Training Studio</h2>
+                <button class="close-modal" id="closeTrainModal">✕</button>
+            </div>
+            <div style="font-size: 12.5px; color: var(--text-muted); line-height: 1.4;">
+                Teach Shinu custom responses, facts, or workflows. You can also type <code>teach: question = answer</code> directly in the chat!
+            </div>
+            <div class="train-form">
+                <input type="text" class="train-input" id="trainTriggerInput" placeholder="When I ask or mention (e.g. creator, nit silchar)..." />
+                <input type="text" class="train-input" id="trainResponseInput" placeholder="Shinu should reply with..." />
+                <button class="train-save-btn" id="saveTrainBtn">+ Commit to Neural Memory</button>
+            </div>
+            <div class="drawer-section-title" style="margin-bottom: 0;">Learned Knowledge Nodes</div>
+            <div class="memory-list" id="memoryList"></div>
+        </div>
+    </div>
 
     <!-- Central Stage -->
     <div class="center-stage" id="centerStage">
@@ -623,52 +866,66 @@
 
     <!-- Input Dock -->
     <div class="input-dock" id="inputDock">
-        <button class="action-icon-btn" aria-label="Add">+</button>
-        <input type="text" id="userInput" placeholder="Type a message or search reddit (e.g. reddit python)..." autocomplete="off" />
+        <button class="action-icon-btn" id="quickHelpBtn" title="Search & Training Tips" aria-label="Tips">+</button>
+        <input type="text" id="userInput" placeholder="Ask anything, or type 'teach: x = y'..." autocomplete="off" />
         <button class="send-icon-btn" id="sendBtn" aria-label="Send">
             <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
         </button>
     </div>
 
 <script>
+    // ---------- Chiaroscuro Neutral Eye SVG (Matches Reference Image) ----------
     const EYE_SVG = `
-    <svg class="eye-svg" viewBox="0 0 120 60" aria-hidden="true">
-        <path class="crease" d="M16 24C34 3 86 3 104 24"/>
-        <g clip-path="url(#eyeClip)">
-            <path d="M6 32C28 8 92 8 114 32C94 48 26 48 6 32Z" fill="url(#eyeSclera)"/>
-            <ellipse class="caruncle" cx="10" cy="32" rx="3.2" ry="2.2"/>
+    <svg class="eye-svg" viewBox="0 0 180 80" aria-hidden="true">
+        <!-- Sweeping upper eyelid hood fold with soft chiaroscuro lighting -->
+        <path d="M 6 48 C 46 13, 128 13, 174 39 C 128 24, 52 24, 6 48 Z" fill="url(#hoodGrad)"/>
+        
+        <!-- Clipped eyeball interior -->
+        <g clip-path="url(#eyeOpeningClip)">
+            <!-- Shadowed neutral sclera -->
+            <rect x="20" y="15" width="140" height="55" fill="url(#scleraGrad)"/>
+            
+            <!-- Deep charcoal iris & breathing pupil -->
             <g class="iris-move">
-                <circle class="iris-base" cx="60" cy="30" r="13"/>
-                <circle cx="60" cy="30" r="13" fill="url(#irisShade)"/>
-                <circle cx="60" cy="30" r="13" fill="url(#irisGlow)"/>
-                <circle class="fibers" cx="60" cy="30" r="9.5"/>
-                <circle class="fibers-dark" cx="60" cy="30" r="11.4"/>
-                <circle class="collarette" cx="60" cy="30" r="7"/>
-                <circle class="limbal" cx="60" cy="30" r="12.6"/>
-                <g class="pupil"><circle cx="60" cy="30" r="5"/></g>
+                <circle cx="90" cy="41" r="19.5" fill="url(#darkIrisGrad)"/>
+                <circle class="iris-fibers" cx="90" cy="41" r="13.5"/>
+                <circle cx="90" cy="41" r="19" fill="none" stroke="#000000" stroke-width="1.6" stroke-opacity="0.85"/>
+                <g class="pupil">
+                    <circle cx="90" cy="41" r="8.5" fill="#000000"/>
+                </g>
             </g>
+
+            <!-- Crisp upper-right specular catchlight (with subtle halo) -->
             <g class="glint-move">
-                <circle cx="64.6" cy="25.4" r="2.3" fill="#fff" fill-opacity="0.95"/>
-                <circle cx="56" cy="34.6" r="1" fill="#fff" fill-opacity="0.5"/>
+                <circle cx="97.5" cy="32.5" r="4.2" fill="#ffffff" fill-opacity="0.18"/>
+                <circle cx="97.5" cy="32.5" r="2.7" fill="#ffffff" fill-opacity="0.92"/>
             </g>
-            <rect x="0" y="0" width="120" height="60" fill="url(#lidShadow)"/>
-            <g class="lid">
-                <path class="lid-fill" d="M-10 -50H130V2Q60 16 -10 2Z"/>
-                <path class="lid-edge" d="M-10 2Q60 16 130 2"/>
+
+            <!-- Upper lid cast shadow over eyeball -->
+            <rect x="20" y="15" width="140" height="55" fill="url(#topCastShadow)"/>
+
+            <!-- Smooth dark blinking upper eyelid -->
+            <g class="blink-lid">
+                <path d="M 0 -40 H 180 V 25 Q 90 36 0 25 Z" fill="#050408"/>
             </g>
         </g>
-        <path class="lash-top" d="M6 32C28 8 92 8 114 32"/>
-        <path class="lash-bottom" d="M6 32C26 48 94 48 114 32"/>
+
+        <!-- Upper lash line shadow -->
+        <path d="M 22 46 C 56 22, 124 22, 158 40" fill="none" stroke="#000000" stroke-width="2.2" stroke-linecap="round" opacity="0.9"/>
+
+        <!-- Subtle lower rim light edge matching the reference photo -->
+        <path d="M 33 45.5 C 60 61, 124 61, 148 42.5" fill="none" stroke="url(#lowerRimGrad)" stroke-width="1.3" stroke-linecap="round"/>
     </svg>`;
     document.querySelectorAll('[data-eye]').forEach(el => { el.innerHTML = EYE_SVG; });
 
+    // ---------- Eye tracking ----------
     const rootEl = document.documentElement;
     let lastPointer = 0;
     const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
     function lookAt(nx, ny) {
-        rootEl.style.setProperty('--ex', (nx * 7).toFixed(2) + 'px');
-        rootEl.style.setProperty('--ey', (ny * 3).toFixed(2) + 'px');
+        rootEl.style.setProperty('--ex', (nx * 6.5).toFixed(2) + 'px');
+        rootEl.style.setProperty('--ey', (ny * 2.8).toFixed(2) + 'px');
     }
     function onPointer(e) {
         lastPointer = Date.now();
@@ -679,13 +936,15 @@
     window.addEventListener('pointerdown', onPointer);
     setInterval(() => {
         if (Date.now() - lastPointer > 3500) {
-            lookAt((Math.random() * 2 - 1), (Math.random() * 2 - 1) * 0.7);
+            lookAt((Math.random() * 2 - 1), (Math.random() * 2 - 1) * 0.65);
         }
-    }, 2600);
+    }, 2800);
 
+    // ---------- Safe storage helpers ----------
     function store(key, val) { try { localStorage.setItem(key, val); } catch (e) {} }
     function load(key) { try { return localStorage.getItem(key); } catch (e) { return null; } }
 
+    // ---------- Theme ----------
     function applyTheme(themeName) {
         document.body.classList.remove('theme-amber', 'theme-pink');
         if (themeName === 'amber') document.body.classList.add('theme-amber');
@@ -701,6 +960,7 @@
     });
     applyTheme(load('shinu_theme') || 'purple');
 
+    // ---------- Time-Aware Greeting ----------
     const hour = new Date().getHours();
     const greetingEl = document.getElementById('openGreeting');
     if (hour >= 5 && hour < 12) greetingEl.textContent = "Good morning!";
@@ -708,6 +968,7 @@
     else if (hour >= 17 && hour < 22) greetingEl.textContent = "Good evening!";
     else greetingEl.textContent = "Late night hustle?";
 
+    // ---------- DOM Elements ----------
     const menuToggle = document.getElementById('menuToggle');
     const sideDrawer = document.getElementById('sideDrawer');
     const drawerBackdrop = document.getElementById('drawerBackdrop');
@@ -718,6 +979,17 @@
     const newChatBtn = document.getElementById('newChatBtn');
     const topicBar = document.getElementById('topicBar');
     const topicText = document.getElementById('topicText');
+    const quickHelpBtn = document.getElementById('quickHelpBtn');
+
+    // Training Modal Elements
+    const trainModal = document.getElementById('trainModal');
+    const openTrainModalBtn = document.getElementById('openTrainModalBtn');
+    const closeTrainModal = document.getElementById('closeTrainModal');
+    const trainTriggerInput = document.getElementById('trainTriggerInput');
+    const trainResponseInput = document.getElementById('trainResponseInput');
+    const saveTrainBtn = document.getElementById('saveTrainBtn');
+    const memoryList = document.getElementById('memoryList');
+    const brainCountBadge = document.getElementById('brainCountBadge');
 
     function toggleDrawer() {
         sideDrawer.classList.toggle('open');
@@ -730,6 +1002,120 @@
     menuToggle.onclick = toggleDrawer;
     drawerBackdrop.onclick = closeDrawer;
 
+    function escapeHtml(str) {
+        return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+    }
+
+    // =========================================================================
+    // SELF-TEACHING & NEURAL MEMORY ENGINE
+    // =========================================================================
+    let brain = [];
+    try {
+        brain = JSON.parse(load('shinu_brain') || '[]');
+    } catch (e) { brain = []; }
+
+    function saveBrain() {
+        store('shinu_brain', JSON.stringify(brain));
+        renderBrainUI();
+    }
+
+    function teachShinu(triggerRaw, responseRaw, source = 'User Trained') {
+        const trigger = triggerRaw.toLowerCase().replace(/[?.!,;:]+$/, '').trim();
+        const response = responseRaw.trim();
+        if (!trigger || !response) return false;
+
+        const existingIdx = brain.findIndex(b => b.trigger === trigger);
+        const node = {
+            id: Date.now().toString(36) + Math.random().toString(36).slice(2, 5),
+            trigger,
+            response,
+            source,
+            timestamp: Date.now()
+        };
+
+        if (existingIdx >= 0) brain[existingIdx] = node;
+        else brain.push(node);
+
+        saveBrain();
+        return node;
+    }
+
+    function queryBrain(userQuery) {
+        const clean = userQuery.toLowerCase().replace(/[?.!,;:]+$/, '').trim();
+        const stripped = cleanSearchQuery(clean).toLowerCase();
+
+        // 1. Exact match on full query or stripped subject
+        for (const node of brain) {
+            if (node.trigger === clean || (stripped && node.trigger === stripped)) {
+                return node;
+            }
+        }
+        // 2. Substring/keyword match for longer trained triggers
+        for (const node of brain) {
+            if (node.trigger.length >= 4 && clean.includes(node.trigger)) {
+                return node;
+            }
+        }
+        return null;
+    }
+
+    function renderBrainUI() {
+        brainCountBadge.textContent = `${brain.length} ${brain.length === 1 ? 'node' : 'nodes'}`;
+        memoryList.innerHTML = '';
+        if (!brain.length) {
+            memoryList.innerHTML = `<div style="font-size: 13px; color: var(--text-muted);">No custom nodes trained yet.</div>`;
+            return;
+        }
+        [...brain].reverse().forEach(node => {
+            const div = document.createElement('div');
+            div.className = 'memory-node';
+            div.innerHTML = `
+                <div style="flex:1; min-width:0;">
+                    <strong>"${escapeHtml(node.trigger)}" <span style="font-size:10px; opacity:0.65;">(${escapeHtml(node.source || 'Trained')})</span></strong>
+                    <div style="color:var(--text-main); word-break:break-word;">${escapeHtml(node.response)}</div>
+                </div>
+            `;
+            const delBtn = document.createElement('button');
+            delBtn.textContent = '✕';
+            delBtn.title = 'Forget node';
+            delBtn.onclick = () => {
+                brain = brain.filter(b => b.id !== node.id);
+                saveBrain();
+            };
+            div.appendChild(delBtn);
+            memoryList.appendChild(div);
+        });
+    }
+
+    openTrainModalBtn.onclick = () => {
+        closeDrawer();
+        renderBrainUI();
+        trainModal.classList.add('open');
+    };
+    closeTrainModal.onclick = () => trainModal.classList.remove('open');
+    trainModal.onclick = (e) => { if (e.target === trainModal) trainModal.classList.remove('open'); };
+
+    saveTrainBtn.onclick = () => {
+        const trig = trainTriggerInput.value.trim();
+        const resp = trainResponseInput.value.trim();
+        if (!trig || !resp) return;
+        teachShinu(trig, resp, 'Studio Trained');
+        trainTriggerInput.value = '';
+        trainResponseInput.value = '';
+    };
+
+    // Quick function exposed globally so "Teach this" buttons inside chat bubbles work
+    window.promptQuickTeach = function(prefillTrigger) {
+        trainTriggerInput.value = prefillTrigger || '';
+        trainResponseInput.value = '';
+        renderBrainUI();
+        trainModal.classList.add('open');
+        setTimeout(() => trainResponseInput.focus(), 150);
+    };
+
+    renderBrainUI();
+
+    // ---------- Helpers ----------
     function tryMath(q) {
         const expr = q.replace(/x/gi, '*').replace(/\^/g, '**');
         if (!/^[0-9+\-*/().%\s]+$/.test(expr) || !/[0-9]/.test(expr) || !/[+\-*/%]/.test(expr)) return null;
@@ -739,19 +1125,23 @@
         } catch (e) { return null; }
     }
 
-    function makeTopic(raw) {
+    function cleanSearchQuery(raw) {
         let t = raw.trim().replace(/\s+/g, ' ');
-        if (tryMath(t.toLowerCase()) !== null) return 'Quick Calculation';
-        if (/^(hello|hi+|hey+|yo|good (morning|afternoon|evening))\b[\s!.,?]*$/i.test(t)) return null;
-        if (/^reddit\b/i.test(t)) return 'Reddit Search';
-
-        const lead = /^(please\s+|can you\s+|could you\s+|would you\s+|i want to\s+|i need to\s+|i would like to\s+|help me\s+(to\s+)?|tell me\s+(about\s+)?|(who|what)\s+(is|are|was|were)\s+(an?\s+|the\s+)?|what'?s\s+(an?\s+|the\s+)?|who'?s\s+|how\s+(do|can|to|does)\s+(i\s+|you\s+|we\s+)?|why\s+(is|are|do|does)\s+(the\s+)?|explain\s+(to me\s+)?|define\s+|describe\s+|show me\s+|give me\s+)/i;
+        const lead = /^(please\s+|can you\s+|could you\s+|would you\s+|search\s+(for\s+)?|wiki(pedia)?\s+|look up\s+|find\s+|tell me\s+(about\s+)?|(who|what|where)\s+(is|are|was|were)\s+(an?\s+|the\s+)?|what'?s\s+(an?\s+|the\s+)?|who'?s\s+|define\s+|explain\s+)/i;
         let prev;
         do { prev = t; t = t.replace(lead, ''); } while (t !== prev && t);
+        return t.replace(/[?.!,;:]+$/, '').trim() || raw.trim();
+    }
 
-        t = t.replace(/[?.!,;:]+$/, '').trim();
-        if (!t) t = raw.trim().replace(/[?.!]+$/, '');
+    function makeTopic(raw) {
+        let t = raw.trim().replace(/\s+/g, ' ');
+        if (/^(teach|learn|train)\s*:/i.test(t)) return 'Neural Training';
+        if (tryMath(t.toLowerCase()) !== null) return 'Quick Calculation';
+        if (/^(hello|hi+|hey+|yo|good (morning|afternoon|evening))\b[\s!.,?]*$/i.test(t)) return null;
+        if (/^(reddit|r\/)\b/i.test(t)) return 'Reddit: ' + t.replace(/^(reddit|r\/)\s*/i, '').slice(0, 18);
+        if (/^(archive|ia)\b/i.test(t)) return 'Archive: ' + t.replace(/^(archive|ia)\s*/i, '').slice(0, 18);
 
+        t = cleanSearchQuery(t);
         t = t.split(' ').slice(0, 5).join(' ');
         t = t.replace(/(^|\s)([a-z])/g, (m, s, c) => s + c.toUpperCase());
         if (t.length > 30) t = t.slice(0, 29).trim() + '…';
@@ -787,14 +1177,11 @@
         chatContainer.classList.remove('active');
     }
 
-    function addBubble(role, htmlContent, isHtml = false) {
+    function addBubble(role, content, isHtml = false) {
         const div = document.createElement('div');
         div.className = 'message-bubble ' + role;
-        if (isHtml) {
-            div.innerHTML = htmlContent;
-        } else {
-            div.textContent = htmlContent;
-        }
+        if (isHtml) div.innerHTML = content;
+        else div.textContent = content;
         chatContainer.appendChild(div);
         chatContainer.scrollTop = chatContainer.scrollHeight;
         return div;
@@ -858,61 +1245,224 @@
         if (close) closeDrawer();
     }
     newChatBtn.onclick = () => startNewChat(true);
-
     userInput.addEventListener('focus', showChatView);
 
-    // ---------- Free Reddit Search Integration ----------
-    async function fetchRedditSearch(query) {
+    quickHelpBtn.onclick = () => {
+        showChatView();
+        addBubble('bot', `
+            <span class="source-badge">Shinu Neural & Web Guide</span><br>
+            <strong>1. Self-Teaching Commands:</strong>
+            <div class="result-item">• Type <code>teach: question = answer</code> (e.g., <em>teach: who made you = David built me</em>).</div>
+            <div class="result-item">• Type <code>brain</code> to inspect all learned memory nodes.</div>
+            <strong>2. Live Free Web Search:</strong>
+            <div class="result-item">• <strong>Wikipedia (Default):</strong> Type any topic (e.g., <em>Sundar Pichai</em>). Shinu also auto-learns summaries!</div>
+            <div class="result-item">• <strong>Reddit:</strong> Prefix with <code>reddit</code> (e.g., <em>reddit webdev</em>).</div>
+            <div class="result-item">• <strong>Internet Archive:</strong> Prefix with <code>archive</code> (e.g., <em>archive retro cartoons</em>).</div>
+        `, true);
+    };
+
+    // ---------- 1. Free Wikipedia Search + Self-Learning Cache ----------
+    async function fetchWikipedia(rawQuery) {
+        const clean = cleanSearchQuery(rawQuery);
+        if (!clean) return null;
         try {
-            // Remove 'reddit' keyword from query if prefixed
-            const cleanQuery = query.replace(/^reddit\s+/i, '').trim();
-            const url = `https://www.reddit.com/search.json?q=${encodeURIComponent(cleanQuery)}&limit=3`;
+            const searchUrl = `https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(clean)}&utf8=&format=json&origin=*&srlimit=3`;
+            const searchRes = await fetch(searchUrl);
+            if (!searchRes.ok) throw new Error('Wiki search error');
+            const searchData = await searchRes.json();
+            const results = searchData?.query?.search;
+
+            if (!results || results.length === 0) return null;
+
+            const topTitle = results[0].title;
+            const summaryUrl = `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(topTitle)}`;
+            const sumRes = await fetch(summaryUrl);
+            if (!sumRes.ok) throw new Error('Wiki summary error');
+            const sumData = await sumRes.json();
+
+            const rawExtract = sumData.extract || 'No summary available.';
+            const extract = escapeHtml(rawExtract);
+            const pageUrl = sumData?.content_urls?.desktop?.page || `https://en.wikipedia.org/wiki/${encodeURIComponent(topTitle)}`;
+            const thumb = sumData?.thumbnail?.source;
+
+            // Self-Teaching Auto-Index: Save concise 2-sentence summary to neural memory if not already learned
+            const firstTwoSentences = rawExtract.split(/(?<=[.!?])\s+/).slice(0, 2).join(' ');
+            if (firstTwoSentences && !queryBrain(topTitle)) {
+                teachShinu(topTitle.toLowerCase(), firstTwoSentences, 'Auto-Learned Wiki');
+            }
+
+            let html = `<span class="source-badge">Wikipedia • Auto-Learned</span><br>`;
+            html += `<strong>${escapeHtml(sumData.title || topTitle)}</strong><br>`;
+            if (thumb) {
+                html += `<img class="wiki-thumb" src="${escapeHtml(thumb)}" alt="${escapeHtml(topTitle)}" loading="lazy" />`;
+            }
+            html += `<div style="margin: 6px 0 10px;">${extract}</div>`;
+            html += `<a href="${escapeHtml(pageUrl)}" target="_blank" rel="noopener">Read full Wikipedia article ↗</a>`;
+
+            if (results.length > 1) {
+                html += `<div class="result-meta" style="margin-top:10px;">Related: `;
+                html += results.slice(1, 3).map(r => {
+                    const rUrl = `https://en.wikipedia.org/wiki/${encodeURIComponent(r.title)}`;
+                    return `<a href="${rUrl}" target="_blank" rel="noopener">${escapeHtml(r.title)}</a>`;
+                }).join(' • ');
+                html += `</div>`;
+            }
+            return html;
+        } catch (err) {
+            return null;
+        }
+    }
+
+    // ---------- 2. Free Reddit Search ----------
+    async function fetchRedditSearch(rawQuery) {
+        const cleanQuery = rawQuery.replace(/^(search\s+)?(reddit|r\/)\s*/i, '').trim();
+        if (!cleanQuery) return `Please specify a topic after "reddit", e.g., <code>reddit javascript</code>.`;
+        try {
+            const url = `https://www.reddit.com/search.json?q=${encodeURIComponent(cleanQuery)}&sort=relevance&limit=4`;
             const response = await fetch(url);
-            if (!response.ok) throw new Error('Network response was not ok');
+            if (!response.ok) throw new Error('Reddit network error');
             const data = await response.json();
             const posts = data?.data?.children;
 
             if (!posts || posts.length === 0) {
-                return `No Reddit posts found for "${cleanQuery}".`;
+                return `No Reddit discussions found for "${escapeHtml(cleanQuery)}".`;
             }
 
-            let html = `<strong>Top Reddit results for "${cleanQuery}":</strong><br><br>`;
-            posts.forEach((p, idx) => {
+            let html = `<span class="source-badge">Reddit Live Feed</span><br>`;
+            html += `<strong>Top discussions for "${escapeHtml(cleanQuery)}":</strong>`;
+            posts.forEach((p) => {
                 const post = p.data;
-                const permalink = `https://reddit.com${post.permalink}`;
-                html += `${idx + 1}. <a href="${permalink}" target="_blank" rel="noopener">${post.title}</a><br><small>r/${post.subreddit} • ⬆ ${post.score}</small><br><br>`;
+                const permalink = `https://www.reddit.com${post.permalink}`;
+                html += `
+                <div class="result-item">
+                    <a href="${escapeHtml(permalink)}" target="_blank" rel="noopener">${escapeHtml(post.title)}</a>
+                    <div class="result-meta">r/${escapeHtml(post.subreddit)} • ⬆ ${post.score} • 💬 ${post.num_comments}</div>
+                </div>`;
             });
             return html;
         } catch (err) {
-            return `Failed to fetch Reddit search results. (CORS or network restriction). Try searching a specific subreddit URL or term.`;
+            return `Unable to reach Reddit right now. Try searching Wikipedia directly.`;
         }
     }
 
+    // ---------- 3. Free Internet Archive Search ----------
+    async function fetchArchiveSearch(rawQuery) {
+        const cleanQuery = rawQuery.replace(/^(search\s+)?(internet\s+archive|archive|ia)\s*/i, '').trim();
+        if (!cleanQuery) return `Please specify what to look for in the Internet Archive, e.g., <code>archive 1930s cartoons</code>.`;
+        try {
+            const url = `https://archive.org/advancedsearch.php?q=${encodeURIComponent(cleanQuery)}&fl[]=identifier&fl[]=title&fl[]=mediatype&fl[]=year&rows=4&page=1&output=json`;
+            const response = await fetch(url);
+            if (!response.ok) throw new Error('Archive network error');
+            const data = await response.json();
+            const docs = data?.response?.docs;
+
+            if (!docs || docs.length === 0) {
+                return `No Internet Archive records found for "${escapeHtml(cleanQuery)}".`;
+            }
+
+            let html = `<span class="source-badge">Internet Archive</span><br>`;
+            html += `<strong>Archive records for "${escapeHtml(cleanQuery)}":</strong>`;
+            docs.forEach((doc) => {
+                const link = `https://archive.org/details/${encodeURIComponent(doc.identifier)}`;
+                const title = doc.title || doc.identifier;
+                const meta = [doc.mediatype, doc.year].filter(Boolean).join(' • ');
+                html += `
+                <div class="result-item">
+                    <a href="${escapeHtml(link)}" target="_blank" rel="noopener">${escapeHtml(title)}</a>
+                    ${meta ? `<div class="result-meta">${escapeHtml(meta)}</div>` : ''}
+                </div>`;
+            });
+            return html;
+        } catch (err) {
+            return `Unable to reach the Internet Archive right now.`;
+        }
+    }
+
+    // ---------- Master Shinu Intelligence & Self-Teaching Router ----------
     async function shinuReply(inputMessage) {
-        const query = inputMessage.toLowerCase().trim();
+        const raw = inputMessage.trim();
+        const query = raw.toLowerCase();
         const has = (re) => re.test(query);
 
-        // Check if user wants to search Reddit (e.g. "reddit javascript" or "search reddit tech")
-        if (has(/^reddit\s+/) || has(/^search reddit/)) {
-            const resultHtml = await fetchRedditSearch(inputMessage);
-            return { text: resultHtml, isHtml: true };
+        // 1. Direct Chat Teaching Command: "teach: trigger = response" or "learn: trigger => response"
+        const teachMatch = raw.match(/^(?:teach|learn|train)\s*:?\s*(.+?)\s*(?:=|=>|->)\s*(.+)$/i);
+        if (teachMatch) {
+            const node = teachShinu(teachMatch[1], teachMatch[2], 'Chat Trained');
+            if (node) {
+                return {
+                    text: `<span class="source-badge">Neural Memory Updated</span><br>Learned! Whenever you ask about <strong>"${escapeHtml(node.trigger)}"</strong>, I will respond with:<br><em>"${escapeHtml(node.response)}"</em>`,
+                    isHtml: true
+                };
+            }
         }
 
-        const math = tryMath(query);
-        if (math !== null) return { text: inputMessage.trim() + " = " + math, isHtml: false };
+        // 2. Inspect Brain Command
+        if (has(/^(brain|memory|what have you learned|show memory)$/)) {
+            openTrainModalBtn.click();
+            return {
+                text: `<span class="source-badge">Neural Memory</span><br>I currently hold <strong>${brain.length}</strong> learned knowledge nodes. Opening the Neural Training Studio for you now.`,
+                isHtml: true
+            };
+        }
 
-        if (has(/\b(hello|hi|hey)\b/)) {
-            return { text: "Hello! Shinu Engine is operational. Type 'reddit [topic]' to search live Reddit posts for free!", isHtml: false };
+        // 3. Check Self-Taught Neural Memory FIRST (User Trained nodes override default searches)
+        const learnedNode = queryBrain(raw);
+        if (learnedNode && learnedNode.source !== 'Auto-Learned Wiki') {
+            return {
+                text: `<span class="source-badge">Neural Memory • ${escapeHtml(learnedNode.source)}</span><br>${escapeHtml(learnedNode.response)}`,
+                isHtml: true
+            };
+        }
+
+        // 4. Math Calculations
+        const math = tryMath(query);
+        if (math !== null) return { text: raw + " = " + math, isHtml: false };
+
+        // 5. Greetings & System Queries
+        if (has(/^(hello|hi+|hey+|yo)\b/)) {
+            return {
+                text: `Hello! Shinu Neural & Web Engine is online (${brain.length} memory nodes active). Ask me anything, search <code>reddit</code> / <code>archive</code>, or teach me with <code>teach: question = answer</code>!`,
+                isHtml: true
+            };
         } else if (has(/who are you|what is shinu/)) {
-            return { text: "I am Shinu, your high-end procedural AI interface and developer workspace engine.", isHtml: false };
-        } else if (has(/\b(version|v1)\b/)) {
-            return { text: "Shinu Engine v1.0 Pro is live and online with live Reddit search capabilities.", isHtml: false };
-        } else if (has(/\b(help|options)\b/)) {
-            return { text: "Type 'reddit [your query]' to query Reddit instantly, or open the menu to manage themes and history.", isHtml: false };
-        } else if (has(/\btime\b/)) {
+            return { text: "I am Shinu, your self-teaching AI workspace connected to Wikipedia, Reddit, and the Internet Archive.", isHtml: false };
+        } else if (has(/^what time is it|\bcurrent time\b/)) {
             return { text: "Current system local time is " + new Date().toLocaleTimeString() + ".", isHtml: false };
         }
-        return { text: `Pipeline compiled successfully for your query: "${inputMessage}". Try typing 'reddit [topic]' to browse live discussions!`, isHtml: false };
+
+        // 6. Explicit Reddit Search
+        if (has(/^(search\s+)?(reddit|r\/)\b/)) {
+            const redditHtml = await fetchRedditSearch(raw);
+            return { text: redditHtml, isHtml: true };
+        }
+
+        // 7. Explicit Internet Archive Search
+        if (has(/^(search\s+)?(internet\s+archive|archive|ia)\b/)) {
+            const archiveHtml = await fetchArchiveSearch(raw);
+            return { text: archiveHtml, isHtml: true };
+        }
+
+        // 8. Wikipedia Encyclopedia Lookup (also auto-learns into neural memory)
+        const wikiHtml = await fetchWikipedia(raw);
+        if (wikiHtml) {
+            return { text: wikiHtml, isHtml: true };
+        }
+
+        // 9. Check Auto-Learned Wiki Cache if offline or direct query matched
+        if (learnedNode) {
+            return {
+                text: `<span class="source-badge">Neural Memory • ${escapeHtml(learnedNode.source)}</span><br>${escapeHtml(learnedNode.response)}`,
+                isHtml: true
+            };
+        }
+
+        // 10. Unknown Query -> Offer One-Tap Self-Teaching Button!
+        const safeTrigger = escapeHtml(cleanSearchQuery(raw));
+        return {
+            text: `I don't have a record for "<strong>${escapeHtml(raw)}</strong>" yet.<br>
+            <button class="teach-quick-btn" onclick="promptQuickTeach('${safeTrigger.replace(/'/g, "\\'")}')">+ Teach Shinu about "${safeTrigger}"</button>`,
+            isHtml: true
+        };
     }
 
     async function handleSend() {
@@ -951,13 +1501,12 @@
         chatContainer.scrollTop = chatContainer.scrollHeight;
 
         const chatId = chat.id;
-        // Await the asynchronous reply engine (Reddit fetch)
         const replyObj = await shinuReply(text);
 
         const target = chats.find(c => c.id === chatId);
-        if (target) { 
-            target.messages.push({ role: 'bot', text: replyObj.text, isHtml: replyObj.isHtml }); 
-            saveChats(); 
+        if (target) {
+            target.messages.push({ role: 'bot', text: replyObj.text, isHtml: replyObj.isHtml });
+            saveChats();
         }
         if (currentId === chatId) {
             typing.remove();
@@ -970,6 +1519,7 @@
 
     renderHistory();
 
+    // ---------- Background canvas ----------
     const canvas = document.getElementById('bgCanvas');
     const ctx = canvas.getContext('2d');
 
