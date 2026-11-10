@@ -1,4 +1,4 @@
-// engine.js — Desu: neural memory, strict router, grounded AI replies, self-learning hooks
+// engine.js — DESU Orchestration, DESUCore Source & Follow-Up Integration
 const menuToggle = document.getElementById('menuToggle');
 const sideDrawer = document.getElementById('sideDrawer');
 const drawerBackdrop = document.getElementById('drawerBackdrop');
@@ -45,9 +45,10 @@ drawerBackdrop.onclick = () => { sideDrawer.classList.remove('open'); drawerBack
 // 1. NEURAL MEMORY DATABASE
 // ============================================================================
 const CORE_SEEDS = [
-    { id: 's1', trigger: 'violence', response: 'Yes, violence is harmful and destructive. It causes physical and psychological trauma, undermines trust, and escalates conflict, whereas empathy, law, and dialogue resolve issues constructively.', source: 'Core Knowledge' },
-    { id: 's2', trigger: 'human behaviour', response: 'Human behaviour is the potential and expressed capacity for physical, mental, and social activity throughout human life, shaped by genetics, psychology, social norms, and environment.', source: 'Core Knowledge' },
-    { id: 's3', trigger: 'curvature', response: 'In mathematics and physics, curvature measures how much a geometric object or spacetime deviates from being flat.', source: 'Core Knowledge' }
+    { id: 's1', trigger: 'violence', response: 'Violence causes physical and psychological harm, erodes trust, and escalates conflict. Constructive dialogue, empathy, and the rule of law are the foundation of lasting resolution.', source: 'Core Knowledge' },
+    { id: 's2', trigger: 'human behaviour', response: 'Human behaviour is the potential and expressed capacity for physical, mental, and social activity throughout human life, shaped by biology, psychology, culture, and environment.', source: 'Core Knowledge' },
+    { id: 's3', trigger: 'curvature', response: 'In mathematics and physics, curvature measures how much a geometric object or spacetime deviates from being flat.', source: 'Core Knowledge' },
+    { id: 's4', trigger: 'ai', response: 'Artificial intelligence (AI) is the capability of computational systems to perform tasks associated with human intelligence—such as learning, reasoning, problem-solving, perception, and decision-making.', source: 'Core Knowledge' }
 ];
 
 let brain = [];
@@ -86,21 +87,14 @@ function forgetTrigger(t) {
     saveBrain();
 }
 
-// Exact match (after removing "what is / who is / tell me about"), or a short message containing a trigger
+// Only matches direct concept lookups (so "How do I play the violin?" goes to AI instead of repeating the "violin" definition!)
 function findMemoryMatch(query) {
     const q = query.toLowerCase().replace(/[?.!,;:]+$/, '').replace(/\s+/g, ' ').trim();
-    const stripped = Learn.core(query);
-    const hit = brain.find(b => b.trigger === q || b.trigger === stripped);
-    if (hit) return hit;
-
-    if (q.split(/\s+/).length <= 4) {
-        for (const node of brain) {
-            if (node.trigger.length < 3) continue;
-            const esc = node.trigger.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-            if (new RegExp(`(^|\\s)${esc}(\\s|$)`, 'i').test(q)) return node;
-        }
+    if (/^(how|why|when|where|can|could|should|would|write|code|compare|difference)\b/i.test(q)) {
+        return brain.find(b => b.trigger === q) || null;
     }
-    return null;
+    const stripped = Learn.core(query);
+    return brain.find(b => b.trigger === q || b.trigger === stripped) || null;
 }
 
 function renderBrainUI() {
@@ -112,7 +106,7 @@ function renderBrainUI() {
         div.className = 'memory-node';
         div.innerHTML = `
             <div style="flex:1; min-width:0;">
-                <strong>${escapeHtml(node.trigger)}</strong>
+                <strong>${escapeHtml(node.trigger)} <span style="font-size:10px; opacity:0.6;">(${escapeHtml(node.source || 'Memory')})</span></strong>
                 <div style="color:var(--text-main); word-break:break-word;">${escapeHtml(node.response)}</div>
             </div>`;
         const del = document.createElement('button');
@@ -124,7 +118,7 @@ function renderBrainUI() {
 }
 
 async function deepLearnTopic(topicRaw, sourceLabel = 'Web Synthesis', strict = false) {
-    const topic = topicRaw.replace(/^(teach|learn|train)\s*:?\s*/i, '').trim();
+    const topic = topicRaw.replace(/^(teach\s+me\s+|teach|learn|train)\s*:?\s*/i, '').trim();
     if (!topic) return null;
 
     headerBrainPill.classList.add('learning');
@@ -137,7 +131,8 @@ async function deepLearnTopic(topicRaw, sourceLabel = 'Web Synthesis', strict = 
             const concise = data.summary.extract.split(/(?<=[.!?])\s+/).slice(0, 3).join(' ');
             const node = teachShinu(topic, concise, sourceLabel);
             crawlerStatusText.textContent = `🟢 Learned: "${data.summary.title}"`;
-            return node;
+            const pageUrl = data.summary?.content_urls?.desktop?.page || `https://en.wikipedia.org/wiki/${encodeURIComponent(data.summary.title)}`;
+            return { ...node, sourceUrl: pageUrl, sourceTitle: `Wikipedia · ${data.summary.title}`, relatedTopic: data.relatedTopic };
         }
         crawlerStatusText.textContent = `🟡 Couldn't find "${topic}"`;
     } catch (e) {
@@ -184,26 +179,36 @@ exportBrainBtn.onclick = () => {
 renderBrainUI();
 
 // ============================================================================
-// 2. SOCIAL & WEB CONNECTORS
+// 2. SOCIAL & WEB CONNECTORS (With Source Attribution Metadata)
 // ============================================================================
 async function searchSocialPlatform(platformCode, rawQuery) {
-    const clean = rawQuery.replace(/^(search\s+)?(instagram|insta|ig|facebook|fb)\s*:?\s*/i, '').trim();
+    // Strip conversational filler like "Instagram I'd of salman khan" -> "salman khan"
+    const clean = rawQuery
+        .replace(/^(search\s+)?(instagram|insta|ig|facebook|fb)\s*:?\s*/i, '')
+        .replace(/^(?:id|i'd|account|profile|handle|page)\s+(?:of|for)\s+/i, '')
+        .trim();
     const label = platformCode === 'insta' ? 'Instagram' : 'Facebook';
-    const handleClean = clean.replace(/^@/, '');
+    const handleClean = clean.replace(/^@/, '').replace(/\s+/g, '');
 
     try {
         const res = await fetch(`/api/web?source=${platformCode}&q=${encodeURIComponent(clean)}`);
         const data = await res.json();
-        let html = `<strong>${label} results for "${escapeHtml(clean)}":</strong>`;
+        const sources = [];
+        let html = `Here are the top public ${label} profiles and posts for <strong>${escapeHtml(clean)}</strong>:`;
+
         if (data?.results?.length > 0) {
             data.results.forEach(item => {
+                sources.push({ title: item.title, url: item.url });
                 html += `<div class="result-item"><a href="${escapeHtml(safeUrl(item.url))}" target="_blank" rel="noopener">${escapeHtml(item.title)}</a><div class="result-meta">${escapeHtml(item.snippet)}</div></div>`;
             });
+        } else {
+            const directUrl = platformCode === 'insta' ? `https://www.instagram.com/${encodeURIComponent(handleClean)}/` : `https://www.facebook.com/public/${encodeURIComponent(clean)}`;
+            sources.push({ title: `${label} · ${clean}`, url: directUrl });
         }
-        const directUrl = platformCode === 'insta' ? `https://www.instagram.com/${encodeURIComponent(handleClean)}/` : `https://www.facebook.com/public/${encodeURIComponent(clean)}`;
-        html += `<div style="margin-top:8px;"><a href="${directUrl}" target="_blank" rel="noopener">Open "${escapeHtml(clean)}" on ${label} ↗</a></div>`;
-        return html;
-    } catch (e) { return `Could not reach ${label} right now.`; }
+        return { text: html, isHtml: true, sources };
+    } catch (e) {
+        return { text: `Could not reach ${label} right now.`, isHtml: false };
+    }
 }
 
 async function searchReddit(rawQuery) {
@@ -211,27 +216,31 @@ async function searchReddit(rawQuery) {
     try {
         const res = await fetch(`/api/web?source=reddit&q=${encodeURIComponent(clean)}`);
         const data = await res.json();
+        const sources = [];
         if (data?.posts?.length > 0) {
-            let html = `<strong>Reddit discussions for "${escapeHtml(clean)}":</strong>`;
+            let html = `Top Reddit discussions on <strong>${escapeHtml(clean)}</strong>:`;
             data.posts.forEach(post => {
-                html += `<div class="result-item"><a href="https://www.reddit.com${escapeHtml(post.permalink)}" target="_blank" rel="noopener">${escapeHtml(post.title)}</a><div class="result-meta">r/${escapeHtml(post.subreddit)} • ⬆ ${post.score} • 💬 ${post.num_comments}</div></div>`;
+                const url = `https://www.reddit.com${post.permalink}`;
+                sources.push({ title: `r/${post.subreddit}`, url });
+                html += `<div class="result-item"><a href="${escapeHtml(url)}" target="_blank" rel="noopener">${escapeHtml(post.title)}</a><div class="result-meta">r/${escapeHtml(post.subreddit)} • ⬆ ${post.score} • 💬 ${post.num_comments}</div></div>`;
             });
-            return html;
+            return { text: html, isHtml: true, sources, followUp: `${clean} community opinions` };
         }
         if (data?.hnHits?.length > 0) {
-            let html = `<strong>Community discussions for "${escapeHtml(clean)}":</strong>`;
+            let html = `Community discussions for <strong>${escapeHtml(clean)}</strong>:`;
             data.hnHits.forEach(hit => {
                 const url = hit.url || `https://news.ycombinator.com/item?id=${hit.objectID}`;
+                sources.push({ title: hit.title, url });
                 html += `<div class="result-item"><a href="${escapeHtml(safeUrl(url))}" target="_blank" rel="noopener">${escapeHtml(hit.title)}</a><div class="result-meta">⬆ ${hit.points || 0} • 💬 ${hit.num_comments || 0}</div></div>`;
             });
-            return html;
+            return { text: html, isHtml: true, sources };
         }
     } catch (e) {}
-    return `No Reddit discussions found for "${escapeHtml(clean)}".`;
+    return { text: `No Reddit discussions found for "${escapeHtml(clean)}".`, isHtml: false };
 }
 
 async function searchWikipedia(rawQuery, strict = false) {
-    const clean = rawQuery.replace(/^(search\s+)?(wikipedia|wiki)\s*:?\s*/i, '').trim();
+    const clean = Learn.core(rawQuery.replace(/^(search\s+)?(wikipedia|wiki)\s*:?\s*/i, ''));
     if (!clean) return null;
     try {
         const res = await fetch(`/api/web?source=wiki&q=${encodeURIComponent(clean)}${strict ? '&strict=1' : ''}`);
@@ -242,13 +251,19 @@ async function searchWikipedia(rawQuery, strict = false) {
         const pageUrl = s?.content_urls?.desktop?.page || `https://en.wikipedia.org/wiki/${encodeURIComponent(s.title)}`;
         teachShinu(s.title.toLowerCase(), s.extract.split(/(?<=[.!?])\s+/).slice(0, 2).join(' '), 'Learned');
 
-        let html = `<strong>${escapeHtml(s.title)}</strong><br>`;
+        // Natural human-like paragraph (No search-engine title header)
+        let html = '';
         if (s.thumbnail?.source) {
             html += `<img class="wiki-thumb" src="${escapeHtml(safeUrl(s.thumbnail.source))}" alt="${escapeHtml(s.title)}" loading="lazy" />`;
         }
-        html += `<div style="margin:6px 0 8px;">${escapeHtml(s.extract)}</div>`;
-        html += `<a href="${escapeHtml(safeUrl(pageUrl))}" target="_blank" rel="noopener">Wikipedia ↗</a>`;
-        return html;
+        html += `<div>${escapeHtml(s.extract)}</div>`;
+        return {
+            text: html,
+            rawText: s.extract,
+            isHtml: true,
+            sources: [{ title: `Wikipedia · ${s.title}`, url: pageUrl }],
+            followUp: data.relatedTopic || `how ${s.title} works`
+        };
     } catch (e) { return null; }
 }
 
@@ -257,14 +272,16 @@ async function searchArchive(rawQuery) {
     try {
         const res = await fetch(`/api/web?source=archive&q=${encodeURIComponent(clean)}`);
         const data = await res.json();
-        if (!data?.docs?.length) return `No Internet Archive records found for "${escapeHtml(clean)}".`;
-        let html = `<strong>Internet Archive — "${escapeHtml(clean)}":</strong>`;
+        if (!data?.docs?.length) return { text: `No Internet Archive records found for "${escapeHtml(clean)}".`, isHtml: false };
+        const sources = [];
+        let html = `Internet Archive records for <strong>${escapeHtml(clean)}</strong>:`;
         data.docs.forEach(doc => {
             const link = `https://archive.org/details/${encodeURIComponent(doc.identifier)}`;
+            sources.push({ title: doc.title || doc.identifier, url: link });
             html += `<div class="result-item"><a href="${escapeHtml(link)}" target="_blank" rel="noopener">${escapeHtml(doc.title || doc.identifier)}</a><div class="result-meta">${escapeHtml([doc.mediatype, doc.year].filter(Boolean).join(' • '))}</div></div>`;
         });
-        return html;
-    } catch (e) { return `Unable to reach Internet Archive.`; }
+        return { text: html, isHtml: true, sources };
+    } catch (e) { return { text: `Unable to reach Internet Archive.`, isHtml: false }; }
 }
 
 // ============================================================================
@@ -274,38 +291,59 @@ async function shinuReply(inputMessage, chatHistory) {
     const raw = inputMessage.trim();
     const lower = raw.toLowerCase();
 
-    // 1. Math
+    // 1. Multiplication Tables ("Table of 2", "Write table of 2") & Math Expressions
+    const tableMatch = raw.match(/^(?:write\s+|print\s+|show\s+|give\s+me\s+)?(?:the\s+)?table\s+of\s+(\d+)$/i);
+    if (tableMatch) {
+        const n = parseInt(tableMatch[1], 10);
+        let out = `Here is the multiplication table of <strong>${n}</strong>:<br><br>`;
+        for (let i = 1; i <= 10; i++) out += `${n} × ${i} = <strong>${n * i}</strong><br>`;
+        return { text: out, isHtml: true, followUp: `table of ${n + 1}` };
+    }
+
     let mathStr = lower
+        .replace(/^(what is|calculate|solve)\s+/i, '')
         .replace(/divided by/g, '/')
         .replace(/plus/g, '+')
         .replace(/minus/g, '-')
         .replace(/times|multiplied by/g, '*')
         .replace(/x/g, '*')
-        .replace(/\^/g, '**');
+        .replace(/\^/g, '**')
+        .replace(/[?=]/g, '');
 
     if (/^[0-9+\-*/().%\s]+$/.test(mathStr) && /[0-9]/.test(mathStr) && /[+\-*/%]/.test(mathStr)) {
         try {
             const val = Function('"use strict"; return (' + mathStr + ')')();
-            if (typeof val === 'number' && isFinite(val)) return { text: `${raw} = ${val}`, isHtml: false };
+            if (typeof val === 'number' && isFinite(val)) return { text: `${raw.replace(/[?=]+$/, '')} = <strong>${val}</strong>`, isHtml: true };
         } catch (e) {}
     }
 
-    // 2. Explicit teaching commands
+    // 2. Explicit Teaching Commands ("teach: x = y", "teach: calculus", "teach me violin")
+    if (/^teach\s+me\s*$/i.test(raw)) {
+        return { text: `What topic would you like to explore or teach me? Try <code>teach: calculus</code> or <code>teach: topic = answer</code>.`, isHtml: true };
+    }
+
     const teachPair = raw.match(/^(?:teach|learn|train)\s*:?\s*(.+?)\s*(?:=>|->|=)\s*(.+)$/i);
     if (teachPair) {
         const node = teachShinu(teachPair[1], teachPair[2], 'Custom');
         if (!node) return { text: 'Use: <code>teach: topic = answer</code>', isHtml: true };
-        return { text: `Got it. Learned response for <strong>"${escapeHtml(node.trigger)}"</strong>.`, isHtml: true };
+        return { text: `Got it. I've committed <strong>"${escapeHtml(node.trigger)}"</strong> to my neural memory.`, isHtml: true };
     }
 
-    const teachTopic = raw.match(/^(?:teach|learn|train)\s*:\s*(.+)$/i);
+    const teachTopic = raw.match(/^(?:teach\s+me|teach|learn|train)\s*:?\s+(.+)$/i);
     if (teachTopic) {
-        const node = await deepLearnTopic(teachTopic[1], 'Web Synthesis', true);
-        if (node) return { text: `<strong>${escapeHtml(node.trigger)}</strong> — ${escapeHtml(node.response)}`, isHtml: true };
-        return { text: `I couldn't find a reliable source for that. Teach me directly with <code>teach: topic = answer</code>.`, isHtml: true };
+        const node = await deepLearnTopic(teachTopic[1], 'Web Synthesis', false);
+        if (node) {
+            return {
+                text: `${escapeHtml(node.response)}`,
+                isHtml: true,
+                sources: node.sourceUrl ? [{ title: node.sourceTitle, url: node.sourceUrl }] : [],
+                followUp: node.relatedTopic || `practical applications of ${node.trigger}`
+            };
+        }
+        return { text: `I couldn't find a verified source for that topic yet. You can teach me directly with <code>teach: ${escapeHtml(teachTopic[1])} = answer</code>.`, isHtml: true };
     }
 
-    // 3. Repetition command
+    // 3. Repetition Command
     const repeatMatch = raw.match(/^(?:write|say|repeat|type|print)\s+(.+?)\s+(\d+)[\s.]*times?\b/i);
     if (repeatMatch) {
         const word = repeatMatch[1].replace(/^["']|["']$/g, '');
@@ -313,35 +351,42 @@ async function shinuReply(inputMessage, chatHistory) {
         return { text: Array(count).fill(word).join(' '), isHtml: false };
     }
 
-    // 4. Learn about this user (name, likes, style) and track interests
+    // 4. Identity, User Profile Recall & Response Modes (Handles "What's your name", "Which subject I like", "mode: educational")
     const prof = Learn.observe(raw);
     if (prof) return prof;
 
-    const isPlatformQuery = /^(search\s+)?(instagram|insta|ig|facebook|fb|reddit|r\/|internet\s+archive|archive|ia|wikipedia|wiki)\b/i.test(lower);
-    const lookup = /^(who|what|when|where|why|how|which|tell me about|explain|define|describe|meaning of)\b/i.test(raw) || raw.split(/\s+/).length <= 3;
-    if (lookup && !isPlatformQuery) Learn.trackInterest(raw);
-
-    // 5. Instant neural memory hit
-    const mem = findMemoryMatch(raw);
-    if (mem) return { text: formatCleanMarkdown(mem.response), isHtml: true };
-
-    // 6. Greetings
+    // 5. Greetings
     if (/^(hi+|hey+|hello+|yo|sup|hi bro|hey bro|hello bro)\b[\s!.,?]*$|^hi$/i.test(lower)) {
         const who = Learn.userName() ? ' ' + Learn.userName() : '';
         return { text: `Hey${who}! What are we exploring or building today?`, isHtml: false };
     }
 
-    // 7. Social & web prefixes
-    if (/^(search\s+)?(instagram|insta|ig)\b/i.test(lower)) return { text: await searchSocialPlatform('insta', raw), isHtml: true };
-    if (/^(search\s+)?(facebook|fb)\b/i.test(lower)) return { text: await searchSocialPlatform('fb', raw), isHtml: true };
-    if (/^(search\s+)?(reddit|r\/)\b/i.test(lower)) return { text: await searchReddit(raw), isHtml: true };
-    if (/^(search\s+)?(internet\s+archive|archive|ia)\b/i.test(lower)) return { text: await searchArchive(raw), isHtml: true };
+    // 6. Explicit Social & Web Prefixes
+    if (/^(search\s+)?(instagram|insta|ig)\b/i.test(lower)) return await searchSocialPlatform('insta', raw);
+    if (/^(search\s+)?(facebook|fb)\b/i.test(lower)) return await searchSocialPlatform('fb', raw);
+    if (/^(search\s+)?(reddit|r\/)\b/i.test(lower)) return await searchReddit(raw);
+    if (/^(search\s+)?(internet\s+archive|archive|ia)\b/i.test(lower)) return await searchArchive(raw);
     if (/^(search\s+)?(wikipedia|wiki)\b/i.test(lower)) {
         const w = await searchWikipedia(raw);
-        if (w) return { text: w, isHtml: true };
+        if (w) return w;
     }
 
-    // 8. Conversational AI, grounded with a Wikipedia reference for factual questions
+    // Track interest for non-personal factual topics
+    const isPersonalOrMeta = /\b(i|my|me|you|your|desu|shinu|earlier|mentioned)\b/i.test(lower);
+    const lookup = !isPersonalOrMeta && (/^(who|what|when|where|why|how|which|tell me about|explain|define|describe|meaning of)\b/i.test(raw) || raw.split(/\s+/).length <= 3);
+    if (lookup) Learn.trackInterest(raw);
+
+    // 7. Instant Neural Memory Hit (for direct definitions/rules)
+    const mem = findMemoryMatch(raw);
+    if (mem) {
+        return {
+            text: formatCleanMarkdown(mem.response),
+            isHtml: true,
+            followUp: `deeper concepts in ${mem.trigger}`
+        };
+    }
+
+    // 8. Provider-Independent Conversational AI (Grounded with Wikipedia reference + History + Profile)
     try {
         const recent = (chatHistory || []).slice(-6).map(m => ({ role: m.role, rawText: m.rawText || m.text }));
         const res = await fetch('/api/web', {
@@ -358,19 +403,42 @@ async function shinuReply(inputMessage, chatHistory) {
         });
         const data = await res.json();
         if (data && data.reply && !data.rateLimited) {
-            return { text: formatCleanMarkdown(data.reply), rawText: data.reply, isHtml: true, fromAI: true };
+            return {
+                text: formatCleanMarkdown(data.reply),
+                rawText: data.reply,
+                isHtml: true,
+                fromAI: true,
+                sources: data.sources || [],
+                followUp: data.followUp || null
+            };
         }
     } catch (e) {}
 
-    // 9. Wikipedia fallback only for clear lookups, and only when the article really matches
-    const wikiHtml = lookup ? await searchWikipedia(raw, true) : null;
-    if (wikiHtml) return { text: wikiHtml, isHtml: true };
+    // 9. Smart Context Fallback for Conversation History Questions ("Which subject did I mention earlier?")
+    if (isPersonalOrMeta && chatHistory && chatHistory.length) {
+        const prevUserMsgs = chatHistory.filter(m => m.role === 'user').map(m => m.rawText || m.text);
+        if (prevUserMsgs.length) {
+            return {
+                text: `Earlier in our conversation, you mentioned: <em>"${escapeHtml(prevUserMsgs.slice(-3).join('", "'))}"</em>.`,
+                isHtml: true
+            };
+        }
+    }
 
-    return { text: `I couldn't reach my AI brain just now, and I'd rather not guess. Try again in a moment, or teach me with <code>teach: topic = answer</code>.`, isHtml: true };
+    // 10. Verified Wikipedia Synthesis Fallback (Only for non-personal factual lookups)
+    if (lookup) {
+        const wikiReply = await searchWikipedia(raw, false);
+        if (wikiReply) return wikiReply;
+    }
+
+    return {
+        text: `I'm ready to learn about <strong>${escapeHtml(raw)}</strong>. Teach me directly with <code>teach: ${escapeHtml(raw)} = [explanation]</code>, or ask me to look up a specific concept!`,
+        isHtml: true
+    };
 }
 
 // ============================================================================
-// 4. CHAT SESSION & HISTORY
+// 4. CHAT SESSION, DESUCORE SOURCE BARS & CLICKABLE FOLLOW-UPS
 // ============================================================================
 let chats = [];
 try { chats = JSON.parse(load('shinu_chats') || '[]'); } catch (e) { chats = []; }
@@ -380,12 +448,31 @@ let busy = false;
 function saveChats() { store('shinu_chats', JSON.stringify(chats)); }
 function currentChat() { return chats.find(c => c.id === currentId) || null; }
 
-// Bot replies scroll so the START of the reply (the target marker) is in view
-function addBubble(role, content, isHtml = false, autoScroll = true) {
+function addBubble(role, content, isHtml = false, autoScroll = true, meta = {}) {
     const div = document.createElement('div');
     div.className = 'message-bubble ' + role;
     if (isHtml) div.innerHTML = content;
     else div.textContent = content;
+
+    // Attach DESUCore Source Attribution Bar (if sources were actually used)
+    if (role === 'bot' && window.DESUCore && Array.isArray(meta.sources) && meta.sources.length > 0) {
+        const sourceBar = window.DESUCore.createSourceBar(meta.sources);
+        if (sourceBar) div.appendChild(sourceBar);
+    }
+
+    // Attach DESUCore Smart Follow-Up Suggestion (clickable to continue conversation!)
+    if (role === 'bot' && window.DESUCore && meta.followUp) {
+        const followEl = window.DESUCore.createFollowUp(meta.followUp);
+        if (followEl) {
+            followEl.style.cursor = 'pointer';
+            followEl.onclick = () => {
+                userInput.value = `Tell me about ${meta.followUp}`;
+                handleSend();
+            };
+            div.appendChild(followEl);
+        }
+    }
+
     chatContainer.appendChild(div);
     if (autoScroll) {
         if (role === 'bot') chatContainer.scrollTo({ top: Math.max(0, div.offsetTop - 8), behavior: 'smooth' });
@@ -422,7 +509,7 @@ function renderHistory() {
         item.onclick = () => {
             currentId = chat.id;
             chatContainer.innerHTML = '';
-            chat.messages.forEach(m => addBubble(m.role, m.text, m.isHtml, false));
+            chat.messages.forEach(m => addBubble(m.role, m.text, m.isHtml, false, { sources: m.sources, followUp: m.followUp }));
             chatContainer.scrollTop = chatContainer.scrollHeight;
             centerStage.classList.add('dissolved');
             chatContainer.classList.add('active');
@@ -455,12 +542,11 @@ quickHelpBtn.onclick = () => {
     centerStage.classList.add('dissolved');
     chatContainer.classList.add('active');
     addBubble('bot', `
-        <strong>Quick Commands:</strong><br>
-        • Ask math (e.g., <code>2 divided by 2</code>) or chat naturally.<br>
-        • Tell me about yourself: <code>my name is …</code>, <code>I like …</code>, <code>keep it short</code>.<br>
-        • Rename me: <code>your name is …</code>.<br>
-        • Search with <code>insta</code>, <code>fb</code>, <code>reddit</code>, <code>wiki</code>, or <code>archive</code>.<br>
-        • Teach me with <code>teach: topic = answer</code>, or tap 👍 / 👎 under my replies.
+        <strong>DESU Guide & Modes (Current: ${escapeHtml(Learn.mode())}):</strong><br>
+        • <strong>Switch Modes:</strong> Type <code>conversational mode</code>, <code>educational mode</code>, or <code>professional mode</code>.<br>
+        • <strong>Personal Memory:</strong> Say <code>my name is …</code>, <code>I like physics</code>, or ask <code>which subject do I like?</code><br>
+        • <strong>Web & Social:</strong> Prefix with <code>insta</code>, <code>fb</code>, <code>reddit</code>, <code>wiki</code>, or <code>archive</code>.<br>
+        • <strong>Knowledge Training:</strong> Type <code>teach: topic</code> or <code>teach: topic = answer</code>.
     `, true);
 };
 
@@ -501,9 +587,19 @@ async function handleSend() {
         catch (e) { replyObj = { text: 'Something went wrong on my side. Please try again.', isHtml: false }; }
         typing.remove();
 
-        chat.messages.push({ role: 'bot', text: replyObj.text, rawText: replyObj.rawText || replyObj.text, isHtml: replyObj.isHtml });
+        chat.messages.push({
+            role: 'bot',
+            text: replyObj.text,
+            rawText: replyObj.rawText || replyObj.text,
+            isHtml: replyObj.isHtml,
+            sources: replyObj.sources || [],
+            followUp: replyObj.followUp || null
+        });
         saveChats();
-        const bubble = addBubble('bot', replyObj.text, replyObj.isHtml);
+        const bubble = addBubble('bot', replyObj.text, replyObj.isHtml, true, {
+            sources: replyObj.sources,
+            followUp: replyObj.followUp
+        });
 
         if (replyObj.fromAI) {
             Learn.cacheReply(text, replyObj.rawText);
