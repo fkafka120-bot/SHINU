@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>Shinu — High-End AI Workspace</title>
+    <title>Shinu</title>
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -16,10 +16,8 @@
         </button>
         <div class="topic-bar idle" id="topicBar">
             <span class="topic-dot"></span>
-            <span class="topic-label">Topic</span>
-            <span class="topic-divider"></span>
-            <span class="topic-text" id="topicText">New Chat</span>
-            <span class="auto-train-pill" id="headerBrainPill" title="Neural Memory Nodes">🧠 0</span>
+            <span class="topic-text" id="topicText">Shinu</span>
+            <span class="auto-train-pill" id="headerBrainPill" title="Neural Memory">🧠 0</span>
         </div>
     </header>
 
@@ -36,7 +34,7 @@
         </button>
 
         <div>
-            <div class="drawer-section-title">1. Theme Options</div>
+            <div class="drawer-section-title">Theme</div>
             <div class="theme-submenu">
                 <button class="theme-sub-item active" data-theme="purple"><span class="dot" style="--dot:#c496ff"></span>Cosmic Purple</button>
                 <button class="theme-sub-item" data-theme="amber"><span class="dot" style="--dot:#ffaa50"></span>Neon Amber</button>
@@ -44,24 +42,24 @@
             </div>
         </div>
         <div>
-            <div class="drawer-section-title">2. Self-Teaching Brain</div>
+            <div class="drawer-section-title">Neural Memory</div>
             <div class="drawer-item" id="openTrainModalBtn">
-                <span>Neural Training Studio</span>
-                <span class="brain-badge" id="brainCountBadge">0 skills</span>
+                <span>Training Studio</span>
+                <span class="brain-badge" id="brainCountBadge">0</span>
             </div>
         </div>
         <div>
-            <div class="drawer-section-title">3. Connected Platforms</div>
+            <div class="drawer-section-title">Web & Social</div>
             <div class="platform-pills">
-                <span class="plat-pill" data-prefix="insta ">📸 Instagram</span>
-                <span class="plat-pill" data-prefix="fb ">📘 Facebook</span>
-                <span class="plat-pill" data-prefix="reddit ">👽 Reddit</span>
-                <span class="plat-pill" data-prefix="wiki ">🌐 Wikipedia</span>
-                <span class="plat-pill" data-prefix="archive ">🏛️ Archive</span>
+                <span class="plat-pill" data-prefix="insta ">Instagram</span>
+                <span class="plat-pill" data-prefix="fb ">Facebook</span>
+                <span class="plat-pill" data-prefix="reddit ">Reddit</span>
+                <span class="plat-pill" data-prefix="wiki ">Wikipedia</span>
+                <span class="plat-pill" data-prefix="archive ">Archive</span>
             </div>
         </div>
         <div>
-            <div class="drawer-section-title">4. History</div>
+            <div class="drawer-section-title">History</div>
             <div class="chat-history-list" id="historyList"></div>
         </div>
     </div>
@@ -71,23 +69,22 @@
     <div class="modal-overlay" id="trainModal">
         <div class="modal-card">
             <div class="modal-header">
-                <h2>Neural Training Studio</h2>
+                <h2>Neural Memory</h2>
                 <button class="close-modal" id="closeTrainModal">✕</button>
             </div>
             <div class="auto-status-bar">
-                <span id="crawlerStatusText">🧠 Deep Web Synthesis: Ready</span>
-                <button class="train-secondary-btn" id="harvestNowBtn">+ Deep-Learn Topic</button>
+                <span id="crawlerStatusText">🟢 Instant Knowledge Sync: Ready</span>
+                <button class="train-secondary-btn" id="harvestNowBtn">+ Learn Topic</button>
             </div>
             <div class="train-form">
-                <input type="text" class="train-input" id="trainTriggerInput" placeholder="Concept or trigger (e.g. curvature, human behaviour)..." />
-                <input type="text" class="train-input" id="trainResponseInput" placeholder="Custom rule OR leave blank to auto-research from web!" />
+                <input type="text" class="train-input" id="trainTriggerInput" placeholder="Topic or trigger (e.g. curvature, violence)..." />
+                <input type="text" class="train-input" id="trainResponseInput" placeholder="Custom response (or leave blank to auto-learn)" />
                 <div class="train-btn-row">
-                    <button class="train-save-btn" id="saveTrainBtn">+ Train Shinu</button>
-                    <button class="train-secondary-btn" id="clearJunkBtn" title="Remove old random nodes">Clean</button>
+                    <button class="train-save-btn" id="saveTrainBtn">+ Save</button>
+                    <button class="train-secondary-btn" id="clearJunkBtn">Clean</button>
                     <button class="train-secondary-btn" id="exportBrainBtn">Export</button>
                 </div>
             </div>
-            <div class="drawer-section-title" style="margin-bottom:0;">Synthesized Knowledge Graph</div>
             <div class="memory-list" id="memoryList"></div>
         </div>
     </div>
@@ -105,8 +102,8 @@
 
     <!-- Input Dock -->
     <div class="input-dock" id="inputDock">
-        <button class="action-icon-btn" id="quickHelpBtn" title="Platforms & Commands">+</button>
-        <input type="text" id="userInput" placeholder="Ask anything, 'insta/fb/reddit [topic]', or 'teach: [topic]'..." autocomplete="off" />
+        <button class="action-icon-btn" id="quickHelpBtn" title="Quick Guide">+</button>
+        <input type="text" id="userInput" placeholder="Message Shinu..." autocomplete="off" />
         <button class="send-icon-btn" id="sendBtn" aria-label="Send">
             <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
         </button>
