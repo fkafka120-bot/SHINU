@@ -14,7 +14,6 @@
             --text-main: #f4ecff;
             --text-muted: #8d7b9e;
             --drawer-bg: rgba(8, 6, 14, 0.94);
-            /* Neutral chiaroscuro eye palette with subtle theme tint */
             --eye-highlight: #d8d2e2;
             --eye-mid: #6e6878;
             --eye-dark: #141118;
@@ -126,7 +125,7 @@
             display: flex;
             align-items: center;
             gap: 10px;
-            padding: 0 16px;
+            padding: 0 14px;
             background: var(--panel-bg);
             border: 1px solid var(--panel-border);
             border-radius: 13px;
@@ -164,7 +163,7 @@
         .topic-text {
             flex: 1;
             min-width: 0;
-            font-size: 14px;
+            font-size: 13.5px;
             font-weight: 600;
             color: var(--text-main);
             overflow: hidden;
@@ -174,7 +173,24 @@
         }
         .topic-text.swap { opacity: 0; transform: translateY(4px); }
         .topic-bar.idle .topic-text { color: var(--text-muted); font-weight: 500; }
-        .topic-bar.idle .topic-dot { opacity: 0.4; animation: none; }
+
+        /* Autonomous Training Pulse Pill */
+        .auto-train-pill {
+            font-size: 10px;
+            font-weight: 700;
+            color: var(--accent-purple);
+            background: rgba(255,255,255,0.05);
+            border: 1px solid var(--panel-border);
+            padding: 3px 7px;
+            border-radius: 8px;
+            flex-shrink: 0;
+            cursor: pointer;
+            transition: all 0.25s;
+        }
+        .auto-train-pill.learning {
+            box-shadow: 0 0 12px var(--accent-glow);
+            border-color: var(--accent-purple);
+        }
 
         /* ---------- Moody Chiaroscuro Neutral Eye ---------- */
         .eye-svg { width: 100%; height: 100%; display: block; overflow: visible; }
@@ -390,7 +406,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: 20px;
+            padding: 16px;
             opacity: 0;
             pointer-events: none;
             transition: opacity 0.3s ease;
@@ -398,15 +414,15 @@
         .modal-overlay.open { opacity: 1; pointer-events: auto; }
         .modal-card {
             width: 100%;
-            max-width: 440px;
-            max-height: 82vh;
+            max-width: 450px;
+            max-height: 86vh;
             background: var(--drawer-bg);
             border: 1px solid var(--panel-border);
             border-radius: 22px;
-            padding: 22px;
+            padding: 20px;
             display: flex;
             flex-direction: column;
-            gap: 16px;
+            gap: 14px;
             box-shadow: 0 24px 60px rgba(0,0,0,0.9), 0 0 30px var(--accent-glow);
         }
         .modal-header {
@@ -415,7 +431,7 @@
             align-items: center;
         }
         .modal-header h2 {
-            font-size: 16px;
+            font-size: 15px;
             letter-spacing: 2px;
             text-transform: uppercase;
             color: var(--accent-purple);
@@ -428,32 +444,57 @@
             cursor: pointer;
             padding: 4px 8px;
         }
+        .auto-status-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 12px;
+            background: rgba(255,255,255,0.03);
+            border: 1px solid var(--panel-border);
+            border-radius: 12px;
+            font-size: 12px;
+        }
         .train-form {
             display: flex;
             flex-direction: column;
-            gap: 10px;
+            gap: 8px;
         }
         .train-input {
             width: 100%;
-            padding: 12px 14px;
+            padding: 11px 14px;
             background: rgba(255,255,255,0.04);
             border: 1px solid var(--panel-border);
             border-radius: 12px;
             color: var(--text-main);
-            font-size: 14px;
+            font-size: 13.5px;
             outline: none;
         }
         .train-input:focus { border-color: var(--accent-purple); }
+        .train-btn-row {
+            display: flex;
+            gap: 8px;
+        }
         .train-save-btn {
-            padding: 12px;
+            flex: 1;
+            padding: 11px;
             background: var(--accent-purple);
             color: #050308;
             border: none;
             border-radius: 12px;
             font-weight: 700;
-            font-size: 14px;
+            font-size: 13.5px;
             cursor: pointer;
             box-shadow: 0 4px 18px var(--accent-glow);
+        }
+        .train-secondary-btn {
+            padding: 11px 12px;
+            background: rgba(255,255,255,0.05);
+            color: var(--text-main);
+            border: 1px solid var(--panel-border);
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
         }
         .memory-list {
             flex: 1;
@@ -461,7 +502,7 @@
             display: flex;
             flex-direction: column;
             gap: 8px;
-            max-height: 32vh;
+            max-height: 28vh;
             padding-right: 4px;
         }
         .memory-node {
@@ -469,7 +510,7 @@
             background: rgba(255,255,255,0.03);
             border: 1px solid var(--panel-border);
             border-radius: 10px;
-            font-size: 13px;
+            font-size: 12.5px;
             display: flex;
             justify-content: space-between;
             align-items: flex-start;
@@ -729,15 +770,12 @@
 </head>
 <body>
 
-    <!-- Shared Chiaroscuro Neutral Eye Gradients & Clipping Path -->
+    <!-- Chiaroscuro Neutral Eye Gradients & Clipping Path -->
     <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
         <defs>
-            <!-- Almond eye opening matching the reference silhouette -->
             <clipPath id="eyeOpeningClip">
                 <path d="M 32 45 C 58 23, 122 23, 148 42 C 124 61, 60 61, 32 45 Z"/>
             </clipPath>
-
-            <!-- Soft matte shading across the sweeping upper eyelid hood -->
             <linearGradient id="hoodGrad" x1="0%" y1="0%" x2="100%" y2="0%">
                 <stop offset="0%" stop-color="#000000" stop-opacity="0"/>
                 <stop offset="22%" stop-color="var(--eye-mid)" stop-opacity="0.38"/>
@@ -745,32 +783,24 @@
                 <stop offset="78%" stop-color="var(--eye-mid)" stop-opacity="0.38"/>
                 <stop offset="100%" stop-color="#000000" stop-opacity="0"/>
             </linearGradient>
-
-            <!-- Realistic shadowed sclera gradient (brightest near bottom-right, deep shadow at corners) -->
             <radialGradient id="scleraGrad" cx="52%" cy="58%" r="52%">
                 <stop offset="0%" stop-color="var(--eye-highlight)" stop-opacity="0.88"/>
                 <stop offset="55%" stop-color="var(--eye-mid)" stop-opacity="0.65"/>
                 <stop offset="85%" stop-color="var(--eye-dark)" stop-opacity="0.92"/>
                 <stop offset="100%" stop-color="#000000" stop-opacity="1"/>
             </radialGradient>
-
-            <!-- Top shadow cast by the upper lid over the eyeball -->
             <linearGradient id="topCastShadow" x1="0%" y1="0%" x2="0%" y2="100%">
                 <stop offset="0%" stop-color="#000000" stop-opacity="0.92"/>
                 <stop offset="38%" stop-color="#000000" stop-opacity="0.35"/>
                 <stop offset="75%" stop-color="#000000" stop-opacity="0"/>
                 <stop offset="100%" stop-color="#000000" stop-opacity="0.45"/>
             </linearGradient>
-
-            <!-- Deep dark charcoal iris gradient -->
             <radialGradient id="darkIrisGrad" cx="50%" cy="55%" r="50%">
                 <stop offset="0%" stop-color="#000000"/>
                 <stop offset="45%" stop-color="#070609"/>
                 <stop offset="80%" stop-color="var(--eye-iris)"/>
                 <stop offset="100%" stop-color="#020203"/>
             </radialGradient>
-
-            <!-- Crisp lower-lid rim highlight gradient -->
             <linearGradient id="lowerRimGrad" x1="15%" y1="0%" x2="85%" y2="0%">
                 <stop offset="0%" stop-color="var(--eye-highlight)" stop-opacity="0"/>
                 <stop offset="35%" stop-color="var(--eye-highlight)" stop-opacity="0.45"/>
@@ -792,6 +822,7 @@
             <span class="topic-label">Topic</span>
             <span class="topic-divider"></span>
             <span class="topic-text" id="topicText">New Chat</span>
+            <span class="auto-train-pill" id="headerBrainPill" title="Autonomous Web Harvester Active">⚡ 0</span>
         </div>
     </header>
 
@@ -840,13 +871,19 @@
                 <h2>Neural Training Studio</h2>
                 <button class="close-modal" id="closeTrainModal">✕</button>
             </div>
-            <div style="font-size: 12.5px; color: var(--text-muted); line-height: 1.4;">
-                Teach Shinu custom responses, facts, or workflows. You can also type <code>teach: question = answer</code> directly in the chat!
+            <div class="auto-status-bar">
+                <span id="crawlerStatusText">🟢 Autonomous Web Harvester: Active</span>
+                <button class="train-secondary-btn" id="harvestNowBtn" style="padding: 5px 10px;">+ Harvest Web Now</button>
             </div>
             <div class="train-form">
-                <input type="text" class="train-input" id="trainTriggerInput" placeholder="When I ask or mention (e.g. creator, nit silchar)..." />
+                <input type="text" class="train-input" id="trainTriggerInput" placeholder="When I ask or mention (e.g. violence is bad)..." />
                 <input type="text" class="train-input" id="trainResponseInput" placeholder="Shinu should reply with..." />
-                <button class="train-save-btn" id="saveTrainBtn">+ Commit to Neural Memory</button>
+                <div class="train-btn-row">
+                    <button class="train-save-btn" id="saveTrainBtn">+ Commit Node</button>
+                    <button class="train-secondary-btn" id="exportBrainBtn" title="Backup Brain JSON">Export</button>
+                    <button class="train-secondary-btn" id="importBrainBtn" title="Restore Brain JSON">Import</button>
+                    <input type="file" id="importFileInput" accept=".json" style="display:none" />
+                </div>
             </div>
             <div class="drawer-section-title" style="margin-bottom: 0;">Learned Knowledge Nodes</div>
             <div class="memory-list" id="memoryList"></div>
@@ -867,25 +904,19 @@
     <!-- Input Dock -->
     <div class="input-dock" id="inputDock">
         <button class="action-icon-btn" id="quickHelpBtn" title="Search & Training Tips" aria-label="Tips">+</button>
-        <input type="text" id="userInput" placeholder="Ask anything, or type 'teach: x = y'..." autocomplete="off" />
+        <input type="text" id="userInput" placeholder="Ask anything, 'reddit [topic]', or 'teach: x = y'..." autocomplete="off" />
         <button class="send-icon-btn" id="sendBtn" aria-label="Send">
             <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
         </button>
     </div>
 
 <script>
-    // ---------- Chiaroscuro Neutral Eye SVG (Matches Reference Image) ----------
+    // ---------- Chiaroscuro Neutral Eye SVG ----------
     const EYE_SVG = `
     <svg class="eye-svg" viewBox="0 0 180 80" aria-hidden="true">
-        <!-- Sweeping upper eyelid hood fold with soft chiaroscuro lighting -->
         <path d="M 6 48 C 46 13, 128 13, 174 39 C 128 24, 52 24, 6 48 Z" fill="url(#hoodGrad)"/>
-        
-        <!-- Clipped eyeball interior -->
         <g clip-path="url(#eyeOpeningClip)">
-            <!-- Shadowed neutral sclera -->
             <rect x="20" y="15" width="140" height="55" fill="url(#scleraGrad)"/>
-            
-            <!-- Deep charcoal iris & breathing pupil -->
             <g class="iris-move">
                 <circle cx="90" cy="41" r="19.5" fill="url(#darkIrisGrad)"/>
                 <circle class="iris-fibers" cx="90" cy="41" r="13.5"/>
@@ -894,26 +925,16 @@
                     <circle cx="90" cy="41" r="8.5" fill="#000000"/>
                 </g>
             </g>
-
-            <!-- Crisp upper-right specular catchlight (with subtle halo) -->
             <g class="glint-move">
                 <circle cx="97.5" cy="32.5" r="4.2" fill="#ffffff" fill-opacity="0.18"/>
                 <circle cx="97.5" cy="32.5" r="2.7" fill="#ffffff" fill-opacity="0.92"/>
             </g>
-
-            <!-- Upper lid cast shadow over eyeball -->
             <rect x="20" y="15" width="140" height="55" fill="url(#topCastShadow)"/>
-
-            <!-- Smooth dark blinking upper eyelid -->
             <g class="blink-lid">
                 <path d="M 0 -40 H 180 V 25 Q 90 36 0 25 Z" fill="#050408"/>
             </g>
         </g>
-
-        <!-- Upper lash line shadow -->
         <path d="M 22 46 C 56 22, 124 22, 158 40" fill="none" stroke="#000000" stroke-width="2.2" stroke-linecap="round" opacity="0.9"/>
-
-        <!-- Subtle lower rim light edge matching the reference photo -->
         <path d="M 33 45.5 C 60 61, 124 61, 148 42.5" fill="none" stroke="url(#lowerRimGrad)" stroke-width="1.3" stroke-linecap="round"/>
     </svg>`;
     document.querySelectorAll('[data-eye]').forEach(el => { el.innerHTML = EYE_SVG; });
@@ -980,14 +1001,19 @@
     const topicBar = document.getElementById('topicBar');
     const topicText = document.getElementById('topicText');
     const quickHelpBtn = document.getElementById('quickHelpBtn');
+    const headerBrainPill = document.getElementById('headerBrainPill');
 
-    // Training Modal Elements
     const trainModal = document.getElementById('trainModal');
     const openTrainModalBtn = document.getElementById('openTrainModalBtn');
     const closeTrainModal = document.getElementById('closeTrainModal');
     const trainTriggerInput = document.getElementById('trainTriggerInput');
     const trainResponseInput = document.getElementById('trainResponseInput');
     const saveTrainBtn = document.getElementById('saveTrainBtn');
+    const harvestNowBtn = document.getElementById('harvestNowBtn');
+    const exportBrainBtn = document.getElementById('exportBrainBtn');
+    const importBrainBtn = document.getElementById('importBrainBtn');
+    const importFileInput = document.getElementById('importFileInput');
+    const crawlerStatusText = document.getElementById('crawlerStatusText');
     const memoryList = document.getElementById('memoryList');
     const brainCountBadge = document.getElementById('brainCountBadge');
 
@@ -1007,14 +1033,22 @@
     }
 
     // =========================================================================
-    // SELF-TEACHING & NEURAL MEMORY ENGINE
+    // PERSISTENT SELF-TEACHING & AUTONOMOUS WEB HARVESTER
     // =========================================================================
+    const SEED_KNOWLEDGE = [
+        { id: 'seed1', trigger: 'violence', response: 'Violence causes harm and suffering. Ethically, socially, and legally, non-violence, empathy, and constructive dialogue are almost universally recognized as the right path.', source: 'Core Ethics' },
+        { id: 'seed2', trigger: 'who created shinu', response: 'Shinu was designed and built as a high-end procedural AI workspace with autonomous web-learning capabilities.', source: 'Core Memory' }
+    ];
+
     let brain = [];
     try {
-        brain = JSON.parse(load('shinu_brain') || '[]');
-    } catch (e) { brain = []; }
+        const saved = JSON.parse(load('shinu_brain') || 'null');
+        brain = (Array.isArray(saved) && saved.length) ? saved : SEED_KNOWLEDGE;
+    } catch (e) { brain = SEED_KNOWLEDGE; }
 
     function saveBrain() {
+        // Keep up to 300 nodes so localStorage stays fast and never overflows
+        if (brain.length > 300) brain = brain.slice(-300);
         store('shinu_brain', JSON.stringify(brain));
         renderBrainUI();
     }
@@ -1042,31 +1076,34 @@
 
     function queryBrain(userQuery) {
         const clean = userQuery.toLowerCase().replace(/[?.!,;:]+$/, '').trim();
-        const stripped = cleanSearchQuery(clean).toLowerCase();
+        const stripped = extractCoreConcept(clean).toLowerCase();
 
-        // 1. Exact match on full query or stripped subject
+        // 1. Exact match on full query or core concept
         for (const node of brain) {
             if (node.trigger === clean || (stripped && node.trigger === stripped)) {
                 return node;
             }
         }
-        // 2. Substring/keyword match for longer trained triggers
+        // 2. Whole-word boundary match for trained triggers
         for (const node of brain) {
-            if (node.trigger.length >= 4 && clean.includes(node.trigger)) {
-                return node;
+            if (node.trigger.length >= 4) {
+                const escaped = node.trigger.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                const regex = new RegExp(`\\b${escaped}\\b`, 'i');
+                if (regex.test(clean)) return node;
             }
         }
         return null;
     }
 
     function renderBrainUI() {
-        brainCountBadge.textContent = `${brain.length} ${brain.length === 1 ? 'node' : 'nodes'}`;
+        brainCountBadge.textContent = `${brain.length} nodes`;
+        headerBrainPill.textContent = `⚡ ${brain.length}`;
         memoryList.innerHTML = '';
         if (!brain.length) {
-            memoryList.innerHTML = `<div style="font-size: 13px; color: var(--text-muted);">No custom nodes trained yet.</div>`;
+            memoryList.innerHTML = `<div style="font-size: 13px; color: var(--text-muted);">No nodes trained yet.</div>`;
             return;
         }
-        [...brain].reverse().forEach(node => {
+        [...brain].reverse().slice(0, 60).forEach(node => {
             const div = document.createElement('div');
             div.className = 'memory-node';
             div.innerHTML = `
@@ -1077,7 +1114,6 @@
             `;
             const delBtn = document.createElement('button');
             delBtn.textContent = '✕';
-            delBtn.title = 'Forget node';
             delBtn.onclick = () => {
                 brain = brain.filter(b => b.id !== node.id);
                 saveBrain();
@@ -1087,6 +1123,54 @@
         });
     }
 
+    // Autonomous Web Harvester: Pulls random Wikipedia summaries in the background AND catches up for offline time
+    async function harvestRandomWebNode(sourceLabel = 'Autonomous Web Crawler') {
+        try {
+            headerBrainPill.classList.add('learning');
+            crawlerStatusText.textContent = '⚡ Harvesting live knowledge from Wikipedia...';
+            const res = await fetch('https://en.wikipedia.org/api/rest_v1/page/random/summary');
+            if (!res.ok) throw new Error('Random fetch failed');
+            const data = await res.json();
+            if (data && data.title && data.extract) {
+                const shortSummary = data.extract.split(/(?<=[.!?])\s+/).slice(0, 2).join(' ');
+                teachShinu(data.title.toLowerCase(), shortSummary, sourceLabel);
+                crawlerStatusText.textContent = `🟢 Learned: "${data.title}"`;
+            }
+        } catch (e) {
+            crawlerStatusText.textContent = '🟢 Autonomous Web Harvester: Idle';
+        } finally {
+            setTimeout(() => headerBrainPill.classList.remove('learning'), 900);
+        }
+    }
+
+    // Offline Catch-Up Training: Calculates how long the tab was closed and harvests web nodes automatically
+    async function runOfflineCatchupTraining() {
+        const lastSeen = parseInt(load('shinu_last_seen') || '0', 10);
+        const now = Date.now();
+        store('shinu_last_seen', String(now));
+
+        if (lastSeen > 0) {
+            const minutesAway = Math.floor((now - lastSeen) / 60000);
+            const catchupCount = Math.min(Math.max(Math.floor(minutesAway / 5), 1), 4);
+            for (let i = 0; i < catchupCount; i++) {
+                await harvestRandomWebNode('Offline Catch-Up');
+            }
+        } else {
+            await harvestRandomWebNode('Initial Web Sync');
+        }
+    }
+
+    // Keep timestamp updated and harvest a new concept every 25 seconds while open
+    setInterval(() => {
+        store('shinu_last_seen', String(Date.now()));
+        if (!document.hidden) harvestRandomWebNode('Autonomous Web Crawler');
+    }, 25000);
+    window.addEventListener('beforeunload', () => store('shinu_last_seen', String(Date.now())));
+
+    headerBrainPill.onclick = () => {
+        renderBrainUI();
+        trainModal.classList.add('open');
+    };
     openTrainModalBtn.onclick = () => {
         closeDrawer();
         renderBrainUI();
@@ -1104,7 +1188,36 @@
         trainResponseInput.value = '';
     };
 
-    // Quick function exposed globally so "Teach this" buttons inside chat bubbles work
+    harvestNowBtn.onclick = () => harvestRandomWebNode('Manual Web Harvest');
+
+    // Export & Import Brain JSON so code changes or device switches never lose training
+    exportBrainBtn.onclick = () => {
+        const blob = new Blob([JSON.stringify(brain, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'shinu_brain_backup.json';
+        a.click();
+        URL.revokeObjectURL(url);
+    };
+    importBrainBtn.onclick = () => importFileInput.click();
+    importFileInput.onchange = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+            try {
+                const imported = JSON.parse(ev.target.result);
+                if (Array.isArray(imported)) {
+                    imported.forEach(n => {
+                        if (n.trigger && n.response) teachShinu(n.trigger, n.response, n.source || 'Imported');
+                    });
+                }
+            } catch (err) {}
+        };
+        reader.readAsText(file);
+    };
+
     window.promptQuickTeach = function(prefillTrigger) {
         trainTriggerInput.value = prefillTrigger || '';
         trainResponseInput.value = '';
@@ -1114,8 +1227,11 @@
     };
 
     renderBrainUI();
+    runOfflineCatchupTraining();
 
-    // ---------- Helpers ----------
+    // =========================================================================
+    // SMART CONTEXT & QUERY EXTRACTION (Fixes Out-of-Context "Bad Witch" Bug)
+    // =========================================================================
     function tryMath(q) {
         const expr = q.replace(/x/gi, '*').replace(/\^/g, '**');
         if (!/^[0-9+\-*/().%\s]+$/.test(expr) || !/[0-9]/.test(expr) || !/[+\-*/%]/.test(expr)) return null;
@@ -1125,12 +1241,26 @@
         } catch (e) { return null; }
     }
 
-    function cleanSearchQuery(raw) {
-        let t = raw.trim().replace(/\s+/g, ' ');
-        const lead = /^(please\s+|can you\s+|could you\s+|would you\s+|search\s+(for\s+)?|wiki(pedia)?\s+|look up\s+|find\s+|tell me\s+(about\s+)?|(who|what|where)\s+(is|are|was|were)\s+(an?\s+|the\s+)?|what'?s\s+(an?\s+|the\s+)?|who'?s\s+|define\s+|explain\s+)/i;
+    // Detects conversational, philosophical, or opinion questions like "Violence is bad?" or "Why do people fight?"
+    function isConversationalOrOpinion(raw) {
+        const q = raw.trim().toLowerCase();
+        if (/\b(is|are)\s+.+\s+(good|bad|wrong|right|better|worse|okay|ok|safe|moral|ethical|true|false)\b/i.test(q)) return true;
+        if (/^(is|are|should|would|could|do|does|can|will|why|how come)\b/i.test(q) && !/^(who|what|where)\s+(is|are|was|were)\b/i.test(q)) return true;
+        if (/\b(you think|your opinion|feel about|agree|mean|advice)\b/i.test(q)) return true;
+        return false;
+    }
+
+    // Extracts clean subject nouns: turns "Violence is bad?" -> "violence", or "Who is Salman Khan?" -> "Salman Khan"
+    function extractCoreConcept(raw) {
+        let t = raw.trim().replace(/\s+/g, ' ').replace(/[?.!,;:]+$/, '');
+        // Handle "[Subject] is/are [adjective]" -> extract Subject
+        const predMatch = t.match(/^([a-zA-Z0-9\s]{2,25}?)\s+(?:is|are|was|were)\s+(?:very\s+|really\s+|so\s+)?(?:good|bad|wrong|right|evil|harmful|healthy|important|real|fake|dead|alive)$/i);
+        if (predMatch) return predMatch[1].trim();
+
+        const lead = /^(please\s+|can you\s+|could you\s+|would you\s+|search\s+(for\s+)?|wiki(pedia)?\s+|look up\s+|find\s+|tell me\s+(about\s+)?|(who|what|where)\s+(is|are|was|were)\s+(an?\s+|the\s+)?|what'?s\s+(an?\s+|the\s+)?|who'?s\s+|define\s+|meaning of\s+|explain\s+)/i;
         let prev;
         do { prev = t; t = t.replace(lead, ''); } while (t !== prev && t);
-        return t.replace(/[?.!,;:]+$/, '').trim() || raw.trim();
+        return t.trim() || raw.trim().replace(/[?.!,;:]+$/, '');
     }
 
     function makeTopic(raw) {
@@ -1141,10 +1271,10 @@
         if (/^(reddit|r\/)\b/i.test(t)) return 'Reddit: ' + t.replace(/^(reddit|r\/)\s*/i, '').slice(0, 18);
         if (/^(archive|ia)\b/i.test(t)) return 'Archive: ' + t.replace(/^(archive|ia)\s*/i, '').slice(0, 18);
 
-        t = cleanSearchQuery(t);
-        t = t.split(' ').slice(0, 5).join(' ');
+        t = extractCoreConcept(t);
+        t = t.split(' ').slice(0, 4).join(' ');
         t = t.replace(/(^|\s)([a-z])/g, (m, s, c) => s + c.toUpperCase());
-        if (t.length > 30) t = t.slice(0, 29).trim() + '…';
+        if (t.length > 28) t = t.slice(0, 27).trim() + '…';
         return t || 'New Chat';
     }
 
@@ -1207,7 +1337,6 @@
             const del = document.createElement('button');
             del.className = 'del';
             del.textContent = '✕';
-            del.setAttribute('aria-label', 'Delete chat');
             del.onclick = (e) => {
                 e.stopPropagation();
                 chats = chats.filter(c => c.id !== chat.id);
@@ -1251,22 +1380,54 @@
         showChatView();
         addBubble('bot', `
             <span class="source-badge">Shinu Neural & Web Guide</span><br>
-            <strong>1. Self-Teaching Commands:</strong>
-            <div class="result-item">• Type <code>teach: question = answer</code> (e.g., <em>teach: who made you = David built me</em>).</div>
-            <div class="result-item">• Type <code>brain</code> to inspect all learned memory nodes.</div>
-            <strong>2. Live Free Web Search:</strong>
-            <div class="result-item">• <strong>Wikipedia (Default):</strong> Type any topic (e.g., <em>Sundar Pichai</em>). Shinu also auto-learns summaries!</div>
-            <div class="result-item">• <strong>Reddit:</strong> Prefix with <code>reddit</code> (e.g., <em>reddit webdev</em>).</div>
-            <div class="result-item">• <strong>Internet Archive:</strong> Prefix with <code>archive</code> (e.g., <em>archive retro cartoons</em>).</div>
+            <strong>1. Context-Aware AI & Encyclopedia:</strong>
+            <div class="result-item">• Ask any question (e.g., <em>"Violence is bad?"</em> or <em>"Who is Salman Khan?"</em>). Shinu combines conversational AI with strict Wikipedia verification so replies never go out of context.</div>
+            <strong>2. Multi-Proxy Reddit & Archive:</strong>
+            <div class="result-item">• <strong>Reddit:</strong> Type <code>reddit [topic]</code> (uses 4 fallback proxies so it never shows unavailable).</div>
+            <div class="result-item">• <strong>Internet Archive:</strong> Type <code>archive [topic]</code>.</div>
+            <strong>3. Autonomous Self-Training:</strong>
+            <div class="result-item">• Shinu harvests web knowledge every 25s and catches up when you reopen the tab. Type <code>teach: x = y</code> to train custom rules!</div>
         `, true);
     };
 
-    // ---------- 1. Free Wikipedia Search + Self-Learning Cache ----------
-    async function fetchWikipedia(rawQuery) {
-        const clean = cleanSearchQuery(rawQuery);
+    // =========================================================================
+    // 1. FREE CONVERSATIONAL AI ENGINE (Context-Aware Pollinations + Wiki Synthesis)
+    // =========================================================================
+    async function fetchConversationalAI(userMessage, activeTopic) {
+        try {
+            const contextNote = (activeTopic && activeTopic !== 'New Chat' && activeTopic !== 'Greeting')
+                ? `Current conversation topic context: "${activeTopic}". `
+                : '';
+            const systemPrompt = `You are Shinu, a concise, intelligent, grounded AI assistant. ${contextNote}Answer the user's message directly, accurately, and in context in 2 to 3 clear sentences.`;
+            const url = `https://text.pollinations.ai/${encodeURIComponent(userMessage)}?model=openai&system=${encodeURIComponent(systemPrompt)}`;
+            const controller = new AbortController();
+            const timer = setTimeout(() => controller.abort(), 6500);
+            const res = await fetch(url, { signal: controller.signal });
+            clearTimeout(timer);
+            if (!res.ok) throw new Error('AI status error');
+            const replyText = (await res.text()).trim();
+            if (!replyText || replyText.length < 5 || replyText.startsWith('{')) return null;
+
+            // Auto-learn the conversational insight into Shinu's neural memory
+            const coreKey = extractCoreConcept(userMessage).toLowerCase();
+            if (coreKey.length >= 3 && !queryBrain(coreKey)) {
+                teachShinu(coreKey, replyText, 'Auto-Learned AI');
+            }
+
+            return `<span class="source-badge">Shinu Contextual AI • Auto-Learned</span><br>${escapeHtml(replyText)}`;
+        } catch (e) {
+            return null;
+        }
+    }
+
+    // =========================================================================
+    // 2. STRICT WIKIPEDIA ENCYCLOPEDIA ENGINE (Prevents Irrelevant Pop-Culture Matches)
+    // =========================================================================
+    async function fetchWikipedia(rawQuery, requireStrictTitleMatch = false) {
+        const clean = extractCoreConcept(rawQuery);
         if (!clean) return null;
         try {
-            const searchUrl = `https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(clean)}&utf8=&format=json&origin=*&srlimit=3`;
+            const searchUrl = `https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(clean)}&utf8=&format=json&origin=*&srlimit=4`;
             const searchRes = await fetch(searchUrl);
             if (!searchRes.ok) throw new Error('Wiki search error');
             const searchData = await searchRes.json();
@@ -1274,7 +1435,28 @@
 
             if (!results || results.length === 0) return null;
 
-            const topTitle = results[0].title;
+            // Pick a result whose title actually matches our core concept words (avoids "Violence is bad" -> "Bad Witch" album)
+            const cleanWords = clean.toLowerCase().split(/\s+/).filter(w => w.length > 2);
+            let chosen = results[0];
+
+            for (const cand of results) {
+                const tLower = cand.title.toLowerCase();
+                if (tLower === clean.toLowerCase() || tLower.startsWith(clean.toLowerCase())) {
+                    chosen = cand;
+                    break;
+                }
+            }
+
+            if (requireStrictTitleMatch && cleanWords.length > 0) {
+                const titleLower = chosen.title.toLowerCase();
+                const hasOverlap = cleanWords.some(w => titleLower.includes(w));
+                // Reject if it's a random album/song/film when the user asked a general question
+                if (!hasOverlap || /\b(album|song|ep|band|film|discography)\b/i.test(chosen.snippet)) {
+                    return null;
+                }
+            }
+
+            const topTitle = chosen.title;
             const summaryUrl = `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(topTitle)}`;
             const sumRes = await fetch(summaryUrl);
             if (!sumRes.ok) throw new Error('Wiki summary error');
@@ -1285,9 +1467,8 @@
             const pageUrl = sumData?.content_urls?.desktop?.page || `https://en.wikipedia.org/wiki/${encodeURIComponent(topTitle)}`;
             const thumb = sumData?.thumbnail?.source;
 
-            // Self-Teaching Auto-Index: Save concise 2-sentence summary to neural memory if not already learned
             const firstTwoSentences = rawExtract.split(/(?<=[.!?])\s+/).slice(0, 2).join(' ');
-            if (firstTwoSentences && !queryBrain(topTitle)) {
+            if (firstTwoSentences) {
                 teachShinu(topTitle.toLowerCase(), firstTwoSentences, 'Auto-Learned Wiki');
             }
 
@@ -1298,54 +1479,85 @@
             }
             html += `<div style="margin: 6px 0 10px;">${extract}</div>`;
             html += `<a href="${escapeHtml(pageUrl)}" target="_blank" rel="noopener">Read full Wikipedia article ↗</a>`;
-
-            if (results.length > 1) {
-                html += `<div class="result-meta" style="margin-top:10px;">Related: `;
-                html += results.slice(1, 3).map(r => {
-                    const rUrl = `https://en.wikipedia.org/wiki/${encodeURIComponent(r.title)}`;
-                    return `<a href="${rUrl}" target="_blank" rel="noopener">${escapeHtml(r.title)}</a>`;
-                }).join(' • ');
-                html += `</div>`;
-            }
             return html;
         } catch (err) {
             return null;
         }
     }
 
-    // ---------- 2. Free Reddit Search ----------
+    // =========================================================================
+    // 3. MULTI-PROXY REDDIT SEARCH ENGINE (Fixes Mobile CORS / "Unavailable" Error)
+    // =========================================================================
     async function fetchRedditSearch(rawQuery) {
         const cleanQuery = rawQuery.replace(/^(search\s+)?(reddit|r\/)\s*/i, '').trim();
-        if (!cleanQuery) return `Please specify a topic after "reddit", e.g., <code>reddit javascript</code>.`;
-        try {
-            const url = `https://www.reddit.com/search.json?q=${encodeURIComponent(cleanQuery)}&sort=relevance&limit=4`;
-            const response = await fetch(url);
-            if (!response.ok) throw new Error('Reddit network error');
-            const data = await response.json();
-            const posts = data?.data?.children;
+        if (!cleanQuery) return `Please specify a topic after "reddit", e.g., <code>reddit artificial intelligence</code>.`;
 
-            if (!posts || posts.length === 0) {
-                return `No Reddit discussions found for "${escapeHtml(cleanQuery)}".`;
+        const targetUrl = `https://www.reddit.com/search.json?q=${encodeURIComponent(cleanQuery)}&sort=relevance&limit=4&raw_json=1`;
+        const endpoints = [
+            targetUrl,
+            `https://old.reddit.com/search.json?q=${encodeURIComponent(cleanQuery)}&sort=relevance&limit=4&raw_json=1`,
+            `https://corsproxy.io/?${encodeURIComponent(targetUrl)}`,
+            `https://api.allorigins.win/raw?url=${encodeURIComponent(targetUrl)}`
+        ];
+
+        for (const ep of endpoints) {
+            try {
+                const controller = new AbortController();
+                const timer = setTimeout(() => controller.abort(), 5500);
+                const res = await fetch(ep, { signal: controller.signal });
+                clearTimeout(timer);
+                if (!res.ok) continue;
+
+                const data = await res.json();
+                const posts = data?.data?.children;
+                if (posts && posts.length > 0) {
+                    // Auto-learn the top community discussion title
+                    teachShinu(`reddit ${cleanQuery.toLowerCase()}`, `Top Reddit thread on r/${posts[0].data.subreddit}: "${posts[0].data.title}"`, 'Auto-Learned Reddit');
+
+                    let html = `<span class="source-badge">Reddit Live Feed</span><br>`;
+                    html += `<strong>Top discussions for "${escapeHtml(cleanQuery)}":</strong>`;
+                    posts.forEach((p) => {
+                        const post = p.data;
+                        const permalink = `https://www.reddit.com${post.permalink}`;
+                        html += `
+                        <div class="result-item">
+                            <a href="${escapeHtml(permalink)}" target="_blank" rel="noopener">${escapeHtml(post.title)}</a>
+                            <div class="result-meta">r/${escapeHtml(post.subreddit)} • ⬆ ${post.score} • 💬 ${post.num_comments}</div>
+                        </div>`;
+                    });
+                    return html;
+                }
+            } catch (e) {
+                // Continue to next fallback proxy
             }
-
-            let html = `<span class="source-badge">Reddit Live Feed</span><br>`;
-            html += `<strong>Top discussions for "${escapeHtml(cleanQuery)}":</strong>`;
-            posts.forEach((p) => {
-                const post = p.data;
-                const permalink = `https://www.reddit.com${post.permalink}`;
-                html += `
-                <div class="result-item">
-                    <a href="${escapeHtml(permalink)}" target="_blank" rel="noopener">${escapeHtml(post.title)}</a>
-                    <div class="result-meta">r/${escapeHtml(post.subreddit)} • ⬆ ${post.score} • 💬 ${post.num_comments}</div>
-                </div>`;
-            });
-            return html;
-        } catch (err) {
-            return `Unable to reach Reddit right now. Try searching Wikipedia directly.`;
         }
+
+        // Ultimate Fallback: Algolia HackerNews Community Discussions (Never blocked by mobile ISP/CORS)
+        try {
+            const hnRes = await fetch(`https://hn.algolia.com/api/v1/search?query=${encodeURIComponent(cleanQuery)}&tags=story&hitsPerPage=4`);
+            const hnData = await hnRes.json();
+            if (hnData?.hits?.length > 0) {
+                let html = `<span class="source-badge">Community Feed (Mirror)</span><br>`;
+                html += `<strong>Live discussions for "${escapeHtml(cleanQuery)}":</strong>`;
+                hnData.hits.forEach(hit => {
+                    const url = hit.url || `https://news.ycombinator.com/item?id=${hit.objectID}`;
+                    html += `
+                    <div class="result-item">
+                        <a href="${escapeHtml(url)}" target="_blank" rel="noopener">${escapeHtml(hit.title)}</a>
+                        <div class="result-meta">⬆ ${hit.points || 0} • 💬 ${hit.num_comments || 0} comments</div>
+                    </div>`;
+                });
+                return html;
+            }
+        } catch (e) {}
+
+        const directRedditUrl = `https://www.reddit.com/search/?q=${encodeURIComponent(cleanQuery)}`;
+        return `Your mobile network blocked direct Reddit API proxies, but you can <a href="${directRedditUrl}" target="_blank" rel="noopener">open "${escapeHtml(cleanQuery)}" on Reddit directly ↗</a>.`;
     }
 
-    // ---------- 3. Free Internet Archive Search ----------
+    // =========================================================================
+    // 4. FREE INTERNET ARCHIVE SEARCH ENGINE
+    // =========================================================================
     async function fetchArchiveSearch(rawQuery) {
         const cleanQuery = rawQuery.replace(/^(search\s+)?(internet\s+archive|archive|ia)\s*/i, '').trim();
         if (!cleanQuery) return `Please specify what to look for in the Internet Archive, e.g., <code>archive 1930s cartoons</code>.`;
@@ -1378,16 +1590,20 @@
         }
     }
 
-    // ---------- Master Shinu Intelligence & Self-Teaching Router ----------
+    // =========================================================================
+    // MASTER SHINU INTELLIGENCE ROUTER
+    // =========================================================================
     async function shinuReply(inputMessage) {
         const raw = inputMessage.trim();
         const query = raw.toLowerCase();
         const has = (re) => re.test(query);
+        const activeChat = currentChat();
+        const activeTopic = activeChat ? activeChat.topic : '';
 
-        // 1. Direct Chat Teaching Command: "teach: trigger = response" or "learn: trigger => response"
+        // 1. Direct Chat Teaching Command: "teach: trigger = response"
         const teachMatch = raw.match(/^(?:teach|learn|train)\s*:?\s*(.+?)\s*(?:=|=>|->)\s*(.+)$/i);
         if (teachMatch) {
-            const node = teachShinu(teachMatch[1], teachMatch[2], 'Chat Trained');
+            const node = teachShinu(teachMatch[1], teachMatch[2], 'User Trained');
             if (node) {
                 return {
                     text: `<span class="source-badge">Neural Memory Updated</span><br>Learned! Whenever you ask about <strong>"${escapeHtml(node.trigger)}"</strong>, I will respond with:<br><em>"${escapeHtml(node.response)}"</em>`,
@@ -1400,55 +1616,69 @@
         if (has(/^(brain|memory|what have you learned|show memory)$/)) {
             openTrainModalBtn.click();
             return {
-                text: `<span class="source-badge">Neural Memory</span><br>I currently hold <strong>${brain.length}</strong> learned knowledge nodes. Opening the Neural Training Studio for you now.`,
+                text: `<span class="source-badge">Neural Memory</span><br>I currently hold <strong>${brain.length}</strong> learned knowledge nodes. Opening the Neural Training Studio now.`,
                 isHtml: true
             };
         }
 
-        // 3. Check Self-Taught Neural Memory FIRST (User Trained nodes override default searches)
+        // 3. Explicit Reddit Search
+        if (has(/^(search\s+)?(reddit|r\/)\b/)) {
+            const redditHtml = await fetchRedditSearch(raw);
+            return { text: redditHtml, isHtml: true };
+        }
+
+        // 4. Explicit Internet Archive Search
+        if (has(/^(search\s+)?(internet\s+archive|archive|ia)\b/)) {
+            const archiveHtml = await fetchArchiveSearch(raw);
+            return { text: archiveHtml, isHtml: true };
+        }
+
+        // 5. Math Calculations
+        const math = tryMath(query);
+        if (math !== null) return { text: raw + " = " + math, isHtml: false };
+
+        // 6. Greetings & System Queries
+        if (has(/^(hello|hi+|hey+|yo)\b/)) {
+            return {
+                text: `Hello! Shinu Neural & Web Engine is online (<strong>${brain.length}</strong> memory nodes learned). Ask me any question, search <code>reddit [topic]</code>, or teach me with <code>teach: x = y</code>!`,
+                isHtml: true
+            };
+        } else if (has(/who are you|what is shinu/)) {
+            return { text: "I am Shinu, your self-teaching AI workspace with continuous background web harvesting, conversational AI, Wikipedia, Reddit, and Internet Archive integration.", isHtml: false };
+        } else if (has(/^what time is it|\bcurrent time\b/)) {
+            return { text: "Current system local time is " + new Date().toLocaleTimeString() + ".", isHtml: false };
+        }
+
+        // 7. Check User-Trained & Core Ethics Memory First
         const learnedNode = queryBrain(raw);
-        if (learnedNode && learnedNode.source !== 'Auto-Learned Wiki') {
+        if (learnedNode && (learnedNode.source === 'User Trained' || learnedNode.source === 'Studio Trained' || learnedNode.source === 'Core Ethics')) {
             return {
                 text: `<span class="source-badge">Neural Memory • ${escapeHtml(learnedNode.source)}</span><br>${escapeHtml(learnedNode.response)}`,
                 isHtml: true
             };
         }
 
-        // 4. Math Calculations
-        const math = tryMath(query);
-        if (math !== null) return { text: raw + " = " + math, isHtml: false };
+        // 8. If it's a conversational, ethical, or opinion question (like "Violence is bad?"), use Contextual AI first!
+        if (isConversationalOrOpinion(raw)) {
+            const aiReply = await fetchConversationalAI(raw, activeTopic);
+            if (aiReply) return { text: aiReply, isHtml: true };
 
-        // 5. Greetings & System Queries
-        if (has(/^(hello|hi+|hey+|yo)\b/)) {
-            return {
-                text: `Hello! Shinu Neural & Web Engine is online (${brain.length} memory nodes active). Ask me anything, search <code>reddit</code> / <code>archive</code>, or teach me with <code>teach: question = answer</code>!`,
-                isHtml: true
-            };
-        } else if (has(/who are you|what is shinu/)) {
-            return { text: "I am Shinu, your self-teaching AI workspace connected to Wikipedia, Reddit, and the Internet Archive.", isHtml: false };
-        } else if (has(/^what time is it|\bcurrent time\b/)) {
-            return { text: "Current system local time is " + new Date().toLocaleTimeString() + ".", isHtml: false };
+            // Fallback to strict concept lookup on Wikipedia (e.g. looks up "Violence" instead of "Bad Witch")
+            const strictWiki = await fetchWikipedia(raw, true);
+            if (strictWiki) return { text: strictWiki, isHtml: true };
         }
 
-        // 6. Explicit Reddit Search
-        if (has(/^(search\s+)?(reddit|r\/)\b/)) {
-            const redditHtml = await fetchRedditSearch(raw);
-            return { text: redditHtml, isHtml: true };
-        }
-
-        // 7. Explicit Internet Archive Search
-        if (has(/^(search\s+)?(internet\s+archive|archive|ia)\b/)) {
-            const archiveHtml = await fetchArchiveSearch(raw);
-            return { text: archiveHtml, isHtml: true };
-        }
-
-        // 8. Wikipedia Encyclopedia Lookup (also auto-learns into neural memory)
-        const wikiHtml = await fetchWikipedia(raw);
+        // 9. Standard Entity / Fact Lookup -> Try Wikipedia first, then Contextual AI
+        const wikiHtml = await fetchWikipedia(raw, false);
         if (wikiHtml) {
             return { text: wikiHtml, isHtml: true };
         }
 
-        // 9. Check Auto-Learned Wiki Cache if offline or direct query matched
+        const aiFallback = await fetchConversationalAI(raw, activeTopic);
+        if (aiFallback) {
+            return { text: aiFallback, isHtml: true };
+        }
+
         if (learnedNode) {
             return {
                 text: `<span class="source-badge">Neural Memory • ${escapeHtml(learnedNode.source)}</span><br>${escapeHtml(learnedNode.response)}`,
@@ -1456,10 +1686,10 @@
             };
         }
 
-        // 10. Unknown Query -> Offer One-Tap Self-Teaching Button!
-        const safeTrigger = escapeHtml(cleanSearchQuery(raw));
+        // 10. Ultimate Fallback -> One-Tap Teach Button
+        const safeTrigger = escapeHtml(extractCoreConcept(raw));
         return {
-            text: `I don't have a record for "<strong>${escapeHtml(raw)}</strong>" yet.<br>
+            text: `I don't have a verified entry for "<strong>${escapeHtml(raw)}</strong>" yet.<br>
             <button class="teach-quick-btn" onclick="promptQuickTeach('${safeTrigger.replace(/'/g, "\\'")}')">+ Teach Shinu about "${safeTrigger}"</button>`,
             isHtml: true
         };
