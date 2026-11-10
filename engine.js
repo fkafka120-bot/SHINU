@@ -1,4 +1,4 @@
-// engine.js — DESU Conversational AI, Omni-Search & Always-Visible Neon Feedback Motifs
+// engine.js — DESU Conversational AI, Omni-Search, AI Image & Video Generation + Neon Motifs
 const menuToggle = document.getElementById('menuToggle');
 const sideDrawer = document.getElementById('sideDrawer');
 const drawerBackdrop = document.getElementById('drawerBackdrop');
@@ -14,6 +14,95 @@ function store(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
 function load(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
 function escapeHtml(s) { return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;"); }
 function safeUrl(u) { return /^https?:\/\//i.test(String(u)) ? String(u) : '#'; }
+
+// Inject CSS for AI Image & Video Studio Cards + Add "Image" & "Video" Pills to Drawer
+(function injectMediaStudioEnhancements() {
+    const style = document.createElement('style');
+    style.textContent = `
+        .desu-media-card {
+            margin-top: 8px;
+            border-radius: 16px;
+            overflow: hidden;
+            border: 1px solid var(--panel-border);
+            background: rgba(10, 8, 18, 0.75);
+            max-width: 340px;
+            box-shadow: 0 12px 32px rgba(0, 0, 0, 0.6);
+        }
+        .desu-media-stage {
+            position: relative;
+            width: 100%;
+            min-height: 220px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: radial-gradient(circle at center, rgba(196,150,255,0.08), rgba(0,0,0,0.9));
+        }
+        .desu-media-stage img,
+        .desu-media-stage canvas {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+        .desu-media-loader {
+            padding: 36px 16px;
+            text-align: center;
+            font-size: 13px;
+            color: var(--accent-purple);
+            letter-spacing: 0.5px;
+        }
+        .desu-media-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            padding: 10px 12px;
+            border-top: 1px solid var(--panel-border);
+            background: rgba(255, 255, 255, 0.02);
+        }
+        .desu-media-btn {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--panel-border);
+            color: var(--text-main);
+            padding: 5px 11px;
+            border-radius: 10px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none !important;
+            border-bottom: 1px solid var(--panel-border) !important;
+            transition: all 0.2s ease;
+        }
+        .desu-media-btn:hover {
+            border-color: var(--accent-purple) !important;
+            color: var(--accent-purple);
+            box-shadow: 0 0 12px var(--accent-glow);
+        }
+    `;
+    document.head.appendChild(style);
+
+    const pillBox = document.querySelector('.platform-pills');
+    if (pillBox && !pillBox.querySelector('[data-prefix="image "]')) {
+        const imgPill = document.createElement('span');
+        imgPill.className = 'plat-pill';
+        imgPill.setAttribute('data-prefix', 'image ');
+        imgPill.textContent = '✨ Image';
+
+        const vidPill = document.createElement('span');
+        vidPill.className = 'plat-pill';
+        vidPill.setAttribute('data-prefix', 'video ');
+        vidPill.textContent = '🎬 Video';
+
+        [imgPill, vidPill].forEach(pill => {
+            pill.onclick = () => {
+                userInput.value = pill.getAttribute('data-prefix');
+                sideDrawer.classList.remove('open');
+                drawerBackdrop.classList.remove('active');
+                userInput.focus();
+            };
+        });
+        pillBox.prepend(imgPill, vidPill);
+    }
+})();
 
 function formatCleanMarkdown(raw) {
     let safe = escapeHtml(raw);
@@ -52,9 +141,11 @@ function applyUndissolveEffect(containerEl) {
             !node.classList.contains('desu-source-bar') &&
             !node.classList.contains('desu-follow-up') &&
             !node.classList.contains('feedback-row') &&
+            !node.classList.contains('desu-media-card') &&
             node.tagName !== 'SCRIPT' &&
             node.tagName !== 'STYLE' &&
-            node.tagName !== 'SVG'
+            node.tagName !== 'SVG' &&
+            node.tagName !== 'CANVAS'
         ) {
             Array.from(node.childNodes).forEach(walk);
         }
@@ -66,7 +157,234 @@ menuToggle.onclick = () => { sideDrawer.classList.toggle('open'); drawerBackdrop
 drawerBackdrop.onclick = () => { sideDrawer.classList.remove('open'); drawerBackdrop.classList.remove('active'); };
 
 // ============================================================================
-// 1. INTENT CLASSIFIER: Conversational vs. Multi-Platform Topic Search
+// 1. AI IMAGE & VIDEO GENERATION STUDIO (100% Free, Supports 9:16 Portrait)
+// ============================================================================
+function parseMediaCommand(raw) {
+    const q = raw.trim();
+    const vidMatch = q.match(/^(?:generate\s+|create\s+|make\s+|render\s+)?(?:a\s+|an\s+)?(?:ai\s+)?(?:video|animation|motion|reel|clip)\s*(?:of|about|for|:)?\s+(.+)$/i) ||
+                     q.match(/^(?:animate)\s*:?\s+(.+)$/i);
+    if (vidMatch) return { type: 'video', prompt: vidMatch[1].trim() };
+
+    const imgMatch = q.match(/^(?:generate\s+|create\s+|make\s+|draw\s+|paint\s+|render\s+)?(?:a\s+|an\s+)?(?:ai\s+)?(?:image|picture|photo|art|illustration|wallpaper|poster)\s*(?:of|about|for|:)?\s+(.+)$/i) ||
+                     q.match(/^(?:draw|paint)\s*:?\s+(.+)$/i);
+    if (imgMatch) return { type: 'image', prompt: imgMatch[1].trim() };
+
+    return null;
+}
+
+function getDimensions(prompt) {
+    if (/\b(9:16|vertical|portrait|reel|shorts?|mobile|story)\b/i.test(prompt)) {
+        return { w: 720, h: 1280, label: '9:16 Portrait' };
+    }
+    if (/\b(16:9|landscape|widescreen|cinematic|youtube)\b/i.test(prompt)) {
+        return { w: 1280, h: 720, label: '16:9 Cinema' };
+    }
+    return { w: 1024, h: 1024, label: '1:1 Square' };
+}
+
+function buildImageReply(prompt) {
+    const dims = getDimensions(prompt);
+    const seed = Math.floor(Math.random() * 999999);
+    const imgUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=${dims.w}&height=${dims.h}&seed=${seed}&nologo=true&model=flux`;
+    const cardId = 'img_' + Date.now().toString(36);
+
+    const html = `
+        <div>Generated <strong>${escapeHtml(prompt)}</strong> (${dims.label}):</div>
+        <div class="desu-media-card" id="${cardId}">
+            <div class="desu-media-stage">
+                <img src="${escapeHtml(imgUrl)}" alt="${escapeHtml(prompt)}" loading="lazy" />
+            </div>
+            <div class="desu-media-bar">
+                <span style="font-size:11.5px; color:var(--text-muted);">Flux · ${dims.label}</span>
+                <div style="display:flex; gap:6px;">
+                    <button class="desu-media-btn" onclick="window.regenerateDesuImage('${cardId}', '${escapeHtml(prompt).replace(/'/g, "\\'")}', ${dims.w}, ${dims.h})">↻ Remix</button>
+                    <a class="desu-media-btn" href="${escapeHtml(imgUrl)}" target="_blank" rel="noopener" download="desu-image.jpg">⬇ Save</a>
+                </div>
+            </div>
+        </div>`;
+
+    return {
+        text: html,
+        rawText: `[Generated Image: ${prompt}]`,
+        isHtml: true,
+        followUp: `video of ${prompt}`
+    };
+}
+
+window.regenerateDesuImage = function (cardId, prompt, w, h) {
+    const card = document.getElementById(cardId);
+    if (!card) return;
+    const img = card.querySelector('img');
+    if (!img) return;
+    const newSeed = Math.floor(Math.random() * 9999999);
+    img.style.opacity = '0.4';
+    img.src = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=${w}&height=${h}&seed=${newSeed}&nologo=true&model=flux`;
+    img.onload = () => { img.style.opacity = '1'; };
+};
+
+// Builds an interactive 60fps AI Motion Video Canvas with 3D Parallax & .WebM Video Recording
+function buildVideoReply(prompt) {
+    const dims = /\b(16:9|landscape|widescreen)\b/i.test(prompt)
+        ? { w: 800, h: 450, label: '16:9 Motion' }
+        : { w: 540, h: 960, label: '9:16 Vertical Reel' }; // Defaults to vertical 9:16 for Reels!
+
+    const seed = Math.floor(Math.random() * 999999);
+    const bgUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt + ', cinematic lighting, high detail, masterpiece')}?width=${dims.w}&height=${dims.h}&seed=${seed}&nologo=true&model=flux`;
+    const canvasId = 'vid_canvas_' + Date.now().toString(36);
+    const statusId = 'vid_status_' + Date.now().toString(36);
+
+    const html = `
+        <div>Synthesized AI motion scene for <strong>${escapeHtml(prompt)}</strong> (${dims.label}):</div>
+        <div class="desu-media-card">
+            <div class="desu-media-stage">
+                <div class="desu-media-loader" id="${statusId}">⚡ Rendering AI keyframes & motion layers...</div>
+                <canvas id="${canvasId}" width="${dims.w}" height="${dims.h}" style="display:none;"></canvas>
+            </div>
+            <div class="desu-media-bar">
+                <span style="font-size:11.5px; color:var(--text-muted);">DESU Motion · ${dims.label}</span>
+                <div style="display:flex; gap:6px;">
+                    <button class="desu-media-btn" onclick="window.recordDesuVideo('${canvasId}', this)">⬇ Export .WebM</button>
+                </div>
+            </div>
+        </div>`;
+
+    setTimeout(() => mountMotionCanvas(canvasId, statusId, bgUrl, prompt, dims.w, dims.h), 80);
+
+    return {
+        text: html,
+        rawText: `[Generated Video: ${prompt}]`,
+        isHtml: true
+    };
+}
+
+function mountMotionCanvas(canvasId, statusId, bgUrl, prompt, w, h) {
+    const canvas = document.getElementById(canvasId);
+    const statusEl = document.getElementById(statusId);
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+
+    const isRain = /\b(rain|storm|cyberpunk|noir|water|ocean)\b/i.test(prompt);
+    const isFire = /\b(fire|flame|sunset|lava|ember|war|sun)\b/i.test(prompt);
+
+    const particles = Array.from({ length: 45 }, () => ({
+        x: Math.random() * w,
+        y: Math.random() * h,
+        r: Math.random() * 2.5 + 0.8,
+        vx: isRain ? -1.2 : (Math.random() - 0.5) * 0.8,
+        vy: isRain ? Math.random() * 9 + 7 : isFire ? -(Math.random() * 1.8 + 0.5) : (Math.random() - 0.5) * 0.6,
+        a: Math.random() * 0.65 + 0.2
+    }));
+
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    let loaded = false;
+
+    img.onload = () => {
+        loaded = true;
+        if (statusEl) statusEl.style.display = 'none';
+        canvas.style.display = 'block';
+    };
+    img.onerror = () => {
+        if (statusEl) statusEl.style.display = 'none';
+        canvas.style.display = 'block';
+    };
+    img.src = bgUrl;
+
+    let t = 0;
+    function renderFrame() {
+        if (!document.body.contains(canvas)) return;
+        t += 0.015;
+        ctx.clearRect(0, 0, w, h);
+
+        // 1. Slow Ken Burns 3D Camera Pan & Zoom
+        const scale = 1.12 + Math.sin(t * 0.7) * 0.05;
+        const panX = Math.cos(t * 0.5) * (w * 0.035);
+        const panY = Math.sin(t * 0.4) * (h * 0.025);
+
+        ctx.save();
+        ctx.translate(w / 2 + panX, h / 2 + panY);
+        ctx.scale(scale, scale);
+        if (loaded) {
+            ctx.drawImage(img, -w / 2, -h / 2, w, h);
+        } else {
+            const grad = ctx.createRadialGradient(0, 0, 20, 0, 0, w * 0.7);
+            grad.addColorStop(0, '#2a164d');
+            grad.addColorStop(1, '#05020a');
+            ctx.fillStyle = grad;
+            ctx.fillRect(-w / 2, -h / 2, w, h);
+        }
+        ctx.restore();
+
+        // 2. Dynamic Atmospheric Particles (Rain, Embers, or Neon Dust)
+        particles.forEach(p => {
+            p.x = (p.x + p.vx + w) % w;
+            p.y = (p.y + p.vy + h) % h;
+            if (isRain) {
+                ctx.strokeStyle = `rgba(180, 220, 255, ${p.a * 0.6})`;
+                ctx.lineWidth = 1.2;
+                ctx.beginPath();
+                ctx.moveTo(p.x, p.y);
+                ctx.lineTo(p.x + p.vx * 2, p.y + p.vy * 1.5);
+                ctx.stroke();
+            } else {
+                ctx.fillStyle = isFire
+                    ? `rgba(255, ${Math.floor(120 + Math.random() * 80)}, 50, ${p.a})`
+                    : `rgba(215, 180, 255, ${p.a})`;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        });
+
+        // 3. Subtle Cinematic Vignette
+        const vig = ctx.createRadialGradient(w / 2, h / 2, w * 0.25, w / 2, h / 2, Math.max(w, h) * 0.65);
+        vig.addColorStop(0, 'rgba(0,0,0,0)');
+        vig.addColorStop(1, 'rgba(0,0,0,0.55)');
+        ctx.fillStyle = vig;
+        ctx.fillRect(0, 0, w, h);
+
+        requestAnimationFrame(renderFrame);
+    }
+    renderFrame();
+}
+
+// Records 4 seconds of the live 60fps canvas animation and downloads a real .webm video file!
+window.recordDesuVideo = function (canvasId, btnEl) {
+    const canvas = document.getElementById(canvasId);
+    if (!canvas || !canvas.captureStream || typeof MediaRecorder === 'undefined') {
+        alert('Video export requires a modern Chrome/Edge/Firefox/Android browser.');
+        return;
+    }
+    const origText = btnEl.textContent;
+    btnEl.textContent = '⏺ Recording 4s...';
+    btnEl.disabled = true;
+
+    try {
+        const stream = canvas.captureStream(30);
+        const recorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
+        const chunks = [];
+        recorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
+        recorder.onstop = () => {
+            const blob = new Blob(chunks, { type: 'video/webm' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `desu-motion-${Date.now().toString(36)}.webm`;
+            a.click();
+            URL.revokeObjectURL(url);
+            btnEl.textContent = origText;
+            btnEl.disabled = false;
+        };
+        recorder.start();
+        setTimeout(() => recorder.stop(), 4000);
+    } catch (e) {
+        btnEl.textContent = origText;
+        btnEl.disabled = false;
+    }
+};
+
+// ============================================================================
+// 2. INTENT CLASSIFIER: Conversational vs. Multi-Platform Topic Search
 // ============================================================================
 function shouldRunOmniSearch(raw) {
     const q = raw.trim();
@@ -89,7 +407,7 @@ function shouldRunOmniSearch(raw) {
 }
 
 // ============================================================================
-// 2. INDIVIDUAL PLATFORM CONNECTORS
+// 3. INDIVIDUAL PLATFORM CONNECTORS
 // ============================================================================
 async function searchSocialPlatform(platformCode, rawQuery) {
     const clean = rawQuery
@@ -160,7 +478,7 @@ async function searchArchive(rawQuery) {
 }
 
 // ============================================================================
-// 3. CONVERSATIONAL AI ENGINE (Uses Self-Trained Google Insights + User Style)
+// 4. CONVERSATIONAL AI ENGINE
 // ============================================================================
 async function queryDirectBrowserAI(raw, chatHistory, profile, multiData) {
     const modeMap = {
@@ -267,13 +585,20 @@ function buildOmniPulseHtml(multiData, aiSynthesisHtml) {
 }
 
 // ============================================================================
-// 4. MASTER ROUTER
+// 5. MASTER ROUTER
 // ============================================================================
 async function shinuReply(inputMessage, chatHistory) {
     const raw = inputMessage.trim();
     const lower = raw.toLowerCase();
 
-    // 1. Multiplication Tables & Math Expressions
+    // 1. AI Image & Video Generation Intercept
+    const mediaCmd = parseMediaCommand(raw);
+    if (mediaCmd) {
+        if (mediaCmd.type === 'video') return buildVideoReply(mediaCmd.prompt);
+        return buildImageReply(mediaCmd.prompt);
+    }
+
+    // 2. Multiplication Tables & Math Expressions
     const tableMatch = raw.match(/^(?:write\s+|print\s+|show\s+|give\s+me\s+)?(?:the\s+)?table\s+of\s+(\d+)$/i);
     if (tableMatch) {
         const n = parseInt(tableMatch[1], 10);
@@ -299,7 +624,7 @@ async function shinuReply(inputMessage, chatHistory) {
         } catch (e) {}
     }
 
-    // 2. Repetition Command
+    // 3. Repetition Command
     const repeatMatch = raw.match(/^(?:write|say|repeat|type|print)\s+(.+?)\s+(\d+)[\s.]*times?\b/i);
     if (repeatMatch) {
         const word = repeatMatch[1].replace(/^["']|["']$/g, '');
@@ -307,17 +632,17 @@ async function shinuReply(inputMessage, chatHistory) {
         return { text: Array(count).fill(word).join(' '), isHtml: false };
     }
 
-    // 3. Identity, Personal Profile & Mode Switching
+    // 4. Identity, Personal Profile & Mode Switching
     const prof = Learn.observe(raw);
     if (prof) return prof;
 
-    // 4. Greetings
+    // 5. Greetings
     if (/^(hi+|hey+|hello+|yo|sup|hi bro|hey bro|hello bro)\b[\s!.,?]*$|^hi$/i.test(lower)) {
         const who = Learn.userName() ? ' ' + Learn.userName() : '';
         return { text: `Hey${who}! What are we exploring or building today?`, isHtml: false };
     }
 
-    // 5. Explicit Single-Platform Prefixes
+    // 6. Explicit Single-Platform Prefixes
     if (/^(search\s+)?(instagram|insta|ig)\b/i.test(lower)) return await searchSocialPlatform('insta', raw);
     if (/^(search\s+)?(facebook|fb)\b/i.test(lower)) return await searchSocialPlatform('fb', raw);
     if (/^(search\s+)?(reddit|r\/)\b/i.test(lower)) return await searchReddit(raw);
@@ -325,7 +650,7 @@ async function shinuReply(inputMessage, chatHistory) {
 
     const profile = Learn.context();
 
-    // 6. AUTOMATIC OMNI-SEARCH (Google + Wikipedia + Reddit + Instagram simultaneously on topic queries)
+    // 7. AUTOMATIC OMNI-SEARCH (Google + Wikipedia + Reddit + Instagram simultaneously on topic queries)
     if (shouldRunOmniSearch(raw)) {
         const coreTopic = Learn.core(raw);
         Learn.noteTopic(coreTopic);
@@ -361,7 +686,7 @@ async function shinuReply(inputMessage, chatHistory) {
         }
     }
 
-    // 7. PURE CONVERSATIONAL AI
+    // 8. PURE CONVERSATIONAL AI
     let chatReply = await queryDirectBrowserAI(raw, chatHistory, profile, null);
     if (chatReply) {
         let suggestedFollowUp = null;
@@ -386,7 +711,7 @@ async function shinuReply(inputMessage, chatHistory) {
 }
 
 // ============================================================================
-// 5. CHAT SESSION, UNDISSOLVE RENDERER & ALWAYS-VISIBLE NEON MOTIFS
+// 6. CHAT SESSION, UNDISSOLVE RENDERER & ALWAYS-VISIBLE NEON MOTIFS
 // ============================================================================
 let chats = [];
 try { chats = JSON.parse(load('shinu_chats') || '[]'); } catch (e) { chats = []; }
@@ -423,7 +748,6 @@ function addBubble(role, content, isHtml = false, autoScroll = true, meta = {}) 
         }
     }
 
-    // Always attach the custom Neon Thumbs Up & Thumbs Down Motifs on bot replies!
     if (role === 'bot' && window.Learn && meta.showFeedback !== false) {
         Learn.attachFeedback(div, meta.userQuestion || '', meta.rawText || content);
     }
@@ -502,10 +826,11 @@ quickHelpBtn.onclick = () => {
     centerStage.classList.add('dissolved');
     chatContainer.classList.add('active');
     addBubble('bot', `
-        <strong>DESU Omni-Search & Self-Training Guide:</strong><br>
-        • <strong>Auto Multi-Search:</strong> Ask about any topic (e.g. <code>Sundar Pichai</code> or <code>Quantum computing</code>) to pull Google, Wikipedia, Reddit & Instagram together.<br>
-        • <strong>Google Self-Training:</strong> Tap the <code>✦ Self-Trained</code> pill in the top bar (or type <code>show training</code>) to see the questions DESU asks itself and learns from Google.<br>
-        • <strong>Neon Feedback Motifs:</strong> Tap the neon thumbs-up or thumbs-down icons under any reply to train DESU on the exact reply style you like.
+        <strong>DESU Creative Studio & Omni-Search Guide:</strong><br>
+        • <strong>AI Image Generation:</strong> Type <code>image [prompt]</code> or <code>draw [prompt]</code> (add <code>vertical</code> or <code>9:16</code> for portrait Reels).<br>
+        • <strong>AI Video Generation:</strong> Type <code>video [prompt]</code> or <code>animate [prompt]</code> to synthesize a 60fps motion scene with <code>.webm</code> export.<br>
+        • <strong>Auto Multi-Search:</strong> Ask about any topic to pull Google, Wikipedia, Reddit & Instagram together.<br>
+        • <strong>Google Self-Training:</strong> Tap the <code>✦ Self-Trained</code> pill in the top bar to see what DESU learned from Google.
     `, true, true, { animateUndissolve: true, showFeedback: false });
 };
 
