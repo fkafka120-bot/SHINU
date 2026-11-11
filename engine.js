@@ -1,4 +1,4 @@
-// engine.js — DESU Universal CAS Math, Three.js 3D / 2D / Web Audio Scrubbable Studio & AI Router
+// engine.js — DESU YouTube-Scrubbable Three.js/Canvas/Audio Studio, Nerdamer CAS Math & Omni-Search
 const menuToggle = document.getElementById('menuToggle');
 const sideDrawer = document.getElementById('sideDrawer');
 const drawerBackdrop = document.getElementById('drawerBackdrop');
@@ -15,12 +15,87 @@ function load(k) { try { return localStorage.getItem(k); } catch (e) {} return n
 function escapeHtml(s) { return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;"); }
 function safeUrl(u) { return /^https?:\/\//i.test(String(u)) ? String(u) : '#'; }
 
-function formatTime(sec) {
-    const s = Math.max(0, Number(sec) || 0);
-    const m = Math.floor(s / 60);
-    const rem = (s % 60).toFixed(1).padStart(4, '0');
-    return `${m}:${rem}`;
-}
+// Inject CSS for YouTube-Style Timeline Scrubber, Duration Selector & Three.js Controls
+(function injectScrubberAndStudioStyles() {
+    const style = document.createElement('style');
+    style.textContent = `
+        .desu-player-controls {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            padding: 10px 12px;
+            background: rgba(8, 5, 16, 0.92);
+            border-top: 1px solid var(--panel-border);
+        }
+        .desu-scrubber-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            width: 100%;
+        }
+        .desu-play-btn {
+            background: var(--accent-purple);
+            color: #050308;
+            border: none;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            font-size: 12px;
+            font-weight: 800;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            flex-shrink: 0;
+            box-shadow: 0 0 10px var(--accent-glow);
+        }
+        .desu-scrubber {
+            -webkit-appearance: none;
+            appearance: none;
+            flex: 1;
+            height: 6px;
+            border-radius: 6px;
+            background: rgba(255, 255, 255, 0.16);
+            outline: none;
+            cursor: pointer;
+        }
+        .desu-scrubber::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 15px;
+            height: 15px;
+            border-radius: 50%;
+            background: var(--accent-purple);
+            box-shadow: 0 0 10px var(--accent-purple), 0 0 4px #ffffff;
+            cursor: grab;
+            transition: transform 0.15s ease;
+        }
+        .desu-scrubber::-webkit-slider-thumb:active {
+            transform: scale(1.3);
+            cursor: grabbing;
+        }
+        .desu-time-badge {
+            font-size: 11px;
+            font-variant-numeric: tabular-nums;
+            color: var(--text-main);
+            min-width: 68px;
+            text-align: right;
+            flex-shrink: 0;
+        }
+        .desu-duration-select {
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid var(--panel-border);
+            color: var(--accent-purple);
+            border-radius: 8px;
+            padding: 3px 6px;
+            font-size: 11px;
+            font-weight: 600;
+            outline: none;
+            cursor: pointer;
+        }
+    `;
+    document.head.appendChild(style);
+})();
 
 function formatCleanMarkdown(raw) {
     let safe = escapeHtml(raw);
@@ -45,7 +120,8 @@ function applyUndissolveEffect(containerEl) {
                 } else {
                     const span = document.createElement('span');
                     span.className = 'undissolve-word';
-                    span.style.animationDelay = `${Math.min(wordIndex * 0.022, 1.4).toFixed(3)}s`;
+                    const delay = Math.min(wordIndex * 0.022, 1.4).toFixed(3);
+                    span.style.animationDelay = `${delay}s`;
                     span.textContent = part;
                     frag.appendChild(span);
                     wordIndex++;
@@ -74,18 +150,9 @@ menuToggle.onclick = () => { sideDrawer.classList.toggle('open'); drawerBackdrop
 drawerBackdrop.onclick = () => { sideDrawer.classList.remove('open'); drawerBackdrop.classList.remove('active'); };
 
 // ============================================================================
-// 1. UNIVERSAL COMPUTER ALGEBRA SYSTEM (Nerdamer CAS + Symbolic & Word Math)
-// Solves multivariable systems, any polynomial equation, integrals, differentials, factoring
+// 1. UNIVERSAL COMPUTER ALGEBRA SYSTEM (Nerdamer CAS + Multi-Variable Solver)
+// Solves Systems of Equations, Any Polynomial, Calculus, Factoring & Word Math
 // ============================================================================
-function normalizeMathExpr(expr) {
-    return expr
-        .replace(/×/g, '*')
-        .replace(/÷/g, '/')
-        .replace(/(\d)([a-zA-Z(])/g, '$1*$2')
-        .replace(/(\))(\d|[a-zA-Z(])/g, '$1*$2')
-        .trim();
-}
-
 function tryUniversalMathematics(raw) {
     const q = raw.trim();
     const lower = q.toLowerCase();
@@ -99,128 +166,108 @@ function tryUniversalMathematics(raw) {
         return { text: out, isHtml: true, followUp: `table of ${n + 1}` };
     }
 
-    // 2. Word-Based Arithmetic ("Difference between 5 and 7", "Sum of...", "Product of...", "25% of 400")
+    // 2. Natural-Language Word Math ("Difference between 5 and 7", "Sum of...", "Product of...", "20% of 150")
     const diffMatch = q.match(/^(?:what\s+is\s+)?(?:the\s+)?difference\s+between\s+([+-]?\d+(?:\.\d+)?)\s+and\s+([+-]?\d+(?:\.\d+)?)[?.!]*$/i);
     if (diffMatch) {
         const a = parseFloat(diffMatch[1]), b = parseFloat(diffMatch[2]);
         return {
-            text: `• Absolute difference: <strong>|${a} - ${b}| = ${Math.abs(a - b)}</strong><br>• Directed subtraction: <code>${a} - ${b} = ${a - b}</code>`,
+            text: `The absolute difference between <strong>${a}</strong> and <strong>${b}</strong> is <strong>|${a} - ${b}| = ${Math.abs(a - b)}</strong> (directed subtraction: <code>${a} - ${b} = ${a - b}</code>).`,
             isHtml: true
         };
     }
 
-    const sumMatch = q.match(/^(?:what\s+is\s+)?(?:the\s+)?sum\s+of\s+([+-]?\d+(?:\.\d+)?)\s+and\s+([+-]?\d+(?:\.\d+)?)[?.!]*$/i);
-    if (sumMatch) {
-        const a = parseFloat(sumMatch[1]), b = parseFloat(sumMatch[2]);
-        return { text: `The sum of <strong>${a}</strong> and <strong>${b}</strong> is <strong>${a + b}</strong>.`, isHtml: true };
-    }
-
-    const prodMatch = q.match(/^(?:what\s+is\s+)?(?:the\s+)?product\s+of\s+([+-]?\d+(?:\.\d+)?)\s+and\s+([+-]?\d+(?:\.\d+)?)[?.!]*$/i);
-    if (prodMatch) {
-        const a = parseFloat(prodMatch[1]), b = parseFloat(prodMatch[2]);
-        return { text: `The product of <strong>${a}</strong> and <strong>${b}</strong> is <strong>${a * b}</strong>.`, isHtml: true };
-    }
-
-    // 3. Nerdamer Symbolic CAS (Integrals, Differentials, Derivatives, Multivariable Equations, Factoring)
-    if (typeof window.nerdamer === 'function') {
+    // 3. Nerdamer Symbolic CAS (Handles Multi-Variable Systems, Polynomials of any degree, Integrals, Derivatives, Factoring)
+    if (typeof window.nerdamer !== 'undefined') {
         try {
-            // A. Definite & Indefinite Integration
+            // A. Multi-Variable Systems of Equations ("solve 2x + y = 10, x - y = 2" or "solve x + y = 5 and 2x - y = 4")
+            const sysMatch = q.match(/^(?:solve\s*:?\s*)(.+)$/i);
+            if (sysMatch && (sysMatch[1].includes(',') || /\band\b/i.test(sysMatch[1])) && sysMatch[1].includes('=')) {
+                const eqs = sysMatch[1].split(/,|\band\b/i).map(s => s.trim().replace(/(\d)([a-z])/gi, '$1*$2')).filter(Boolean);
+                if (eqs.length >= 2) {
+                    const sol = nerdamer.solveEquations(eqs);
+                    if (Array.isArray(sol) && sol.length) {
+                        const formatted = sol.map(pair => `<strong>${pair[0]} = ${Math.round(Number(pair[1]) * 100000) / 100000}</strong>`).join(', &nbsp; ');
+                        return {
+                            text: `<strong>System of Equations Solution:</strong><br>• Equations: <code>${escapeHtml(eqs.join(' , '))}</code><br>• Solution: ${formatted}`,
+                            isHtml: true
+                        };
+                    }
+                }
+            }
+
+            // B. Single Equation Solver of Any Degree ("solve 2x=6", "solve x^3 - 6x^2 + 11x - 6 = 0", "sin(x) = 0.5")
+            if (/^(?:solve|find)\b/i.test(q) || (/^[0-9a-z+\-*/^().\s]+=+[0-9a-z+\-*/^().\s]+$/i.test(q) && /[a-z]/i.test(q) && !q.includes(','))) {
+                const eqClean = q.replace(/^(?:solve|find\s+[a-z]\s+in|find)\s*:?\s*/i, '').replace(/[?!.]+$/, '').trim();
+                if (eqClean.includes('=')) {
+                    const varName = (eqClean.match(/[a-z]/i) || ['x'])[0].toLowerCase();
+                    const normalizedEq = eqClean.replace(/(\d)([a-z(])/gi, '$1*$2');
+                    const roots = nerdamer.solve(normalizedEq, varName).toString();
+                    if (roots && roots !== '[]') {
+                        return {
+                            text: `<strong>Symbolic Equation Solution (${escapeHtml(eqClean)}):</strong><br>• Variable: <code>${varName}</code><br>• Roots / Solutions: <strong>${varName} ∈ ${escapeHtml(roots)}</strong>`,
+                            isHtml: true
+                        };
+                    }
+                }
+            }
+
+            // C. Symbolic & Definite Integration ("integration of 2x", "integrate x^2 * sin(x)", "integrate x^2 from 0 to 3")
             const intMatch = q.match(/^(?:what\s+is\s+)?(?:the\s+)?(?:integration|integral|antiderivative|integrate)\s+(?:of\s+)?(.+?)(?:\s+d([a-z]))?(?:\s+from\s+([+-]?\d+(?:\.\d+)?)\s+to\s+([+-]?\d+(?:\.\d+)?))?[?.!]*$/i) ||
                              q.match(/^∫\s*(.+?)(?:\s*d([a-z]))?$/i);
             if (intMatch) {
                 const rawExpr = intMatch[1].trim();
-                const variable = intMatch[2] || 'x';
+                const v = (intMatch[2] || 'x').toLowerCase();
                 const limA = intMatch[3], limB = intMatch[4];
-                const normExpr = normalizeMathExpr(rawExpr);
+                const normExpr = rawExpr.replace(/(\d)([a-z(])/gi, '$1*$2');
 
                 if (limA !== undefined && limB !== undefined) {
-                    const defRes = window.nerdamer(`defint(${normExpr}, ${limA}, ${limB}, ${variable})`).text();
-                    const indefRes = window.nerdamer(`integrate(${normExpr}, ${variable})`).text();
+                    const defRes = nerdamer(`defint(${normExpr}, ${limA}, ${limB}, ${v})`).text();
+                    const indefRes = nerdamer(`integrate(${normExpr}, ${v})`).text();
                     return {
-                        text: `<strong>Symbolic Definite & Indefinite Integral:</strong><br>` +
-                              `• Antiderivative: ∫ (${escapeHtml(rawExpr)}) d${variable} = <strong>${escapeHtml(indefRes)} + C</strong><br>` +
-                              `• Definite Integral [${limA} to ${limB}] = <strong>${escapeHtml(defRes)}</strong>`,
-                        isHtml: true,
-                        followUp: `differential of ${rawExpr}`
+                        text: `<strong>Definite & Symbolic Integration:</strong><br>• Antiderivative: ∫ (${escapeHtml(rawExpr)}) d${v} = <code>${escapeHtml(indefRes)} + C</code><br>• Definite Integral [${limA} to ${limB}] = <strong>${escapeHtml(defRes)}</strong>`,
+                        isHtml: true
                     };
                 } else {
-                    const res = window.nerdamer(`integrate(${normExpr}, ${variable})`).text();
+                    const res = nerdamer(`integrate(${normExpr}, ${v})`).text();
                     return {
-                        text: `<strong>Symbolic Integration:</strong><br>` +
-                              `∫ (${escapeHtml(rawExpr)}) d${variable} = <strong>${escapeHtml(res)} + C</strong>`,
+                        text: `<strong>Symbolic Integration:</strong><br>∫ (${escapeHtml(rawExpr)}) d${v} = <strong>${escapeHtml(res)} + C</strong>`,
                         isHtml: true,
-                        followUp: `differential of ${rawExpr}`
+                        followUp: `differentiation of ${rawExpr}`
                     };
                 }
             }
 
-            // B. Differentiation, Derivatives & Differentials ("Differential of 2x", "derivative of x^2*sin(x)")
-            const derivMatch = q.match(/^(?:what\s+is\s+)?(?:the\s+)?(?:differential|derivative|differentiation|differentiate|d\/d([a-z]))\s+(?:of\s+)?(.+?)[?.!]*$/i);
+            // D. Symbolic Differentiation & Differentials ("Differential of 2x", "derivative of sin(x)*x^2")
+            const derivMatch = q.match(/^(?:what\s+is\s+)?(?:the\s+)?(?:differential|derivative|differentiation|differentiate|d\/dx)\s+(?:of\s+)?(.+?)[?.!]*$/i);
             if (derivMatch) {
-                const variable = derivMatch[1] || 'x';
-                const rawExpr = derivMatch[2].trim();
-                const normExpr = normalizeMathExpr(rawExpr);
-                const res = window.nerdamer(`diff(${normExpr}, ${variable})`).text();
+                const rawExpr = derivMatch[1].trim();
+                const normExpr = rawExpr.replace(/(\d)([a-z(])/gi, '$1*$2');
+                const res = nerdamer(`diff(${normExpr}, x)`).text();
                 const isDiffWord = /\bdifferential\b/i.test(q);
                 return {
                     text: `<strong>Symbolic ${isDiffWord ? 'Differential & Derivative' : 'Derivative'}:</strong><br>` +
-                          (isDiffWord ? `• Total Differential: <strong>dy = (${escapeHtml(res)}) d${variable}</strong><br>` : '') +
-                          `• Derivative: d/d${variable} (${escapeHtml(rawExpr)}) = <strong>${escapeHtml(res)}</strong>`,
+                          (isDiffWord ? `• Total Differential: <strong>dy = (${escapeHtml(res)}) dx</strong><br>` : '') +
+                          `• Derivative: d/dx (${escapeHtml(rawExpr)}) = <strong>${escapeHtml(res)}</strong>`,
                     isHtml: true,
                     followUp: `integration of ${rawExpr}`
                 };
             }
 
-            // C. Factoring & Expanding ("factor x^4 - 1", "expand (x+2)^3")
-            const factorMatch = q.match(/^(?:factor|factorize|factorise)\s+(.+?)[?.!]*$/i);
-            if (factorMatch) {
-                const normExpr = normalizeMathExpr(factorMatch[1]);
-                const res = window.nerdamer(`factor(${normExpr})`).text();
-                return { text: `<strong>Factored Form:</strong><br><code>${escapeHtml(factorMatch[1])}</code> = <strong>${escapeHtml(res)}</strong>`, isHtml: true };
-            }
-
-            const expandMatch = q.match(/^(?:expand|simplify)\s+(.+?)[?.!]*$/i);
-            if (expandMatch) {
-                const normExpr = normalizeMathExpr(expandMatch[1]);
-                const res = window.nerdamer(`expand(${normExpr})`).text();
-                return { text: `<strong>Expanded / Simplified Form:</strong><br><code>${escapeHtml(expandMatch[1])}</code> = <strong>${escapeHtml(res)}</strong>`, isHtml: true };
-            }
-
-            // D. Single-Variable & Multi-Variable Equation Systems ("Solve 2x=6", "solve x+y=10, x-y=4", "solve x^3 - 6x^2 + 11x - 6 = 0")
-            const isSolveCmd = /^(?:solve|find\s+roots?\s+of|find\s+[a-z]\s+in)\b/i.test(q) ||
-                               (/^[0-9a-zA-Z+\-*/^(),.\s]+=+[0-9a-zA-Z+\-*/^(),.\s]+$/.test(q) && /[a-zA-Z]/.test(q));
-            if (isSolveCmd) {
-                const eqBody = q.replace(/^(?:solve|find\s+roots?\s+of|find\s+[a-z]\s+in)\s*:?\s*/i, '').replace(/[?!.]+$/, '').trim();
-                const rawEquations = eqBody.split(/\s*(?:,|and|;)\s*/i).filter(e => e.includes('='));
-
-                if (rawEquations.length > 1) {
-                    // System of Equations in Multiple Variables
-                    const normEqs = rawEquations.map(normalizeMathExpr);
-                    const sol = window.nerdamer.solveEquations(normEqs);
-                    const formatted = sol.map(pair => `<strong>${pair[0]} = ${pair[1]}</strong>`).join(', &nbsp; ');
-                    return {
-                        text: `<strong>System of Equations Solution:</strong><br>` +
-                              `• Equations: <code>${escapeHtml(rawEquations.join(' , '))}</code><br>` +
-                              `• Solution: ${formatted}`,
-                        isHtml: true
-                    };
-                } else if (rawEquations.length === 1) {
-                    const normEq = normalizeMathExpr(rawEquations[0]);
-                    const vars = Array.from(new Set(normEq.match(/[a-zA-Z]+/g) || ['x'])).filter(v => !['sin', 'cos', 'tan', 'log', 'ln', 'sqrt', 'exp', 'pi'].includes(v));
-                    const targetVar = vars[0] || 'x';
-                    const sol = window.nerdamer.solveEquations(normEq, targetVar);
-                    const roots = Array.isArray(sol) ? sol.map(r => r.toString()) : [sol.toString()];
-                    return {
-                        text: `<strong>Equation Solution (${escapeHtml(rawEquations[0])}):</strong><br>` +
-                              `• Solved for <strong>${escapeHtml(targetVar)}</strong>: <strong>${escapeHtml(targetVar)} = ${escapeHtml(roots.join(' , '))}</strong>`,
-                        isHtml: true
-                    };
-                }
+            // E. Factoring & Expanding ("factor x^2 - 5x + 6", "expand (x+2)^3")
+            const facMatch = q.match(/^(factor|expand|simplify)\s+(.+)$/i);
+            if (facMatch) {
+                const op = facMatch[1].toLowerCase();
+                const expr = facMatch[2].trim().replace(/(\d)([a-z(])/gi, '$1*$2');
+                const out = nerdamer(`${op}(${expr})`).text();
+                return {
+                    text: `<strong>Symbolic ${escapeHtml(op.toUpperCase())}:</strong><br><code>${escapeHtml(facMatch[2])}</code> = <strong>${escapeHtml(out)}</strong>`,
+                    isHtml: true
+                };
             }
         } catch (e) {}
     }
 
-    // 4. Direct Numerical & Scientific Expressions
+    // 4. Direct Arithmetic & Scientific Expressions
     let mathStr = lower
         .replace(/^(what is|calculate|compute|evaluate)\s+/i, '')
         .replace(/divided by/g, '/')
@@ -246,294 +293,619 @@ function tryUniversalMathematics(raw) {
 }
 
 // ============================================================================
-// 2. UNIVERSAL COMPOSITIONAL 2D, THREE.JS 3D & WEB AUDIO ENGINE + AI CODE SYNTHESIS
-// Generates ANY scene in the world with YouTube-style timeline scrubbing & custom duration
+// 2. DYNAMIC AI CODE SYNTHESIS + YOUTUBE-SCRUBBABLE THREE.JS / CANVAS / AUDIO STUDIO
 // ============================================================================
+const activePlayers = {};
+
+function extractDurationSeconds(raw, defaultSec = 10) {
+    const m = raw.match(/\b(\d+(?:\.\d+)?)\s*(?:sec|secs|seconds|s)\b/i) ||
+              raw.match(/\bfor\s+(\d+)\s*s?\b/i);
+    if (m) {
+        const val = parseFloat(m[1]);
+        if (val >= 1 && val <= 180) return val;
+    }
+    const minMatch = raw.match(/\b(\d+(?:\.\d+)?)\s*(?:min|mins|minutes)\b/i);
+    if (minMatch) {
+        const val = parseFloat(minMatch[1]) * 60;
+        if (val >= 5 && val <= 180) return val;
+    }
+    return defaultSec;
+}
+
 function parseMediaCommand(raw) {
     const q = raw.trim().replace(/^(?:tell\s+me\s+about|would\s+you\s+like\s+to\s+explore|explore|show\s+me)\s+/i, '').trim();
+    const duration = extractDurationSeconds(q, 10);
+    const is3D = /\b(3d|three\.?js|webgl|cube|sphere|rotating|orbiting|lowpoly|voxel)\b/i.test(q);
 
-    // Extract custom duration if requested (e.g. "make a 25 second 3d video of...", "15s audio of...")
-    let duration = 10;
-    const durMatch = q.match(/\b(\d+)\s*(?:seconds?|secs?|s)\b/i) || q.match(/\b(\d+)\s*(?:minutes?|mins?)\b/i);
-    if (durMatch) {
-        const val = parseInt(durMatch[1], 10);
-        duration = /min/i.test(durMatch[0]) ? Math.min(120, val * 60) : Math.min(120, Math.max(2, val));
-    }
+    const audMatch = q.match(/^(?:generate\s+|create\s+|make\s+|play\s+|synthesize\s+)?(?:a\s+|an\s+)?(?:\d+\s*(?:s|sec|seconds)\s+)?(?:coded\s+)?(?:audio|sound|music|melody|voice|sfx|beat|tone)\s*(?:of|for|about|:)?\s+(.+)$/i);
+    if (audMatch) return { type: 'audio', prompt: audMatch[1].replace(/\b(?:for\s+)?\d+\s*(?:s|sec|seconds)\b/gi, '').trim(), duration };
 
-    const cleanPrompt = q
-        .replace(/\b(?:for|of length|lasting)?\s*\d+\s*(?:seconds?|secs?|s|minutes?|mins?)\b/gi, '')
-        .replace(/\s+/g, ' ')
-        .trim();
+    const vidMatch = q.match(/^(?:generate\s+|create\s+|make\s+|render\s+|code\s+)?(?:a\s+|an\s+)?(?:\d+\s*(?:s|sec|seconds)\s+)?(?:3d\s+|three\.?js\s+|coded\s+|ai\s+)?(?:video|animation|motion|reel|clip|scene)\s*(?:of|about|for|:)?\s+(.+)$/i) ||
+                     q.match(/^(?:animate|3d)\s*:?\s+(.+)$/i);
+    if (vidMatch) return { type: 'video', is3D, prompt: vidMatch[1].replace(/\b(?:for\s+)?\d+\s*(?:s|sec|seconds)\b/gi, '').trim(), duration };
 
-    // 1. Audio / Music / Sound
-    const audMatch = cleanPrompt.match(/^(?:generate\s+|create\s+|make\s+|play\s+|synthesize\s+)?(?:a\s+|an\s+)?(?:coded\s+)?(?:audio|sound|music|melody|voice|sfx|beat|tone|song)\s*(?:of|for|about|:)?\s+(.+)$/i);
-    if (audMatch) return { type: 'audio', prompt: audMatch[1].trim(), duration };
-
-    // 2. Three.js 3D Video / Scene
-    const threeMatch = cleanPrompt.match(/^(?:generate\s+|create\s+|make\s+|render\s+|code\s+)?(?:a\s+|an\s+)?(?:3d\s+video|3d\s+animation|3d\s+scene|3d\s+model|three\.?js(?:\s+video|\s+scene)?|video\s+in\s+3d)\s*(?:of|about|for|:)?\s+(.+)$/i);
-    if (threeMatch) return { type: '3d', prompt: threeMatch[1].trim(), duration };
-
-    // 3. 2D / 3D Video
-    const vidMatch = cleanPrompt.match(/^(?:generate\s+|create\s+|make\s+|render\s+|code\s+)?(?:a\s+|an\s+)?(?:coded\s+|ai\s+)?(?:video|animation|motion|reel|clip)\s*(?:of|about|for|:)?\s+(.+)$/i) ||
-                     cleanPrompt.match(/^(?:animate)\s*:?\s+(.+)$/i);
-    if (vidMatch) {
-        const p = vidMatch[1].trim();
-        const wants3D = /\b(3d|three\.?js|cube|sphere|helix|dna|atom|rotating|planet|solar|drone|helicopter|car|airplane|robot|pyramid|torus|galaxy)\b/i.test(p);
-        return { type: wants3D ? '3d' : 'video', prompt: p, duration };
-    }
-
-    // 4. Image
-    const imgMatch = cleanPrompt.match(/^(?:generate\s+|create\s+|make\s+|draw\s+|paint\s+|render\s+|code\s+)?(?:a\s+|an\s+)?(?:coded\s+|ai\s+)?(?:image|picture|photo|art|illustration|drawing)\s*(?:of|for|about|:)?\s+(.+)$/i) ||
-                     cleanPrompt.match(/^(?:draw|paint)\s*:?\s+(.+)$/i);
-    if (imgMatch) return { type: 'image', prompt: imgMatch[1].trim(), duration: 10 };
+    const imgMatch = q.match(/^(?:generate\s+|create\s+|make\s+|draw\s+|paint\s+|render\s+|code\s+)?(?:a\s+|an\s+)?(?:3d\s+|coded\s+|ai\s+)?(?:image|picture|photo|art|illustration|drawing)\s*(?:of|for|about|:)?\s+(.+)$/i) ||
+                     q.match(/^(?:draw|paint)\s*:?\s+(.+)$/i);
+    if (imgMatch) return { type: 'image', is3D, prompt: imgMatch[1].trim(), duration: 10 };
 
     return null;
 }
 
-function hashPrompt(str) {
-    let h = 2166136261;
-    for (let i = 0; i < str.length; i++) {
-        h ^= str.charCodeAt(i);
-        h = Math.imul(h, 16777619);
-    }
-    return Math.abs(h);
+// Calls the LLM to dynamically write custom deterministic JavaScript drawing/3D code for ANY object in the world!
+async function synthesizeCustomSceneCode(prompt, mode = '2d') {
+    const sysPrompt = mode === '3d'
+        ? `You are a Three.js 3D procedural artist. Write ONLY the raw JavaScript body for a function \`render3D(t, duration, THREE, scene, camera)\` that builds and animates "${prompt}".
+Rules:
+- First check \`if (!scene.userData.initialized) { scene.userData.initialized = true; ... }\` to add Lights (AmbientLight, DirectionalLight) and 3D Meshes (BoxGeometry, SphereGeometry, CylinderGeometry, ConeGeometry, TorusGeometry, Group) to \`scene\`, storing references in \`scene.userData\`.
+- Then animate positions/rotations smoothly as a deterministic function of \`t\` (time in seconds, from 0 to \`duration\`).
+- Output ONLY valid JavaScript statements. No markdown backticks, no explanations.`
+        : `You are an HTML5 Canvas procedural artist. Write ONLY the raw JavaScript body for a deterministic function \`render2D(ctx, w, h, t, duration)\` that draws and animates "${prompt}" on a ${520}x${380} canvas.
+Rules:
+- Every position, wave, limb, vehicle, animal, or object must be computed directly from \`t\` (seconds, 0 to \`duration\`) using Math.sin/cos/linear interpolation so scrubbing \`t\` forward or backward works smoothly.
+- Fill the background first, then draw detailed recognizable shapes, colors, and motion for "${prompt}".
+- Output ONLY valid JavaScript statements. No markdown backticks, no explanations.`;
+
+    const extractCleanCode = (rawText) => {
+        if (!rawText) return null;
+        let code = rawText.replace(/^```(?:javascript|js)?/i, '').replace(/```$/i, '').trim();
+        const blockMatch = rawText.match(/```(?:javascript|js)?\s*([\s\S]*?)```/i);
+        if (blockMatch) code = blockMatch[1].trim();
+        if (code.length < 30 || code.includes('Free limit reached') || code.startsWith('<')) return null;
+        return code;
+    };
+
+    // 1. Try Server API (Groq / Gemini / OpenRouter)
+    try {
+        const r = await fetch('/api/web', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                source: 'codegen',
+                q: `Write deterministic ${mode.toUpperCase()} procedural animation code for: ${prompt}`,
+                messages: [
+                    { role: 'system', content: sysPrompt },
+                    { role: 'user', content: `Prompt: "${prompt}"` }
+                ]
+            })
+        });
+        const d = await r.json();
+        const clean = extractCleanCode(d?.reply);
+        if (clean) return clean;
+    } catch (e) {}
+
+    // 2. Try Direct Browser LLM Fallback
+    try {
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), 5200);
+        const r = await fetch('https://text.pollinations.ai/openai', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                model: 'openai',
+                messages: [
+                    { role: 'system', content: sysPrompt },
+                    { role: 'user', content: `Prompt: "${prompt}"` }
+                ]
+            }),
+            signal: controller.signal
+        });
+        clearTimeout(timer);
+        if (r.ok) {
+            const d = await r.json();
+            const clean = extractCleanCode(d?.choices?.[0]?.message?.content);
+            if (clean) return clean;
+        }
+    } catch (e) {}
+
+    return null;
 }
 
-// Universal Compositional 3D World Builder (Three.js) — Builds ANY subject procedurally in 3D
-function renderCompositionalThreeScene(THREE, scene, camera, t, duration, state, prompt) {
+// Universal Built-in Three.js 3D Scene Composer (Renders 3D worlds deterministically at any time `t`)
+function renderBuiltInThreeJsScene(t, duration, THREE, scene, camera, prompt) {
     const p = prompt.toLowerCase();
-    const h = hashPrompt(p);
+    if (!scene.userData.init) {
+        scene.userData.init = true;
+        scene.background = new THREE.Color(0x070412);
 
-    if (!state.initialized) {
-        state.initialized = true;
-        scene.background = new THREE.Color(
-            /\b(day|sky|sun|beach|forest|park|mountain|bird|airplane|cloud)\b/.test(p) ? 0x0f253e : 0x060311
-        );
+        const amb = new THREE.AmbientLight(0xffffff, 0.65);
+        const dir = new THREE.DirectionalLight(0xc496ff, 1.2);
+        dir.position.set(5, 10, 7);
+        const pt = new THREE.PointLight(0xff69b4, 1.5, 25);
+        pt.position.set(-4, 4, 4);
+        scene.add(amb, dir, pt);
 
-        const amb = new THREE.AmbientLight(0xffffff, 0.75);
-        const dir = new THREE.DirectionalLight(0xfff4e6, 1.3);
-        dir.position.set(10, 18, 14);
-        const point = new THREE.PointLight(0xc496ff, 1.4, 50);
-        point.position.set(-8, 6, 8);
-        scene.add(amb, dir, point);
+        // Grid / Terrain
+        const grid = new THREE.GridHelper(30, 30, 0xc496ff, 0x2a1b4e);
+        grid.position.y = -2.2;
+        scene.add(grid);
 
-        const root = new THREE.Group();
-        scene.add(root);
-        state.root = root;
-        state.actors = [];
+        const group = new THREE.Group();
+        scene.add(group);
+        scene.userData.mainGroup = group;
 
-        // Environment Ground / Ocean / Starfield
-        if (/\b(water|ocean|sea|wave|boat|ship|fish|island|rain)\b/.test(p)) {
-            const geo = new THREE.PlaneGeometry(36, 36, 32, 32);
-            geo.rotateX(-Math.PI / 2);
-            const mat = new THREE.MeshStandardMaterial({ color: 0x0284c7, roughness: 0.25, metalness: 0.4, wireframe: false });
-            const water = new THREE.Mesh(geo, mat);
-            water.position.y = -2.2;
-            scene.add(water);
-            state.waterMesh = water;
-        } else if (/\b(house|room|city|road|car|dog|cat|tree|forest|mountain|park|person|robot|human)\b/.test(p)) {
-            const groundGeo = new THREE.PlaneGeometry(40, 40);
-            groundGeo.rotateX(-Math.PI / 2);
-            const groundMat = new THREE.MeshStandardMaterial({
-                color: /\b(grass|tree|forest|park|nature|dog)\b/.test(p) ? 0x143326 : 0x18112b,
-                roughness: 0.8
+        if (/\b(car|vehicle|truck|train|bus|bike)\b/.test(p)) {
+            const body = new THREE.Mesh(new THREE.BoxGeometry(2.8, 0.7, 1.4), new THREE.MeshStandardMaterial({ color: 0xc496ff, metalness: 0.5, roughness: 0.2 }));
+            const cabin = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.6, 1.2), new THREE.MeshStandardMaterial({ color: 0x38bdf8, metalness: 0.7, roughness: 0.1 }));
+            cabin.position.set(-0.2, 0.6, 0);
+            group.add(body, cabin);
+            const wheels = [];
+            [[-0.9, -0.4, 0.75], [0.9, -0.4, 0.75], [-0.9, -0.4, -0.75], [0.9, -0.4, -0.75]].forEach(([x, y, z]) => {
+                const w = new THREE.Mesh(new THREE.CylinderGeometry(0.38, 0.38, 0.25, 20), new THREE.MeshStandardMaterial({ color: 0x111118 }));
+                w.rotation.x = Math.PI / 2;
+                w.position.set(x, y, z);
+                group.add(w);
+                wheels.push(w);
             });
-            const ground = new THREE.Mesh(groundGeo, groundMat);
-            ground.position.y = -2.2;
-            scene.add(ground);
-
-            const grid = new THREE.GridHelper(40, 28, 0xc496ff, 0x2d1f4a);
-            grid.position.y = -2.18;
-            scene.add(grid);
-        }
-
-        // Star / Particle Field
-        const starGeo = new THREE.BufferGeometry();
-        const starPos = new Float32Array(180 * 3);
-        for (let i = 0; i < 180 * 3; i++) starPos[i] = (Math.random() - 0.5) * 45;
-        starGeo.setAttribute('position', new THREE.BufferAttribute(starPos, 3));
-        const starMat = new THREE.PointsMaterial({ color: 0xe9d5ff, size: 0.14 });
-        const stars = new THREE.Points(starGeo, starMat);
-        scene.add(stars);
-        state.stars = stars;
-
-        // Build 3D Subject Models based on prompt semantics
-        const matPrimary = new THREE.MeshStandardMaterial({ color: 0xc496ff, roughness: 0.3, metalness: 0.3 });
-        const matAccent = new THREE.MeshStandardMaterial({ color: 0xff69b4, roughness: 0.25, metalness: 0.4 });
-        const matDark = new THREE.MeshStandardMaterial({ color: 0x1e1b2e, roughness: 0.5 });
-        const matGlow = new THREE.MeshStandardMaterial({ color: 0x38bdf8, emissive: 0x0284c7, emissiveIntensity: 0.5 });
-
-        if (/\b(car|vehicle|truck|bus|race|train)\b/.test(p)) {
-            const car = new THREE.Group();
-            const chassis = new THREE.Mesh(new THREE.BoxGeometry(4.2, 0.9, 2.1), matPrimary);
-            const cabin = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.8, 1.8), matGlow);
-            cabin.position.set(-0.2, 0.8, 0);
-            car.add(chassis, cabin);
-            [[-1.3, -0.5, 1.1], [1.3, -0.5, 1.1], [-1.3, -0.5, -1.1], [1.3, -0.5, -1.1]].forEach(([x, y, z]) => {
-                const wheel = new THREE.Mesh(new THREE.CylinderGeometry(0.48, 0.48, 0.35, 20), matDark);
-                wheel.rotation.x = Math.PI / 2;
-                wheel.position.set(x, y, z);
-                car.add(wheel);
-                state.actors.push({ mesh: wheel, role: 'wheel' });
-            });
-            car.position.y = -1.2;
-            root.add(car);
-            state.actors.push({ mesh: car, role: 'vehicle' });
-        } else if (/\b(helicopter|airplane|plane|jet|drone|bird|eagle|butterfly|dragon)\b/.test(p)) {
-            const flyer = new THREE.Group();
-            const body = new THREE.Mesh(new THREE.ConeGeometry(0.8, 3.6, 16), matPrimary);
-            body.rotation.z = Math.PI / 2;
-            const wingL = new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.12, 4.4), matAccent);
-            const rotor = new THREE.Mesh(new THREE.BoxGeometry(3.8, 0.08, 0.28), matGlow);
-            rotor.position.y = 0.85;
-            flyer.add(body, wingL, rotor);
-            root.add(flyer);
-            state.actors.push({ mesh: flyer, role: 'flyer' }, { mesh: rotor, role: 'rotor' }, { mesh: wingL, role: 'wing' });
-        } else if (/\b(dna|helix|molecule|atom|quantum|physics|chemistry)\b/.test(p)) {
-            const dna = new THREE.Group();
-            for (let i = -12; i <= 12; i++) {
-                const y = i * 0.35;
-                const a = i * 0.45;
-                const s1 = new THREE.Mesh(new THREE.SphereGeometry(0.24, 16, 16), matPrimary);
-                const s2 = new THREE.Mesh(new THREE.SphereGeometry(0.24, 16, 16), matAccent);
-                s1.position.set(Math.cos(a) * 1.6, y, Math.sin(a) * 1.6);
-                s2.position.set(Math.cos(a + Math.PI) * 1.6, y, Math.sin(a + Math.PI) * 1.6);
-                const bar = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 3.2, 8), matGlow);
-                bar.position.set(0, y, 0);
-                bar.rotation.z = Math.PI / 2;
-                bar.rotation.y = -a;
-                dna.add(s1, s2, bar);
-            }
-            root.add(dna);
-            state.actors.push({ mesh: dna, role: 'spinY' });
-        } else if (/\b(cat|dog|wolf|lion|tiger|animal|pet|rabbit|horse)\b/.test(p)) {
-            const animal = new THREE.Group();
-            const torso = new THREE.Mesh(new THREE.CylinderGeometry(0.75, 0.85, 2.2, 18), matPrimary);
-            torso.rotation.z = Math.PI / 2;
-            const head = new THREE.Mesh(new THREE.SphereGeometry(0.78, 20, 20), matPrimary);
-            head.position.set(1.3, 0.65, 0);
-            const earL = new THREE.Mesh(new THREE.ConeGeometry(0.28, 0.6, 12), matAccent);
-            const earR = new THREE.Mesh(new THREE.ConeGeometry(0.28, 0.6, 12), matAccent);
-            earL.position.set(1.35, 1.35, 0.38);
-            earR.position.set(1.35, 1.35, -0.38);
-            const tail = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.16, 1.6, 12), matAccent);
-            tail.position.set(-1.3, 0.6, 0);
-            tail.rotation.z = 0.6;
-            animal.add(torso, head, earL, earR, tail);
-            [[-0.8, -0.9, 0.45], [0.8, -0.9, 0.45], [-0.8, -0.9, -0.45], [0.8, -0.9, -0.45]].forEach(([x, y, z], idx) => {
-                const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.15, 1.2, 12), matPrimary);
-                leg.position.set(x, y, z);
-                animal.add(leg);
-                state.actors.push({ mesh: leg, role: 'leg', idx });
-            });
-            const ball = new THREE.Mesh(new THREE.SphereGeometry(0.42, 20, 20), matGlow);
-            ball.position.set(2.8, -0.8, 0);
-            scene.add(ball);
-            state.actors.push({ mesh: animal, role: 'creature' }, { mesh: tail, role: 'tail' }, { mesh: ball, role: 'ball' });
-            animal.position.y = -0.7;
-            root.add(animal);
-        } else if (/\b(house|home|building|city|castle|tower)\b/.test(p)) {
-            const house = new THREE.Group();
-            const walls = new THREE.Mesh(new THREE.BoxGeometry(3.2, 2.4, 2.8), matPrimary);
-            const roof = new THREE.Mesh(new THREE.ConeGeometry(2.6, 1.6, 4), matAccent);
-            roof.position.y = 2.0;
-            roof.rotation.y = Math.PI / 4;
-            const door = new THREE.Mesh(new THREE.BoxGeometry(0.6, 1.2, 0.1), matGlow);
-            door.position.set(0, -0.6, 1.42);
-            house.add(walls, roof, door);
-            house.position.y = -1.0;
-            root.add(house);
-            state.actors.push({ mesh: house, role: 'turntable' });
+            scene.userData.wheels = wheels;
+        } else if (/\b(solar|planet|space|earth|saturn|galaxy|atom)\b/.test(p)) {
+            const sun = new THREE.Mesh(new THREE.SphereGeometry(1.1, 32, 32), new THREE.MeshStandardMaterial({ color: 0xffaa50, emissive: 0xff6600, emissiveIntensity: 0.6 }));
+            group.add(sun);
+            const ring = new THREE.Mesh(new THREE.TorusGeometry(2.4, 0.06, 16, 64), new THREE.MeshStandardMaterial({ color: 0xc496ff }));
+            ring.rotation.x = Math.PI / 2.3;
+            group.add(ring);
+            const p1 = new THREE.Mesh(new THREE.SphereGeometry(0.35, 24, 24), new THREE.MeshStandardMaterial({ color: 0x38bdf8 }));
+            const p2 = new THREE.Mesh(new THREE.SphereGeometry(0.45, 24, 24), new THREE.MeshStandardMaterial({ color: 0xff69b4 }));
+            group.add(p1, p2);
+            scene.userData.planets = [p1, p2];
         } else {
-            // Dynamic Multi-Body Sculpture / Planetary / Abstract Generator seeded by prompt
-            const centerMesh = new THREE.Mesh(new THREE.TorusKnotGeometry(1.2, 0.34, 110, 18, (h % 3) + 2, (h % 4) + 3), matPrimary);
-            const ring1 = new THREE.Mesh(new THREE.TorusGeometry(2.4, 0.06, 16, 80), matAccent);
-            const ring2 = new THREE.Mesh(new THREE.TorusGeometry(3.0, 0.06, 16, 80), matGlow);
-            ring1.rotation.x = Math.PI / 3;
-            ring2.rotation.y = Math.PI / 3;
-            root.add(centerMesh, ring1, ring2);
-            state.actors.push({ mesh: centerMesh, role: 'spinXY' }, { mesh: ring1, role: 'spinX' }, { mesh: ring2, role: 'spinY' });
+            // Dynamic 3D Character / Sculpture with Orbiting Energy Rings
+            const core = new THREE.Mesh(new THREE.OctahedronGeometry(1.15, 2), new THREE.MeshStandardMaterial({ color: 0xc496ff, wireframe: false, metalness: 0.4, roughness: 0.2 }));
+            const wire = new THREE.Mesh(new THREE.OctahedronGeometry(1.18, 2), new THREE.MeshBasicMaterial({ color: 0xffffff, wireframe: true, transparent: true, opacity: 0.35 }));
+            const ring1 = new THREE.Mesh(new THREE.TorusGeometry(1.9, 0.05, 16, 80), new THREE.MeshStandardMaterial({ color: 0xff69b4, emissive: 0xff69b4, emissiveIntensity: 0.4 }));
+            const ring2 = new THREE.Mesh(new THREE.TorusGeometry(2.3, 0.04, 16, 80), new THREE.MeshStandardMaterial({ color: 0x38bdf8, emissive: 0x38bdf8, emissiveIntensity: 0.4 }));
+            group.add(core, wire, ring1, ring2);
+            scene.userData.rings = [ring1, ring2];
         }
     }
 
-    // Deterministic Update at Exact Time `t` (So Scrubbing Forward & Backward Works Perfectly!)
-    if (state.waterMesh) {
-        const pos = state.waterMesh.geometry.attributes.position;
-        for (let i = 0; i < pos.count; i++) {
-            const x = pos.getX(i);
-            const z = pos.getZ(i);
-            pos.setY(i, Math.sin(x * 0.45 + t * 2.6) * 0.35 + Math.cos(z * 0.45 + t * 2.0) * 0.35);
-        }
-        pos.needsUpdate = true;
-        state.waterMesh.geometry.computeVertexNormals();
+    // Deterministic animation at exact time `t`
+    const g = scene.userData.mainGroup;
+    if (g) {
+        g.rotation.y = t * 0.85;
+        g.position.y = Math.sin(t * 2.2) * 0.25;
     }
-
-    if (state.stars) {
-        state.stars.rotation.y = t * 0.08;
+    if (scene.userData.wheels) {
+        scene.userData.wheels.forEach(w => { w.rotation.z = -t * 5; });
+        g.position.x = Math.sin(t * 1.5) * 1.2;
     }
-
-    state.actors.forEach(a => {
-        if (a.role === 'wheel') a.mesh.rotation.z = -t * 6;
-        if (a.role === 'vehicle') {
-            a.mesh.position.x = Math.sin(t * 0.9) * 2.5;
-            a.mesh.position.y = -1.2 + Math.sin(t * 8) * 0.04;
-            a.mesh.rotation.y = Math.cos(t * 0.9) * 0.25;
-        }
-        if (a.role === 'flyer') {
-            a.mesh.position.x = Math.cos(t * 1.1) * 2.2;
-            a.mesh.position.y = 0.6 + Math.sin(t * 2.2) * 0.7;
-            a.mesh.rotation.z = Math.sin(t * 1.1) * 0.25;
-        }
-        if (a.role === 'rotor') a.mesh.rotation.y = t * 18;
-        if (a.role === 'wing') a.mesh.rotation.x = Math.sin(t * 7) * 0.3;
-        if (a.role === 'spinY') a.mesh.rotation.y = t * 1.1;
-        if (a.role === 'spinX') a.mesh.rotation.x = t * 1.3;
-        if (a.role === 'spinXY') { a.mesh.rotation.x = t * 0.9; a.mesh.rotation.y = t * 1.2; }
-        if (a.role === 'turntable') a.mesh.rotation.y = Math.sin(t * 0.6) * 0.8;
-        if (a.role === 'creature') {
-            a.mesh.position.x = Math.sin(t * 1.6) * 1.2;
-            a.mesh.position.y = -0.7 + Math.abs(Math.sin(t * 3.2)) * 0.35;
-        }
-        if (a.role === 'leg') a.mesh.rotation.z = Math.sin(t * 6.4 + a.idx * Math.PI * 0.5) * 0.45;
-        if (a.role === 'tail') a.mesh.rotation.x = Math.sin(t * 7) * 0.45;
-        if (a.role === 'ball') {
-            a.mesh.position.x = 2.4 + Math.cos(t * 2.4) * 1.1;
-            a.mesh.position.y = -1.5 + Math.abs(Math.sin(t * 4.8)) * 1.8;
-        }
-    });
-
-    camera.position.x = Math.sin(t * 0.35) * 6.5;
-    camera.position.z = Math.cos(t * 0.35) * 6.5;
-    camera.position.y = 2.2 + Math.sin(t * 0.5) * 0.8;
+    if (scene.userData.planets) {
+        const [p1, p2] = scene.userData.planets;
+        p1.position.set(Math.cos(t * 1.8) * 2.0, Math.sin(t * 1.2) * 0.3, Math.sin(t * 1.8) * 2.0);
+        p2.position.set(Math.cos(t * 1.1 + 2) * 3.1, Math.cos(t * 1.5) * 0.4, Math.sin(t * 1.1 + 2) * 3.1);
+    }
+    if (scene.userData.rings) {
+        scene.userData.rings[0].rotation.x = t * 1.4;
+        scene.userData.rings[1].rotation.y = t * 1.1;
+    }
+    camera.position.set(Math.sin(t * 0.35) * 6.5, 2.2 + Math.sin(t * 0.7) * 0.8, Math.cos(t * 0.35) * 6.5);
     camera.lookAt(0, 0, 0);
 }
 
-// Universal Deterministic 2D Canvas Renderer (Supports Scrubbing at Exact Time `t`)
-function renderDeterministic2DScene(ctx, w, h, prompt, t, duration, customFn) {
-    if (typeof customFn === 'function') {
+function formatTimeMMSS(sec) {
+    const s = Math.max(0, Math.floor(sec));
+    const m = Math.floor(s / 60);
+    const rem = s % 60;
+    return `${m}:${rem < 10 ? '0' : ''}${rem}`;
+}
+
+// Builds the YouTube-Style Scrubbable Video / 3D / Image Studio Card
+async function buildScrubbableMediaReply(mediaCmd) {
+    const { type, is3D, prompt, duration } = mediaCmd;
+    const playerId = 'player_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+    const canvasId = 'canvas_' + playerId;
+    const codeId = 'code_' + playerId;
+    const w = 520, h = 380;
+
+    // Ask AI to write custom scene code for any prompt in the world (with instant fallback)
+    const customCode = await synthesizeCustomSceneCode(prompt, is3D ? '3d' : '2d');
+
+    const codeDisplay = customCode || `// DESU Deterministic Timeline Renderer (${is3D ? 'Three.js 3D' : 'HTML5 Canvas 2D'})\n// Scrubbable at any time t ∈ [0, ${duration}s]\nrenderScene(t, duration, "${prompt.replace(/"/g, '')}");`;
+
+    const isVideo = type === 'video';
+    const badgeLabel = is3D ? 'Three.js 3D WebGL' : (isVideo ? '60fps Scrubbable Video' : 'Procedural Canvas');
+
+    const html = `
+        <div>Synthesized ${is3D ? '3D Three.js' : 'procedural'} ${escapeHtml(type)} for <strong>${escapeHtml(prompt)}</strong>:</div>
+        <div class="desu-media-card" id="${playerId}">
+            <div class="desu-media-stage">
+                <canvas id="${canvasId}" width="${w}" height="${h}"></canvas>
+            </div>
+            ${isVideo || is3D ? `
+            <div class="desu-player-controls">
+                <div class="desu-scrubber-row">
+                    <button type="button" class="desu-play-btn" id="play_${playerId}" title="Play / Pause">⏸</button>
+                    <input type="range" class="desu-scrubber" id="scrub_${playerId}" min="0" max="1000" value="0" />
+                    <span class="desu-time-badge" id="time_${playerId}">0:00 / ${formatTimeMMSS(duration)}</span>
+                </div>
+                <div style="display:flex; justify-content:space-between; align-items:center; gap:6px; flex-wrap:wrap;">
+                    <div style="display:flex; align-items:center; gap:6px;">
+                        <span style="font-size:11px; color:var(--text-muted);">Length:</span>
+                        <select class="desu-duration-select" id="dur_${playerId}">
+                            ${[5, 10, 15, 20, 30, 60].map(s => `<option value="${s}" ${s === duration ? 'selected' : ''}>${s}s</option>`).join('')}
+                        </select>
+                        <button type="button" class="desu-media-btn" id="mode_${playerId}">${is3D ? 'Switch to 2D' : '🧊 View in 3D'}</button>
+                    </div>
+                    <div style="display:flex; gap:6px;">
+                        <button type="button" class="desu-media-btn" onclick="const el=document.getElementById('${codeId}'); el.style.display=el.style.display==='none'?'block':'none';">&lt;/&gt; Code</button>
+                        <button type="button" class="desu-media-btn" onclick="window.recordDesuVideo('${canvasId}', this)">⬇ .WebM</button>
+                    </div>
+                </div>
+            </div>` : `
+            <div class="desu-media-bar">
+                <span style="font-size:11.5px; color:var(--text-muted);">${badgeLabel}</span>
+                <div style="display:flex; gap:6px;">
+                    <button type="button" class="desu-media-btn" onclick="const el=document.getElementById('${codeId}'); el.style.display=el.style.display==='none'?'block':'none';">&lt;/&gt; Code</button>
+                    <button type="button" class="desu-media-btn" onclick="window.downloadCodedCanvas('${canvasId}', 'desu-art.png')">⬇ PNG</button>
+                </div>
+            </div>`}
+            <pre id="${codeId}" class="desu-code-drawer" style="display:none;"><code>${escapeHtml(codeDisplay)}</code></pre>
+        </div>`;
+
+    setTimeout(() => mountTimelinePlayer({
+        playerId,
+        canvasId,
+        prompt,
+        initialDuration: duration,
+        initial3D: is3D,
+        isStaticImage: !isVideo && !is3D,
+        customCode
+    }), 60);
+
+    return {
+        text: html,
+        rawText: `[Generated ${is3D ? '3D ' : ''}${type}: ${prompt} (${duration}s)]`,
+        isHtml: true,
+        followUp: type === 'video' ? `audio ${prompt}` : `3d video ${prompt}`
+    };
+}
+
+function mountTimelinePlayer(cfg) {
+    const canvas = document.getElementById(cfg.canvasId);
+    if (!canvas) return;
+
+    let use3D = cfg.initial3D;
+    let duration = cfg.initialDuration || 10;
+    let currentTime = cfg.isStaticImage ? 1.2 : 0;
+    let isPlaying = !cfg.isStaticImage;
+    let isScrubbing = false;
+    let lastFrameTs = performance.now();
+
+    const playBtn = document.getElementById(`play_${cfg.playerId}`);
+    const scrubInput = document.getElementById(`scrub_${cfg.playerId}`);
+    const timeBadge = document.getElementById(`time_${cfg.playerId}`);
+    const durSelect = document.getElementById(`dur_${cfg.playerId}`);
+    const modeBtn = document.getElementById(`mode_${cfg.playerId}`);
+
+    // Compile AI-generated custom 2D or 3D function if present
+    let custom2DFn = null;
+    let custom3DFn = null;
+    if (cfg.customCode) {
         try {
-            ctx.save();
-            ctx.clearRect(0, 0, w, h);
-            customFn(ctx, w, h, t, duration, Math);
-            ctx.restore();
-            return;
-        } catch (e) {
-            ctx.restore();
+            if (use3D) custom3DFn = new Function('t', 'duration', 'THREE', 'scene', 'camera', cfg.customCode);
+            else custom2DFn = new Function('ctx', 'w', 'h', 't', 'duration', cfg.customCode);
+        } catch (e) {}
+    }
+
+    // Dedicated offscreen Three.js WebGLRenderer that draws into our visible canvas so 2D/3D switching works seamlessly
+    let threeState = null;
+    function ensureThreeState() {
+        if (threeState || typeof window.THREE === 'undefined') return threeState;
+        const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+        renderer.setSize(canvas.width, canvas.height);
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(50, canvas.width / canvas.height, 0.1, 100);
+        camera.position.set(0, 2, 6.5);
+        threeState = { renderer, scene, camera };
+        return threeState;
+    }
+
+    function renderAtTime(t) {
+        const ctx = canvas.getContext('2d');
+        if (use3D && typeof window.THREE !== 'undefined') {
+            const st = ensureThreeState();
+            if (st) {
+                let ok = false;
+                if (custom3DFn) {
+                    try {
+                        custom3DFn(t, duration, window.THREE, st.scene, st.camera);
+                        ok = true;
+                    } catch (e) { custom3DFn = null; }
+                }
+                if (!ok) {
+                    renderBuiltInThreeJsScene(t, duration, window.THREE, st.scene, st.camera, cfg.prompt);
+                }
+                st.renderer.render(st.scene, st.camera);
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.drawImage(st.renderer.domElement, 0, 0, canvas.width, canvas.height);
+                return;
+            }
+        }
+
+        // 2D Canvas Render
+        let ok2D = false;
+        if (custom2DFn) {
+            try {
+                ctx.save();
+                custom2DFn(ctx, canvas.width, canvas.height, t, duration);
+                ctx.restore();
+                ok2D = true;
+            } catch (e) { custom2DFn = null; }
+        }
+        if (!ok2D) {
+            drawProceduralScene(ctx, canvas.width, canvas.height, cfg.prompt, t, 1);
         }
     }
 
-    // Fallback Compositional 2D Engine (Water, House, Cat, Car, Bird, Tree, Fire, Space, City, etc.)
-    const p = prompt.toLowerCase();
-    const seed = (hashPrompt(p) % 50) + 1;
-    const isCat = /\b(cat|kitten|feline|kitty|dog|puppy|pet|animal)\b/.test(p);
-    const isHouse = /\b(house|home|room|living|indoors|inside|window)\b/.test(p);
-    const isWater = /\b(water|ocean|sea|wave|waves|river|lake|rain|underwater|boat|fish)\b/.test(p);
-    const isFire = /\b(fire|flame|lava|campfire|bonfire|ember)\b/.test(p);
-    const isSpace = /\b(space|planet|solar|galaxy|star|cosmos|orbit|astrophysics)\b/.test(p);
-    const isCity = /\b(city|cyberpunk|street|building|neon|urban|car|road|traffic)\b/.test(p);
-    const isNature = /\b(tree|forest|mountain|sunset|sunrise|park|flower|bird|nature|sky)\b/.test(p);
+    function updateUI() {
+        if (scrubInput && !isScrubbing) {
+            scrubInput.value = Math.round((currentTime / duration) * 1000);
+        }
+        if (timeBadge) {
+            timeBadge.textContent = `${formatTimeMMSS(currentTime)} / ${formatTimeMMSS(duration)}`;
+        }
+        if (playBtn) {
+            playBtn.textContent = isPlaying ? '⏸' : '▶';
+        }
+    }
 
-    ctx.clearRect(0, 0, w, h);
+    if (playBtn) {
+        playBtn.onclick = () => {
+            isPlaying = !isPlaying;
+            lastFrameTs = performance.now();
+            updateUI();
+        };
+    }
+
+    // YouTube-Style Hold & Drag Scrubbing Forward and Backward!
+    if (scrubInput) {
+        const startScrub = () => { isScrubbing = true; };
+        const endScrub = () => { isScrubbing = false; lastFrameTs = performance.now(); };
+        scrubInput.addEventListener('pointerdown', startScrub);
+        scrubInput.addEventListener('touchstart', startScrub, { passive: true });
+        window.addEventListener('pointerup', endScrub);
+        window.addEventListener('touchend', endScrub);
+
+        scrubInput.addEventListener('input', () => {
+            isScrubbing = true;
+            const ratio = parseFloat(scrubInput.value) / 1000;
+            currentTime = ratio * duration;
+            renderAtTime(currentTime);
+            if (timeBadge) {
+                timeBadge.textContent = `${formatTimeMMSS(currentTime)} / ${formatTimeMMSS(duration)}`;
+            }
+        });
+    }
+
+    if (durSelect) {
+        durSelect.onchange = () => {
+            duration = parseFloat(durSelect.value) || 10;
+            if (currentTime > duration) currentTime = 0;
+            updateUI();
+            renderAtTime(currentTime);
+        };
+    }
+
+    if (modeBtn) {
+        modeBtn.onclick = () => {
+            use3D = !use3D;
+            modeBtn.textContent = use3D ? 'Switch to 2D' : '🧊 View in 3D';
+            renderAtTime(currentTime);
+        };
+    }
+
+    function tick(now) {
+        if (!document.body.contains(canvas)) return;
+        const dt = (now - lastFrameTs) / 1000;
+        lastFrameTs = now;
+
+        if (isPlaying && !isScrubbing) {
+            currentTime += dt;
+            if (currentTime >= duration) currentTime = currentTime % duration;
+            renderAtTime(currentTime);
+            updateUI();
+        }
+        requestAnimationFrame(tick);
+    }
+
+    renderAtTime(currentTime);
+    updateUI();
+    if (!cfg.isStaticImage) requestAnimationFrame(tick);
+}
+
+// ============================================================================
+// 3. YOUTUBE-SCRUBBABLE OFFLINEAUDIOCONTEXT WAV SYNTHESIZER (Custom Duration!)
+// Pre-renders any length of audio into a real WAV file with a draggable progress bar
+// ============================================================================
+function buildScrubbableAudioReply(prompt, initialDuration = 10) {
+    const audioId = 'aud_' + Date.now().toString(36);
+    const canvasId = 'vis_' + audioId;
+    const safePrompt = escapeHtml(prompt).replace(/'/g, "\\'");
+
+    const html = `
+        <div>Synthesized scrubbable Web Audio track for <strong>${escapeHtml(prompt)}</strong>:</div>
+        <div class="desu-media-card" id="card_${audioId}">
+            <div class="desu-media-stage" style="min-height:110px;">
+                <canvas id="${canvasId}" width="480" height="110"></canvas>
+            </div>
+            <audio id="${audioId}" style="display:none;"></audio>
+            <div class="desu-player-controls">
+                <div class="desu-scrubber-row">
+                    <button type="button" class="desu-play-btn" id="play_${audioId}">▶</button>
+                    <input type="range" class="desu-scrubber" id="scrub_${audioId}" min="0" max="1000" value="0" />
+                    <span class="desu-time-badge" id="time_${audioId}">0:00 / ${formatTimeMMSS(initialDuration)}</span>
+                </div>
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <div style="display:flex; align-items:center; gap:6px;">
+                        <span style="font-size:11px; color:var(--text-muted);">Length:</span>
+                        <select class="desu-duration-select" id="dur_${audioId}">
+                            ${[5, 10, 15, 30, 60].map(s => `<option value="${s}" ${s === initialDuration ? 'selected' : ''}>${s}s</option>`).join('')}
+                        </select>
+                    </div>
+                    <a class="desu-media-btn" id="dl_${audioId}" download="desu-audio.wav">⬇ Download .WAV</a>
+                </div>
+            </div>
+        </div>`;
+
+    setTimeout(() => initScrubbableAudioPlayer(audioId, canvasId, prompt, initialDuration), 60);
+    return { text: html, rawText: `[Scrubbable Audio: ${prompt} (${initialDuration}s)]`, isHtml: true };
+}
+
+function generateWavBlobForPrompt(prompt, durationSec) {
+    const sampleRate = 22050;
+    const length = Math.floor(sampleRate * durationSec);
+    const samples = new Float32Array(length);
+    const p = prompt.toLowerCase();
+
+    let phase = 0;
+    let lastNoise = 0;
+    const notes = [261.63, 329.63, 392.00, 523.25, 440.00, 392.00, 329.63, 293.66];
+
+    for (let i = 0; i < length; i++) {
+        const t = i / sampleRate;
+        if (/\b(cat|kitten|meow|purr)\b/.test(p)) {
+            const cycle = t % 2.2;
+            let sample = 0;
+            if (cycle >= 0.15 && cycle <= 1.25) {
+                const local = (cycle - 0.15) / 1.1;
+                const env = Math.sin(Math.PI * local);
+                const freq = 480 + 360 * Math.sin(Math.PI * Math.pow(local, 0.7)) - 140 * local;
+                phase += (2 * Math.PI * freq) / sampleRate;
+                sample = (Math.sin(phase) * 0.55 + Math.sin(phase * 2) * 0.3) * env * 0.55;
+            }
+            const purr = Math.sin(2 * Math.PI * 26 * t) * 0.08;
+            samples[i] = Math.max(-1, Math.min(1, sample + purr));
+        } else if (/\b(water|ocean|rain|storm|wind|sea|river)\b/.test(p)) {
+            const white = Math.random() * 2 - 1;
+            lastNoise = (lastNoise + 0.04 * white) / 1.04;
+            const swell = 0.4 + 0.5 * Math.sin(t * 1.8) * Math.sin(t * 0.7);
+            samples[i] = Math.max(-1, Math.min(1, lastNoise * swell * 2.2));
+        } else {
+            const step = Math.floor(t * 2.5) % notes.length;
+            const noteTime = (t * 2.5) % 1;
+            const freq = notes[step];
+            const env = Math.exp(-noteTime * 3.5) * Math.min(1, noteTime * 35);
+            const tone = Math.sin(2 * Math.PI * freq * t) * 0.5 + Math.sin(2 * Math.PI * (freq * 0.5) * t) * 0.25;
+            samples[i] = tone * env * 0.65;
+        }
+    }
+
+    const wavBuffer = new ArrayBuffer(44 + samples.length * 2);
+    const view = new DataView(wavBuffer);
+    const writeStr = (off, s) => { for (let i = 0; i < s.length; i++) view.setUint8(off + i, s.charCodeAt(i)); };
+
+    writeStr(0, 'RIFF');
+    view.setUint32(4, 36 + samples.length * 2, true);
+    writeStr(8, 'WAVE');
+    writeStr(12, 'fmt ');
+    view.setUint32(16, 16, true);
+    view.setUint16(20, 1, true);
+    view.setUint16(22, 1, true);
+    view.setUint32(24, sampleRate, true);
+    view.setUint32(28, sampleRate * 2, true);
+    view.setUint16(32, 2, true);
+    view.setUint16(34, 16, true);
+    writeStr(36, 'data');
+    view.setUint32(40, samples.length * 2, true);
+
+    let offset = 44;
+    for (let i = 0; i < samples.length; i++, offset += 2) {
+        const s = Math.max(-1, Math.min(1, samples[i]));
+        view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+    }
+    return new Blob([view], { type: 'audio/wav' });
+}
+
+function initScrubbableAudioPlayer(audioId, canvasId, prompt, initialDuration) {
+    const audioEl = document.getElementById(audioId);
+    const canvas = document.getElementById(canvasId);
+    const playBtn = document.getElementById(`play_${audioId}`);
+    const scrubInput = document.getElementById(`scrub_${audioId}`);
+    const timeBadge = document.getElementById(`time_${audioId}`);
+    const durSelect = document.getElementById(`dur_${audioId}`);
+    const dlLink = document.getElementById(`dl_${audioId}`);
+    if (!audioEl || !canvas) return;
+
+    let duration = initialDuration;
+    let isScrubbing = false;
+
+    function rebuildAudioTrack(dur) {
+        duration = dur;
+        const blob = generateWavBlobForPrompt(prompt, duration);
+        const url = URL.createObjectURL(blob);
+        audioEl.src = url;
+        if (dlLink) dlLink.href = url;
+        if (timeBadge) timeBadge.textContent = `0:00 / ${formatTimeMMSS(duration)}`;
+        drawAudioProgressWave(canvas, 0, prompt);
+    }
+
+    function drawAudioProgressWave(c, progressRatio, p) {
+        const ctx = c.getContext('2d');
+        const w = c.width, h = c.height;
+        ctx.fillStyle = '#070410';
+        ctx.fillRect(0, 0, w, h);
+        const bars = 48;
+        const barW = (w - bars * 3) / bars;
+        for (let i = 0; i < bars; i++) {
+            const ratio = i / bars;
+            const amp = 0.25 + 0.65 * Math.abs(Math.sin(i * 0.45 + p.length));
+            const bh = amp * (h - 24);
+            ctx.fillStyle = ratio <= progressRatio ? '#c496ff' : 'rgba(196, 150, 255, 0.22)';
+            ctx.fillRect(i * (barW + 3) + 6, (h - bh) / 2, barW, bh);
+        }
+    }
+
+    rebuildAudioTrack(duration);
+
+    if (playBtn) {
+        playBtn.onclick = () => {
+            if (audioEl.paused) { audioEl.play(); playBtn.textContent = '⏸'; }
+            else { audioEl.pause(); playBtn.textContent = '▶'; }
+        };
+    }
+
+    audioEl.ontimeupdate = () => {
+        if (!isScrubbing && duration > 0) {
+            const ratio = audioEl.currentTime / duration;
+            if (scrubInput) scrubInput.value = Math.round(ratio * 1000);
+            if (timeBadge) timeBadge.textContent = `${formatTimeMMSS(audioEl.currentTime)} / ${formatTimeMMSS(duration)}`;
+            drawAudioProgressWave(canvas, ratio, prompt);
+        }
+    };
+
+    audioEl.onended = () => {
+        if (playBtn) playBtn.textContent = '▶';
+    };
+
+    if (scrubInput) {
+        scrubInput.addEventListener('pointerdown', () => { isScrubbing = true; });
+        window.addEventListener('pointerup', () => { isScrubbing = false; });
+        scrubInput.addEventListener('input', () => {
+            isScrubbing = true;
+            const ratio = parseFloat(scrubInput.value) / 1000;
+            audioEl.currentTime = ratio * duration;
+            if (timeBadge) timeBadge.textContent = `${formatTimeMMSS(audioEl.currentTime)} / ${formatTimeMMSS(duration)}`;
+            drawAudioProgressWave(canvas, ratio, prompt);
+        });
+    }
+
+    if (durSelect) {
+        durSelect.onchange = () => {
+            audioEl.pause();
+            if (playBtn) playBtn.textContent = '▶';
+            rebuildAudioTrack(parseFloat(durSelect.value) || 10);
+        };
+    }
+}
+
+// Built-in 2D Scene Renderer (Water, House, Cat, Fire, Space, City, Nature, Vehicles, etc.)
+function drawProceduralScene(ctx, w, h, prompt, t = 0, seed = 1) {
+    const p = prompt.toLowerCase();
+    const isCat = /\b(cat|kitten|feline|kitty|meow|dog|pet|animal)\b/.test(p);
+    const isHouse = /\b(house|home|room|living|indoors|inside|sofa|couch|window)\b/.test(p);
+    const isWater = /\b(water|ocean|sea|wave|waves|river|lake|rain|underwater|fish|aqua|boat|ship)\b/.test(p);
+    const isFire = /\b(fire|flame|lava|campfire|bonfire|ember|burn)\b/.test(p);
+    const isSpace = /\b(space|planet|solar|galaxy|star|cosmos|orbit|astrophysics|rocket)\b/.test(p);
+    const isCity = /\b(city|cyberpunk|street|building|neon|urban|car|highway)\b/.test(p);
 
     if (isHouse) {
         const wallGrad = ctx.createLinearGradient(0, 0, 0, h * 0.72);
@@ -541,6 +913,7 @@ function renderDeterministic2DScene(ctx, w, h, prompt, t, duration, customFn) {
         wallGrad.addColorStop(1, '#2d1f4a');
         ctx.fillStyle = wallGrad;
         ctx.fillRect(0, 0, w, h * 0.72);
+
         ctx.fillStyle = '#26152b';
         ctx.fillRect(0, h * 0.72, w, h * 0.28);
 
@@ -549,60 +922,46 @@ function renderDeterministic2DScene(ctx, w, h, prompt, t, duration, customFn) {
         ctx.fillRect(wx, wy, ww, wh);
         ctx.fillStyle = '#fef08a';
         ctx.beginPath(); ctx.arc(wx + 82, wy + 38, 16, 0, Math.PI * 2); ctx.fill();
-        ctx.strokeStyle = '#6b4c9a'; ctx.lineWidth = 5; ctx.strokeRect(wx, wy, ww, wh);
+        ctx.strokeStyle = '#6b4c9a';
+        ctx.lineWidth = 5;
+        ctx.strokeRect(wx, wy, ww, wh);
+
         ctx.fillStyle = 'rgba(196, 150, 255, 0.18)';
         ctx.beginPath(); ctx.ellipse(w * 0.48, h * 0.83, 165, 34, 0, 0, Math.PI * 2); ctx.fill();
     } else if (isWater) {
         const skyGrad = ctx.createLinearGradient(0, 0, 0, h);
-        skyGrad.addColorStop(0, '#040d1a'); skyGrad.addColorStop(0.42, '#0a2246'); skyGrad.addColorStop(1, '#031026');
-        ctx.fillStyle = skyGrad; ctx.fillRect(0, 0, w, h);
+        skyGrad.addColorStop(0, '#040d1a');
+        skyGrad.addColorStop(0.42, '#0a2246');
+        skyGrad.addColorStop(1, '#031026');
+        ctx.fillStyle = skyGrad;
+        ctx.fillRect(0, 0, w, h);
+
         ctx.fillStyle = '#e0f2fe';
         ctx.beginPath(); ctx.arc(w * 0.5, h * 0.22, 30, 0, Math.PI * 2); ctx.fill();
 
-        ['rgba(14,116,144,0.55)', 'rgba(2,132,199,0.65)', 'rgba(56,189,248,0.55)', 'rgba(3,105,161,0.88)'].forEach((col, layer) => {
+        const waveColors = ['rgba(14, 116, 144, 0.55)', 'rgba(2, 132, 199, 0.65)', 'rgba(56, 189, 248, 0.55)', 'rgba(3, 105, 161, 0.85)'];
+        waveColors.forEach((col, layer) => {
             const baseY = h * (0.46 + layer * 0.11);
             const amp = 14 + layer * 4;
             const freq = 0.014 - layer * 0.002;
             const speed = (layer % 2 === 0 ? 1 : -1) * (2.2 + layer * 0.5);
             ctx.fillStyle = col;
-            ctx.beginPath(); ctx.moveTo(0, h);
+            ctx.beginPath();
+            ctx.moveTo(0, h);
             for (let x = 0; x <= w; x += 6) {
                 const y = baseY + Math.sin(x * freq + t * speed + layer) * amp + Math.cos(x * freq * 1.8 - t * 1.5) * (amp * 0.4);
                 ctx.lineTo(x, y);
             }
-            ctx.lineTo(w, h); ctx.closePath(); ctx.fill();
+            ctx.lineTo(w, h);
+            ctx.closePath();
+            ctx.fill();
         });
-    } else if (isNature) {
-        const sky = ctx.createLinearGradient(0, 0, 0, h * 0.75);
-        sky.addColorStop(0, '#1e1b4b'); sky.addColorStop(0.5, '#7e22ce'); sky.addColorStop(1, '#f97316');
-        ctx.fillStyle = sky; ctx.fillRect(0, 0, w, h);
-        // Sun
-        const sunY = h * 0.48 - Math.sin((t / Math.max(1, duration)) * Math.PI) * 55;
-        ctx.fillStyle = '#fde047';
-        ctx.shadowColor = '#f97316'; ctx.shadowBlur = 30;
-        ctx.beginPath(); ctx.arc(w * 0.5, sunY, 42, 0, Math.PI * 2); ctx.fill(); ctx.shadowBlur = 0;
-        // Mountains
-        ctx.fillStyle = '#1e1035';
-        ctx.beginPath(); ctx.moveTo(0, h * 0.75); ctx.lineTo(w * 0.28, h * 0.42); ctx.lineTo(w * 0.58, h * 0.75); ctx.fill();
-        ctx.fillStyle = '#120924';
-        ctx.beginPath(); ctx.moveTo(w * 0.35, h * 0.75); ctx.lineTo(w * 0.72, h * 0.38); ctx.lineTo(w, h * 0.75); ctx.fill();
-        ctx.fillStyle = '#090414'; ctx.fillRect(0, h * 0.75, w, h * 0.25);
-        // Animated Flying Birds
-        for (let b = 0; b < 5; b++) {
-            const bx = ((t * 65 + b * 95) % (w + 60)) - 30;
-            const by = h * 0.26 + Math.sin(t * 3 + b) * 18 + b * 12;
-            const flap = Math.sin(t * 9 + b * 1.4) * 9;
-            ctx.strokeStyle = '#fef08a'; ctx.lineWidth = 2.2;
-            ctx.beginPath();
-            ctx.moveTo(bx - 12, by + flap); ctx.quadraticCurveTo(bx - 5, by - 6, bx, by);
-            ctx.quadraticCurveTo(bx + 5, by - 6, bx + 12, by + flap);
-            ctx.stroke();
-        }
     } else if (isFire) {
-        ctx.fillStyle = '#090204'; ctx.fillRect(0, 0, w, h);
+        ctx.fillStyle = '#090204';
+        ctx.fillRect(0, 0, w, h);
         for (let i = 0; i < 35; i++) {
             const fx = w * 0.5 + Math.sin(i * 1.7 + t * 3) * (110 - (i % 20) * 3);
-            const fy = h * 0.82 - ((t * 110 + i * 25) % (h * 0.65));
+            const fy = h * 0.82 - (((t * 110 + i * 25) % (h * 0.65) + (h * 0.65)) % (h * 0.65));
             const radius = Math.max(4, 38 - ((h * 0.82 - fy) * 0.14));
             const hue = 15 + ((h * 0.82 - fy) * 0.18);
             ctx.fillStyle = `hsla(${hue}, 100%, 55%, 0.55)`;
@@ -610,30 +969,41 @@ function renderDeterministic2DScene(ctx, w, h, prompt, t, duration, customFn) {
         }
     } else {
         const bgGrad = ctx.createLinearGradient(0, 0, 0, h);
-        bgGrad.addColorStop(0, '#060312'); bgGrad.addColorStop(1, '#180d30');
-        ctx.fillStyle = bgGrad; ctx.fillRect(0, 0, w, h);
+        bgGrad.addColorStop(0, '#060312');
+        bgGrad.addColorStop(1, '#180d30');
+        ctx.fillStyle = bgGrad;
+        ctx.fillRect(0, 0, w, h);
         for (let i = 0; i < 36; i++) {
             const sx = ((i * 137.5 * seed) % w);
             const sy = ((i * 293.1 * seed) % (h * 0.72));
-            ctx.fillStyle = `rgba(230, 210, 255, ${0.35 + 0.65 * Math.abs(Math.sin(t * 2 + i))})`;
+            const twinkle = 0.35 + 0.65 * Math.abs(Math.sin(t * 2 + i));
+            ctx.fillStyle = `rgba(230, 210, 255, ${twinkle * 0.7})`;
             ctx.beginPath(); ctx.arc(sx, sy, (i % 3) * 0.8 + 0.8, 0, Math.PI * 2); ctx.fill();
         }
     }
 
     if (isCat) {
-        if (!isHouse && !isWater && !isNature) {
-            ctx.fillStyle = '#150d2a'; ctx.fillRect(0, h * 0.73, w, h * 0.27);
+        if (!isHouse && !isWater) {
+            ctx.fillStyle = '#150d2a';
+            ctx.fillRect(0, h * 0.73, w, h * 0.27);
         }
-        const cx = w * 0.42 + Math.sin(t * 2.2) * 22;
-        const cy = h * 0.63 + Math.abs(Math.sin(t * 4.4)) * -15;
-        ctx.strokeStyle = '#d8b4f8'; ctx.lineWidth = 14; ctx.lineCap = 'round';
-        ctx.beginPath(); ctx.moveTo(cx - 45, cy + 35);
+        const cx = w * 0.42 + Math.sin(t * 2.2) * 18;
+        const cy = h * 0.63 + Math.abs(Math.sin(t * 4.4)) * -14;
+
+        ctx.save();
+        ctx.strokeStyle = '#d8b4f8';
+        ctx.lineWidth = 14;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(cx - 45, cy + 35);
         const tailSwing = Math.sin(t * 5) * 35;
         ctx.bezierCurveTo(cx - 95, cy + 10 + tailSwing, cx - 110, cy - 45 + tailSwing, cx - 75 + tailSwing * 0.5, cy - 65);
         ctx.stroke();
+        ctx.restore();
 
         ctx.fillStyle = '#c496ff';
         ctx.beginPath(); ctx.ellipse(cx - 10, cy + 25, 52, 40, -0.1, 0, Math.PI * 2); ctx.fill();
+
         const pawLift = Math.sin(t * 6) * 24;
         ctx.fillStyle = '#e9d5ff';
         ctx.beginPath(); ctx.ellipse(cx - 42, cy + 60, 14, 9, 0, 0, Math.PI * 2); ctx.fill();
@@ -641,337 +1011,46 @@ function renderDeterministic2DScene(ctx, w, h, prompt, t, duration, customFn) {
 
         ctx.fillStyle = '#d8b4f8';
         ctx.beginPath(); ctx.arc(cx + 15, cy - 22, 40, 0, Math.PI * 2); ctx.fill();
+
         ctx.fillStyle = '#c496ff';
         ctx.beginPath(); ctx.moveTo(cx - 18, cy - 45); ctx.lineTo(cx - 8, cy - 82); ctx.lineTo(cx + 10, cy - 55); ctx.closePath(); ctx.fill();
         ctx.beginPath(); ctx.moveTo(cx + 22, cy - 55); ctx.lineTo(cx + 46, cy - 82); ctx.lineTo(cx + 50, cy - 42); ctx.closePath(); ctx.fill();
 
+        const blink = (Math.sin(t * 1.7) > 0.94) ? 0.12 : 1;
         ctx.fillStyle = '#6ee7b7';
-        ctx.beginPath(); ctx.arc(cx + 2, cy - 24, 6.5, 0, Math.PI * 2); ctx.arc(cx + 32, cy - 24, 6.5, 0, Math.PI * 2); ctx.fill();
-        ctx.fillStyle = '#05020a';
-        ctx.beginPath(); ctx.ellipse(cx + 2, cy - 24, 2.2, 5.5, 0, 0, Math.PI * 2); ctx.ellipse(cx + 32, cy - 24, 2.2, 5.5, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath();
+        ctx.ellipse(cx + 2, cy - 24, 7, 8 * blink, 0, 0, Math.PI * 2);
+        ctx.ellipse(cx + 32, cy - 24, 7, 8 * blink, 0, 0, Math.PI * 2);
+        ctx.fill();
 
         const ballX = w * 0.72 + Math.cos(t * 3.2) * 38;
         const ballY = h * 0.71 - Math.abs(Math.sin(t * 5.2)) * 68;
         ctx.fillStyle = '#ff69b4';
         ctx.beginPath(); ctx.arc(ballX, ballY, 18, 0, Math.PI * 2); ctx.fill();
-    } else if (isCity) {
-        for (let i = 0; i < 12; i++) {
-            const bw = w / 10, bx = i * (w / 12), bh = 90 + ((i * 73 + seed * 31) % 160);
-            ctx.fillStyle = i % 2 === 0 ? '#0d061a' : '#160b2c';
-            ctx.fillRect(bx, h * 0.78 - bh, bw, bh);
-        }
-        // Moving Coded Car on Highway
-        const carX = ((t * 110) % (w + 140)) - 70;
-        const carY = h * 0.82;
-        ctx.fillStyle = '#c496ff';
-        ctx.fillRect(carX, carY - 16, 68, 16);
-        ctx.fillStyle = '#38bdf8';
-        ctx.fillRect(carX + 14, carY - 28, 36, 13);
-        ctx.fillStyle = '#111';
-        ctx.beginPath(); ctx.arc(carX + 15, carY, 8, 0, Math.PI * 2); ctx.arc(carX + 52, carY, 8, 0, Math.PI * 2); ctx.fill();
     } else if (isSpace) {
         const cx = w / 2, cy = h / 2;
         ctx.fillStyle = '#ffaa50';
         ctx.beginPath(); ctx.arc(cx, cy, 28, 0, Math.PI * 2); ctx.fill();
-        [{ r: 65, size: 7, s: 1.8, c: '#60a5fa' }, { r: 105, size: 11, s: 1.1, c: '#c496ff' }, { r: 150, size: 9, s: 0.65, c: '#f472b6' }].forEach((pl, idx) => {
-            ctx.strokeStyle = 'rgba(255,255,255,0.14)';
+        [{ r: 65, size: 7, speed: 1.8, color: '#60a5fa' }, { r: 105, size: 11, speed: 1.1, color: '#c496ff' }, { r: 150, size: 9, speed: 0.65, color: '#f472b6' }].forEach((pl, idx) => {
+            ctx.strokeStyle = 'rgba(255,255,255,0.12)';
             ctx.beginPath(); ctx.arc(cx, cy, pl.r, 0, Math.PI * 2); ctx.stroke();
-            const a = t * pl.s + idx * 2.1;
-            ctx.fillStyle = pl.c;
-            ctx.beginPath(); ctx.arc(cx + Math.cos(a) * pl.r, cy + Math.sin(a) * pl.r, pl.size, 0, Math.PI * 2); ctx.fill();
+            const angle = t * pl.speed + idx * 2.1;
+            ctx.fillStyle = pl.color;
+            ctx.beginPath(); ctx.arc(cx + Math.cos(angle) * pl.r, cy + Math.sin(angle) * pl.r, pl.size, 0, Math.PI * 2); ctx.fill();
         });
-    }
-}
-
-// ============================================================================
-// YOUTUBE-STYLE SCRUBBABLE 2D & THREE.JS 3D VIDEO STUDIO
-// ============================================================================
-const activePlayers = {};
-
-function buildScrubbableVideoReply(prompt, initialMode = '2d', initialDuration = 10) {
-    const uid = 'vid_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
-    const w = 520, h = 390;
-
-    const html = `
-        <div>Synthesized interactive <strong>${initialMode.toUpperCase()}</strong> coded video for <strong>${escapeHtml(prompt)}</strong>:</div>
-        <div class="desu-media-card" id="${uid}_card">
-            <div class="desu-media-stage" id="${uid}_stage">
-                <canvas id="${uid}_canvas2d" width="${w}" height="${h}" style="display:${initialMode === '2d' ? 'block' : 'none'};"></canvas>
-                <div id="${uid}_mount3d" style="width:100%; display:${initialMode === '3d' ? 'block' : 'none'};"></div>
-                <div class="desu-engine-badge" id="${uid}_badge">${initialMode === '3d' ? 'Three.js WebGL' : '2D Canvas'} · AI Synthesis</div>
-            </div>
-
-            <!-- YouTube-Style Scrubbable Progress & Timeline Controls -->
-            <div class="desu-yt-controls">
-                <button type="button" class="desu-play-btn" id="${uid}_play" title="Play / Pause">⏸</button>
-                <span class="desu-time-label" id="${uid}_time">0:00.0 / ${formatTime(initialDuration)}</span>
-                <input type="range" class="desu-scrubber" id="${uid}_scrub" min="0" max="${initialDuration}" step="0.02" value="0" />
-            </div>
-
-            <!-- Duration Selector & Engine Switcher Bar -->
-            <div class="desu-media-bar">
-                <div class="desu-dur-group">
-                    <span style="font-size:11px; color:var(--text-muted);">Length:</span>
-                    ${[5, 10, 20, 30, 60].map(sec => `<button type="button" class="desu-dur-pill ${sec === initialDuration ? 'active' : ''}" onclick="window.setDesuVideoDuration('${uid}', ${sec}, this)">${sec}s</button>`).join('')}
-                </div>
-                <div style="display:flex; gap:5px;">
-                    <button type="button" class="desu-media-btn" onclick="window.toggleDesu3DMode('${uid}')">🧊 2D/3D</button>
-                    <button type="button" class="desu-media-btn" onclick="const el=document.getElementById('${uid}_code'); el.style.display=el.style.display==='none'?'block':'none';">&lt;/&gt;</button>
-                    <button type="button" class="desu-media-btn" onclick="window.exportDesuPlayerWebM('${uid}', this)">⬇ .WebM</button>
-                </div>
-            </div>
-            <pre id="${uid}_code" class="desu-code-drawer" style="display:none;"><code>// Generating custom deterministic ${initialMode.toUpperCase()} scene code for "${escapeHtml(prompt)}"...</code></pre>
-        </div>`;
-
-    setTimeout(() => initScrubbableVideoPlayer(uid, prompt, initialMode, initialDuration, w, h), 60);
-
-    return {
-        text: html,
-        rawText: `[Coded ${initialMode.toUpperCase()} Video: ${prompt} (${initialDuration}s)]`,
-        isHtml: true,
-        followUp: `audio ${prompt}`
-    };
-}
-
-async function initScrubbableVideoPlayer(uid, prompt, initialMode, initialDuration, w, h) {
-    const canvas2d = document.getElementById(`${uid}_canvas2d`);
-    const mount3d = document.getElementById(`${uid}_mount3d`);
-    const playBtn = document.getElementById(`${uid}_play`);
-    const timeLabel = document.getElementById(`${uid}_time`);
-    const scrubber = document.getElementById(`${uid}_scrub`);
-    const codeEl = document.getElementById(`${uid}_code`);
-    const badgeEl = document.getElementById(`${uid}_badge`);
-    if (!canvas2d || !scrubber) return;
-
-    const player = {
-        uid,
-        prompt,
-        mode: initialMode,
-        duration: initialDuration,
-        t: 0,
-        playing: true,
-        scrubbing: false,
-        lastNow: performance.now(),
-        custom2DFn: null,
-        custom3DFn: null,
-        three: null
-    };
-    activePlayers[uid] = player;
-
-    // Setup Three.js WebGL Context if available
-    if (typeof window.THREE !== 'undefined' && mount3d) {
-        const scene = new window.THREE.Scene();
-        const camera = new window.THREE.PerspectiveCamera(50, w / h, 0.1, 1000);
-        const renderer = new window.THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
-        renderer.setSize(w, h);
-        renderer.domElement.style.width = '100%';
-        renderer.domElement.style.height = 'auto';
-        renderer.domElement.style.display = 'block';
-        mount3d.innerHTML = '';
-        mount3d.appendChild(renderer.domElement);
-        player.three = { scene, camera, renderer, state: {} };
-    }
-
-    function renderAtCurrentTime() {
-        const clampedT = Math.max(0, Math.min(player.duration, player.t));
-        if (player.mode === '3d' && player.three) {
-            const { scene, camera, renderer, state } = player.three;
-            if (typeof player.custom3DFn === 'function') {
-                try {
-                    player.custom3DFn(window.THREE, scene, camera, clampedT, player.duration, state);
-                } catch (e) {
-                    renderCompositionalThreeScene(window.THREE, scene, camera, clampedT, player.duration, state, player.prompt);
-                }
-            } else {
-                renderCompositionalThreeScene(window.THREE, scene, camera, clampedT, player.duration, state, player.prompt);
-            }
-            renderer.render(scene, camera);
-        } else {
-            const ctx = canvas2d.getContext('2d');
-            renderDeterministic2DScene(ctx, w, h, player.prompt, clampedT, player.duration, player.custom2DFn);
+    } else if (isCity) {
+        for (let i = 0; i < 12; i++) {
+            const bw = w / 10, bx = i * (w / 12), bh = 90 + ((i * 73) % 160);
+            ctx.fillStyle = i % 2 === 0 ? '#0d061a' : '#160b2c';
+            ctx.fillRect(bx, h * 0.78 - bh, bw, bh);
         }
-        if (!player.scrubbing) scrubber.value = clampedT.toFixed(2);
-        timeLabel.textContent = `${formatTime(clampedT)} / ${formatTime(player.duration)}`;
-    }
-    player.renderAtCurrentTime = renderAtCurrentTime;
-
-    // YouTube-Style Hold & Drag Scrubber Events (Forward & Backward in Real Time!)
-    const startScrub = () => { player.scrubbing = true; };
-    const moveScrub = () => {
-        player.t = parseFloat(scrubber.value) || 0;
-        renderAtCurrentTime();
-    };
-    const endScrub = () => {
-        player.t = parseFloat(scrubber.value) || 0;
-        player.scrubbing = false;
-        player.lastNow = performance.now();
-        renderAtCurrentTime();
-    };
-
-    scrubber.addEventListener('pointerdown', startScrub);
-    scrubber.addEventListener('touchstart', startScrub, { passive: true });
-    scrubber.addEventListener('input', moveScrub);
-    scrubber.addEventListener('change', endScrub);
-    scrubber.addEventListener('pointerup', endScrub);
-    scrubber.addEventListener('touchend', endScrub);
-
-    playBtn.onclick = () => {
-        player.playing = !player.playing;
-        playBtn.textContent = player.playing ? '⏸' : '▶';
-        player.lastNow = performance.now();
-    };
-
-    function tick(now) {
-        if (!document.body.contains(scrubber)) return;
-        const dt = (now - player.lastNow) / 1000;
-        player.lastNow = now;
-        if (player.playing && !player.scrubbing) {
-            player.t += dt;
-            if (player.t >= player.duration) player.t = player.t % player.duration;
-            renderAtCurrentTime();
+        for (let k = 0; k < 6; k++) {
+            const lx = ((t * 140 * (k % 2 ? 1 : -1) + k * 90) % w + w) % w;
+            ctx.fillStyle = k % 2 ? '#ff69b4' : '#60a5fa';
+            ctx.fillRect(lx, h * 0.82 + k * 8, 36, 3);
         }
-        requestAnimationFrame(tick);
     }
-    requestAnimationFrame(tick);
-
-    // Request AI-Synthesized Custom Code for this exact prompt in the background
-    try {
-        const res = await fetch('/api/web', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ source: 'code_media', kind: player.mode, q: prompt })
-        });
-        const data = await res.json();
-        if (data?.code) {
-            if (player.mode === '3d') {
-                player.custom3DFn = new Function('THREE', 'scene', 'camera', 't', 'duration', 'state', data.code);
-                if (player.three) {
-                    // Clear scene for custom AI 3D build
-                    while (player.three.scene.children.length > 0) player.three.scene.remove(player.three.scene.children[0]);
-                    player.three.state = {};
-                }
-            } else {
-                player.custom2DFn = new Function('ctx', 'w', 'h', 't', 'duration', 'Math', data.code);
-            }
-            if (codeEl) codeEl.textContent = data.code;
-            if (badgeEl) badgeEl.textContent = `${player.mode === '3d' ? 'Three.js 3D' : '2D Canvas'} · Custom AI Code`;
-            renderAtCurrentTime();
-        }
-    } catch (e) {}
 }
-
-window.setDesuVideoDuration = function (uid, newSec, pillEl) {
-    const p = activePlayers[uid];
-    if (!p) return;
-    p.duration = newSec;
-    if (p.t > newSec) p.t = 0;
-    const scrubber = document.getElementById(`${uid}_scrub`);
-    if (scrubber) scrubber.max = String(newSec);
-    if (pillEl && pillEl.parentElement) {
-        pillEl.parentElement.querySelectorAll('.desu-dur-pill').forEach(el => el.classList.remove('active'));
-        pillEl.classList.add('active');
-    }
-    p.renderAtCurrentTime();
-};
-
-window.toggleDesu3DMode = function (uid) {
-    const p = activePlayers[uid];
-    if (!p) return;
-    p.mode = p.mode === '3d' ? '2d' : '3d';
-    const c2d = document.getElementById(`${uid}_canvas2d`);
-    const m3d = document.getElementById(`${uid}_mount3d`);
-    const badge = document.getElementById(`${uid}_badge`);
-    if (c2d) c2d.style.display = p.mode === '2d' ? 'block' : 'none';
-    if (m3d) m3d.style.display = p.mode === '3d' ? 'block' : 'none';
-    if (badge) badge.textContent = p.mode === '3d' ? 'Three.js WebGL 3D' : '2D Canvas';
-    p.renderAtCurrentTime();
-};
-
-window.exportDesuPlayerWebM = function (uid, btnEl) {
-    const p = activePlayers[uid];
-    if (!p) return;
-    const activeCanvas = (p.mode === '3d' && p.three)
-        ? p.three.renderer.domElement
-        : document.getElementById(`${uid}_canvas2d`);
-    if (!activeCanvas || !activeCanvas.captureStream || typeof MediaRecorder === 'undefined') return;
-
-    const recSecs = Math.min(p.duration, 15);
-    const orig = btnEl.textContent;
-    btnEl.textContent = `⏺ ${recSecs}s...`;
-    btnEl.disabled = true;
-
-    try {
-        const stream = activeCanvas.captureStream(30);
-        const recorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
-        const chunks = [];
-        recorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
-        recorder.onstop = () => {
-            const blob = new Blob(chunks, { type: 'video/webm' });
-            const a = document.createElement('a');
-            a.href = URL.createObjectURL(blob);
-            a.download = `desu-${p.mode}-${Date.now().toString(36)}.webm`;
-            a.click();
-            btnEl.textContent = orig;
-            btnEl.disabled = false;
-        };
-        recorder.start();
-        setTimeout(() => recorder.stop(), recSecs * 1000);
-    } catch (e) {
-        btnEl.textContent = orig;
-        btnEl.disabled = false;
-    }
-};
-
-// Coded Image Generator (Also Uses AI-Synthesized Canvas Code + Compositional Engine)
-function buildCodedImageReply(prompt) {
-    const uid = 'img_' + Date.now().toString(36);
-    const w = 520, h = 380;
-    const html = `
-        <div>Rendered procedural coded image for <strong>${escapeHtml(prompt)}</strong>:</div>
-        <div class="desu-media-card">
-            <div class="desu-media-stage">
-                <canvas id="${uid}_canvas" width="${w}" height="${h}"></canvas>
-            </div>
-            <pre id="${uid}_code" class="desu-code-drawer" style="display:none;"><code>// Procedural Canvas Image Code — "${escapeHtml(prompt)}"</code></pre>
-            <div class="desu-media-bar">
-                <span style="font-size:11.5px; color:var(--text-muted);">Coded Canvas · ${w}×${h}</span>
-                <div style="display:flex; gap:6px;">
-                    <button type="button" class="desu-media-btn" onclick="window.remixCodedImage('${uid}', '${escapeHtml(prompt).replace(/'/g, "\\'")}')">↻ Remix</button>
-                    <button type="button" class="desu-media-btn" onclick="const el=document.getElementById('${uid}_code'); el.style.display=el.style.display==='none'?'block':'none';">&lt;/&gt; Code</button>
-                    <button type="button" class="desu-media-btn" onclick="window.downloadCodedCanvas('${uid}_canvas', 'desu-image.png')">⬇ PNG</button>
-                </div>
-            </div>
-        </div>`;
-
-    setTimeout(async () => {
-        const c = document.getElementById(`${uid}_canvas`);
-        if (!c) return;
-        const ctx = c.getContext('2d');
-        renderDeterministic2DScene(ctx, w, h, prompt, 1.4, 10, null);
-        try {
-            const r = await fetch('/api/web', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ source: 'code_media', kind: '2d', q: prompt })
-            });
-            const d = await r.json();
-            if (d?.code) {
-                const fn = new Function('ctx', 'w', 'h', 't', 'duration', 'Math', d.code);
-                renderDeterministic2DScene(ctx, w, h, prompt, 1.4, 10, fn);
-                const ce = document.getElementById(`${uid}_code`);
-                if (ce) ce.textContent = d.code;
-            }
-        } catch (e) {}
-    }, 50);
-
-    return { text: html, rawText: `[Coded Image: ${prompt}]`, isHtml: true, followUp: `3d video ${prompt}` };
-}
-
-window.remixCodedImage = function (uid, prompt) {
-    const c = document.getElementById(`${uid}_canvas`);
-    if (!c) return;
-    renderDeterministic2DScene(c.getContext('2d'), c.width, c.height, prompt, Math.random() * 12, 10, null);
-};
 
 window.downloadCodedCanvas = function (canvasId, filename) {
     const c = document.getElementById(canvasId);
@@ -982,209 +1061,33 @@ window.downloadCodedCanvas = function (canvasId, filename) {
     a.click();
 };
 
-// ============================================================================
-// 3. YOUTUBE-STYLE SCRUBBABLE WEB AUDIO SYNTHESIZER (Pre-Computed WAV + Custom Duration)
-// ============================================================================
-const activeAudioPlayers = {};
+window.recordDesuVideo = function (canvasId, btnEl) {
+    const canvas = document.getElementById(canvasId);
+    if (!canvas || !canvas.captureStream || typeof MediaRecorder === 'undefined') return;
+    const origText = btnEl.textContent;
+    btnEl.textContent = '⏺ Rec 4s...';
+    btnEl.disabled = true;
 
-function buildScrubbableAudioReply(prompt, initialDuration = 10) {
-    const uid = 'aud_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
-    const html = `
-        <div>Synthesized scrubbable Web Audio track for <strong>${escapeHtml(prompt)}</strong>:</div>
-        <div class="desu-media-card">
-            <div class="desu-media-stage" style="min-height:130px;">
-                <canvas id="${uid}_vis" width="480" height="130"></canvas>
-            </div>
-            <audio id="${uid}_audio" style="display:none;"></audio>
-
-            <!-- YouTube-Style Audio Progress Scrubber -->
-            <div class="desu-yt-controls">
-                <button type="button" class="desu-play-btn" id="${uid}_play">▶</button>
-                <span class="desu-time-label" id="${uid}_time">0:00.0 / ${formatTime(initialDuration)}</span>
-                <input type="range" class="desu-scrubber" id="${uid}_scrub" min="0" max="${initialDuration}" step="0.02" value="0" />
-            </div>
-
-            <div class="desu-media-bar">
-                <div class="desu-dur-group">
-                    <span style="font-size:11px; color:var(--text-muted);">Length:</span>
-                    ${[5, 10, 20, 30].map(sec => `<button type="button" class="desu-dur-pill ${sec === initialDuration ? 'active' : ''}" onclick="window.setDesuAudioDuration('${uid}', ${sec}, this)">${sec}s</button>`).join('')}
-                </div>
-                <div style="display:flex; gap:5px;">
-                    <button type="button" class="desu-media-btn" onclick="const el=document.getElementById('${uid}_code'); el.style.display=el.style.display==='none'?'block':'none';">&lt;/&gt;</button>
-                    <a class="desu-media-btn" id="${uid}_dl" download="desu-audio.wav">⬇ .WAV</a>
-                </div>
-            </div>
-            <pre id="${uid}_code" class="desu-code-drawer" style="display:none;"><code>// Web Audio DSP Sample Synthesizer — "${escapeHtml(prompt)}"</code></pre>
-        </div>`;
-
-    setTimeout(() => initScrubbableAudioPlayer(uid, prompt, initialDuration), 60);
-    return { text: html, rawText: `[Coded Audio: ${prompt} (${initialDuration}s)]`, isHtml: true };
-}
-
-function generateAudioWavBlob(prompt, duration, customSampleFn = null) {
-    const sampleRate = 22050;
-    const numSamples = Math.floor(sampleRate * duration);
-    const samples = new Float32Array(numSamples);
-    const p = prompt.toLowerCase();
-    const h = hashPrompt(p);
-
-    let phase = 0;
-    let lastNoise = 0;
-    const scales = [
-        [261.63, 293.66, 329.63, 392.00, 440.00, 523.25],
-        [220.00, 261.63, 293.66, 329.63, 392.00, 440.00],
-        [196.00, 246.94, 293.66, 370.00, 392.00, 493.88]
-    ];
-    const scale = scales[h % scales.length];
-
-    for (let i = 0; i < numSamples; i++) {
-        const t = i / sampleRate;
-        let val = 0;
-
-        if (typeof customSampleFn === 'function') {
-            try { val = Number(customSampleFn(t, duration, Math)) || 0; } catch (e) { customSampleFn = null; }
-        }
-
-        if (!customSampleFn) {
-            if (/\b(cat|kitten|meow|purr)\b/.test(p)) {
-                const cycle = t % 2.2;
-                if (cycle > 0.15 && cycle < 1.25) {
-                    const local = (cycle - 0.15) / 1.1;
-                    const env = Math.sin(Math.PI * local);
-                    const freq = 480 + 360 * Math.sin(Math.PI * Math.pow(local, 0.7)) - 140 * local;
-                    phase += (2 * Math.PI * freq) / sampleRate;
-                    val = (Math.sin(phase) * 0.55 + Math.sin(phase * 2) * 0.25) * env * 0.55;
-                }
-                val += Math.sin(2 * Math.PI * 26 * t) * 0.08;
-            } else if (/\b(dog|bark|wolf)\b/.test(p)) {
-                const cycle = t % 1.4;
-                if (cycle < 0.28) {
-                    const local = cycle / 0.28;
-                    const env = Math.sin(Math.PI * local) * Math.exp(-local * 2);
-                    const freq = 320 - local * 140;
-                    phase += (2 * Math.PI * freq) / sampleRate;
-                    val = (Math.sin(phase) + (Math.random() * 0.4 - 0.2)) * env * 0.7;
-                }
-            } else if (/\b(bird|chirp|tweet|whistle|flute)\b/.test(p)) {
-                const cycle = t % 0.9;
-                if (cycle < 0.35) {
-                    const local = cycle / 0.35;
-                    const freq = 1600 + Math.sin(local * 18) * 450 + local * 600;
-                    phase += (2 * Math.PI * freq) / sampleRate;
-                    val = Math.sin(phase) * Math.sin(Math.PI * local) * 0.45;
-                }
-            } else if (/\b(rain|water|ocean|wave|sea|wind|storm|river)\b/.test(p)) {
-                const white = Math.random() * 2 - 1;
-                lastNoise = (lastNoise + 0.04 * white) / 1.04;
-                const swell = 0.4 + 0.5 * Math.sin(t * 1.8);
-                val = lastNoise * swell * 1.9;
-            } else {
-                // Melodic Multi-Voice Synthesizer seeded by prompt
-                const tempo = 2.4 + (h % 3) * 0.4;
-                const step = Math.floor(t * tempo);
-                const noteTime = (t * tempo) % 1;
-                const freq = scale[(step + (h % 5)) % scale.length];
-                const env = Math.exp(-noteTime * 3.2) * Math.min(1, noteTime * 35);
-                val = (Math.sin(2 * Math.PI * freq * t) * 0.5 + Math.sin(2 * Math.PI * (freq * 0.5) * t) * 0.25 + Math.sin(2 * Math.PI * (freq * 1.5) * t) * 0.12) * env * 0.65;
-            }
-        }
-        samples[i] = Math.max(-1, Math.min(1, val));
+    try {
+        const stream = canvas.captureStream(30);
+        const recorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
+        const chunks = [];
+        recorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
+        recorder.onstop = () => {
+            const blob = new Blob(chunks, { type: 'video/webm' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = `desu-video-${Date.now().toString(36)}.webm`;
+            a.click();
+            btnEl.textContent = origText;
+            btnEl.disabled = false;
+        };
+        recorder.start();
+        setTimeout(() => recorder.stop(), 4000);
+    } catch (e) {
+        btnEl.textContent = origText;
+        btnEl.disabled = false;
     }
-
-    const wavBuffer = new ArrayBuffer(44 + numSamples * 2);
-    const view = new DataView(wavBuffer);
-    const writeStr = (off, s) => { for (let i = 0; i < s.length; i++) view.setUint8(off + i, s.charCodeAt(i)); };
-    writeStr(0, 'RIFF'); view.setUint32(4, 36 + numSamples * 2, true); writeStr(8, 'WAVE');
-    writeStr(12, 'fmt '); view.setUint32(16, 16, true); view.setUint16(20, 1, true); view.setUint16(22, 1, true);
-    view.setUint32(24, sampleRate, true); view.setUint32(28, sampleRate * 2, true);
-    view.setUint16(32, 2, true); view.setUint16(34, 16, true); writeStr(36, 'data'); view.setUint32(40, numSamples * 2, true);
-    for (let i = 0, off = 44; i < numSamples; i++, off += 2) {
-        const s = samples[i];
-        view.setInt16(off, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
-    }
-    return { blob: new Blob([view], { type: 'audio/wav' }), samples };
-}
-
-function initScrubbableAudioPlayer(uid, prompt, initialDuration) {
-    const audioEl = document.getElementById(`${uid}_audio`);
-    const visCanvas = document.getElementById(`${uid}_vis`);
-    const playBtn = document.getElementById(`${uid}_play`);
-    const timeLabel = document.getElementById(`${uid}_time`);
-    const scrubber = document.getElementById(`${uid}_scrub`);
-    const dlLink = document.getElementById(`${uid}_dl`);
-    if (!audioEl || !visCanvas || !scrubber) return;
-
-    const state = { uid, prompt, duration: initialDuration, samples: null, customFn: null };
-    activeAudioPlayers[uid] = state;
-
-    function rebuildTrack() {
-        const { blob, samples } = generateAudioWavBlob(state.prompt, state.duration, state.customFn);
-        state.samples = samples;
-        const url = URL.createObjectURL(blob);
-        audioEl.src = url;
-        if (dlLink) dlLink.href = url;
-        scrubber.max = String(state.duration);
-        drawAudioScrubWaveform(visCanvas, samples, audioEl.currentTime || 0, state.duration);
-        timeLabel.textContent = `${formatTime(audioEl.currentTime || 0)} / ${formatTime(state.duration)}`;
-    }
-    state.rebuildTrack = rebuildTrack;
-    rebuildTrack();
-
-    playBtn.onclick = () => {
-        if (audioEl.paused) { audioEl.play(); playBtn.textContent = '⏸'; }
-        else { audioEl.pause(); playBtn.textContent = '▶'; }
-    };
-
-    audioEl.addEventListener('timeupdate', () => {
-        scrubber.value = audioEl.currentTime.toFixed(2);
-        timeLabel.textContent = `${formatTime(audioEl.currentTime)} / ${formatTime(state.duration)}`;
-        drawAudioScrubWaveform(visCanvas, state.samples, audioEl.currentTime, state.duration);
-    });
-
-    audioEl.addEventListener('ended', () => { playBtn.textContent = '▶'; });
-
-    scrubber.addEventListener('input', () => {
-        const target = parseFloat(scrubber.value) || 0;
-        audioEl.currentTime = target;
-        timeLabel.textContent = `${formatTime(target)} / ${formatTime(state.duration)}`;
-        drawAudioScrubWaveform(visCanvas, state.samples, target, state.duration);
-    });
-}
-
-function drawAudioScrubWaveform(canvas, samples, currentT, duration) {
-    if (!canvas || !samples) return;
-    const ctx = canvas.getContext('2d');
-    const w = canvas.width, h = canvas.height;
-    ctx.fillStyle = '#070410';
-    ctx.fillRect(0, 0, w, h);
-
-    const progressX = (currentT / Math.max(0.1, duration)) * w;
-    const bars = 64;
-    const step = Math.floor(samples.length / bars);
-    const barW = (w / bars) - 2;
-
-    for (let i = 0; i < bars; i++) {
-        let peak = 0;
-        for (let j = 0; j < step; j += 12) {
-            const v = Math.abs(samples[i * step + j] || 0);
-            if (v > peak) peak = v;
-        }
-        const bh = Math.max(6, peak * (h - 24));
-        const x = i * (barW + 2);
-        ctx.fillStyle = x <= progressX ? '#ff69b4' : 'rgba(196, 150, 255, 0.38)';
-        ctx.fillRect(x, (h - bh) / 2, barW, bh);
-    }
-}
-
-window.setDesuAudioDuration = function (uid, newSec, pillEl) {
-    const st = activeAudioPlayers[uid];
-    if (!st) return;
-    st.duration = newSec;
-    if (pillEl && pillEl.parentElement) {
-        pillEl.parentElement.querySelectorAll('.desu-dur-pill').forEach(el => el.classList.remove('active'));
-        pillEl.classList.add('active');
-    }
-    st.rebuildTrack();
 };
 
 // ============================================================================
@@ -1194,7 +1097,7 @@ function shouldRunOmniSearch(raw) {
     const q = raw.trim();
     const lower = q.toLowerCase();
 
-    if (/\b(integrate|integration|integral|derivative|differentiation|differential|differentiate|calculus|solve|equation|factor|expand|simplify|limit|matrix|sin|cos|tan|log|ln|sqrt|audio|video|image|draw|animate|3d|threejs|sound|music|i|im|i'm|my|me|you|your|we|us|sad|happy|tired|bored|feeling|feel|good|bad|wrong|right|code|coding|program|script|weather|temperature|how are you|can you|do you|remember)\b/i.test(lower)) {
+    if (/\b(integrate|integration|integral|derivative|differentiation|differential|differentiate|calculus|solve|factor|expand|simplify|equation|limit|matrix|sin|cos|tan|log|ln|sqrt|3d|audio|video|image|draw|animate|sound|music|i|im|i'm|my|me|you|your|we|us|sad|happy|tired|bored|feeling|feel|good|bad|wrong|right|code|coding|program|script|weather|temperature|how are you|can you|do you|remember)\b/i.test(lower)) {
         return false;
     }
     if (/[0-9+\-*/^=]/.test(lower)) return false;
@@ -1204,7 +1107,7 @@ function shouldRunOmniSearch(raw) {
     return wordCount >= 1 && wordCount <= 4 && !q.endsWith('?');
 }
 
-async function queryDirectBrowserAI(raw, chatHistory, profile, multiData, extraDirective = '') {
+async function queryConversationalAI(raw, chatHistory, profile, multiData, extraDirective = '') {
     const modeMap = {
         conversational: 'Use a warm, natural, human-like conversational tone. Be concise, supportive, and clear.',
         educational: 'Use an Educational Mode: explain step-by-step with clear structure and examples.',
@@ -1223,9 +1126,9 @@ async function queryDirectBrowserAI(raw, chatHistory, profile, multiData, extraD
     const systemPrompt = `You are ${profile.botName || 'Desu'}, a self-improving, empathetic, independent AI assistant.
 ${modeMap[profile.mode] || modeMap.conversational}
 Rules:
-- Adapt to user preferences: ${profile.text || 'Be clear and natural.'}
+- Adapt to the user's preferences: ${profile.text || 'Be clear and natural.'}
 ${extraDirective ? `- CRITICAL QUALITY OVERRIDE: ${extraDirective}` : ''}
-- Solve math, calculus, physics, and coding questions accurately step-by-step.
+- Solve any math, physics, multivariable algebra, or coding question step-by-step.
 - Optionally append a final line "FOLLOWUP: [short 3-5 word topic]" if relevant.
 Today is ${new Date().toDateString()}.${groundingContext}`;
 
@@ -1238,25 +1141,28 @@ Today is ${new Date().toDateString()}.${groundingContext}`;
         { role: 'user', content: raw }
     ];
 
-    // 1. Try Server Provider Router (Groq / Gemini / OpenRouter / Multi-Model)
+    // 1. Try Server Backend First (Uses Groq / Gemini / OpenRouter if configured)
     try {
-        const savedKey = load('desu_api_key') || '';
         const r = await fetch('/api/web', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ source: 'ai', q: raw, messages, apiKey: savedKey })
+            body: JSON.stringify({ source: 'ai', q: raw, messages })
         });
         const d = await r.json();
-        if (d?.reply) return d.reply;
+        if (d?.reply && !d.rateLimited) return d.reply;
     } catch (e) {}
 
     // 2. Direct Browser Fallback
     try {
-        const url = `https://text.pollinations.ai/${encodeURIComponent(raw)}?model=openai&seed=${Math.floor(Math.random() * 99999)}&system=${encodeURIComponent(systemPrompt.slice(0, 450))}`;
-        const r = await fetch(url);
+        const r = await fetch('https://text.pollinations.ai/openai', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ model: 'openai', messages, seed: Math.floor(Math.random() * 999999) })
+        });
         if (r.ok) {
-            const txt = (await r.text()).trim();
-            if (txt && !txt.includes('Free limit reached') && !txt.startsWith('<!DOCTYPE')) return txt;
+            const d = await r.json();
+            const reply = (d?.choices?.[0]?.message?.content || '').trim();
+            if (reply && !reply.includes('Free limit reached')) return reply;
         }
     } catch (e) {}
 
@@ -1284,27 +1190,21 @@ function buildOmniPulseHtml(multiData, aiSynthesisHtml) {
     return html;
 }
 
+// ============================================================================
+// 5. MASTER ROUTER
+// ============================================================================
 async function shinuReply(inputMessage, chatHistory, extraDirective = '') {
     const raw = inputMessage.trim();
     const lower = raw.toLowerCase();
 
-    // Optional In-Chat API Key Setter ("key: gsk_..." or "key: AIza...")
-    const keyMatch = raw.match(/^(?:set\s+)?key\s*:\s*(\S+)$/i);
-    if (keyMatch) {
-        store('desu_api_key', keyMatch[1].trim());
-        return { text: `Connected your high-speed AI API key! DESU will now use it for instant code synthesis and reasoning.`, isHtml: false };
-    }
-
-    // 1. Coded 2D Video, Three.js 3D Video, Image & Scrubbable Audio Studio
+    // 1. Scrubbable Three.js 3D, 2D Video, Image & Custom-Length Audio Studio
     const mediaCmd = parseMediaCommand(raw);
     if (mediaCmd) {
         if (mediaCmd.type === 'audio') return buildScrubbableAudioReply(mediaCmd.prompt, mediaCmd.duration);
-        if (mediaCmd.type === '3d') return buildScrubbableVideoReply(mediaCmd.prompt, '3d', mediaCmd.duration);
-        if (mediaCmd.type === 'video') return buildScrubbableVideoReply(mediaCmd.prompt, '2d', mediaCmd.duration);
-        return buildCodedImageReply(mediaCmd.prompt);
+        return await buildScrubbableMediaReply(mediaCmd);
     }
 
-    // 2. Universal Nerdamer CAS Symbolic & Numerical Math Solver
+    // 2. Universal Symbolic CAS Math Solver (Nerdamer + Multi-Variable Systems + Calculus)
     const mathReply = tryUniversalMathematics(raw);
     if (mathReply) return mathReply;
 
@@ -1317,6 +1217,7 @@ async function shinuReply(inputMessage, chatHistory, extraDirective = '') {
         if (golden) return { text: formatCleanMarkdown(golden), rawText: golden, isHtml: true };
     }
 
+    // 4. Greetings
     if (/^(hi+|hey+|hello+|yo|sup|hi bro|hey bro|hello bro)\b[\s!.,?]*$|^hi$/i.test(lower)) {
         const who = Learn.userName() ? ' ' + Learn.userName() : '';
         return { text: `Hey${who}! What are we exploring or building today?`, isHtml: false };
@@ -1324,52 +1225,66 @@ async function shinuReply(inputMessage, chatHistory, extraDirective = '') {
 
     const profile = Learn.context();
 
-    // 4. Automatic Omni-Search on Factual Topics
+    // 5. Automatic Omni-Search on Topic Queries
     if (shouldRunOmniSearch(raw) && !extraDirective) {
         const coreTopic = Learn.core(raw);
         Learn.noteTopic(coreTopic);
+
         let multiData = null;
         try {
             const mRes = await fetch(`/api/web?source=multisearch&q=${encodeURIComponent(coreTopic)}`);
             multiData = await mRes.json();
         } catch (e) {}
 
-        const hasMulti = multiData && (multiData.wiki || multiData.google?.length || multiData.reddit?.length);
-        let aiSynth = await queryDirectBrowserAI(raw, chatHistory, profile, hasMulti ? multiData : null);
-        let followUp = multiData?.wiki?.relatedTopic || null;
+        const hasMultiContent = multiData && (multiData.wiki || multiData.google?.length || multiData.reddit?.length);
+        let aiSynthesis = await queryConversationalAI(raw, chatHistory, profile, hasMultiContent ? multiData : null);
+        let suggestedFollowUp = multiData?.wiki?.relatedTopic || null;
 
-        if (aiSynth) {
-            const fw = aiSynth.match(/\n*FOLLOWUP:\s*(.+)$/i);
-            if (fw) { followUp = fw[1].trim(); aiSynth = aiSynth.replace(/\n*FOLLOWUP:\s*(.+)$/i, '').trim(); }
+        if (aiSynthesis) {
+            const fwMatch = aiSynthesis.match(/\n*FOLLOWUP:\s*(.+)$/i);
+            if (fwMatch) {
+                suggestedFollowUp = fwMatch[1].replace(/[?.!]+$/, '').trim();
+                aiSynthesis = aiSynthesis.replace(/\n*FOLLOWUP:\s*(.+)$/i, '').trim();
+            }
         }
-        if (hasMulti) {
+
+        if (hasMultiContent) {
             return {
-                text: buildOmniPulseHtml(multiData, aiSynth ? formatCleanMarkdown(aiSynth) : null),
-                rawText: aiSynth || multiData?.wiki?.extract || coreTopic,
+                text: buildOmniPulseHtml(multiData, aiSynthesis ? formatCleanMarkdown(aiSynthesis) : null),
+                rawText: aiSynthesis || multiData?.wiki?.extract || coreTopic,
                 isHtml: true,
                 sources: multiData.sources || [],
-                followUp
+                followUp: suggestedFollowUp
             };
         }
     }
 
-    // 5. Conversational AI
-    let chatReply = await queryDirectBrowserAI(raw, chatHistory, profile, null, extraDirective);
+    // 6. Conversational AI & Complex Mathematical Word Problems
+    let chatReply = await queryConversationalAI(raw, chatHistory, profile, null, extraDirective);
     if (chatReply) {
-        let followUp = null;
-        const fw = chatReply.match(/\n*FOLLOWUP:\s*(.+)$/i);
-        if (fw) { followUp = fw[1].trim(); chatReply = chatReply.replace(/\n*FOLLOWUP:\s*(.+)$/i, '').trim(); }
-        return { text: formatCleanMarkdown(chatReply), rawText: chatReply, isHtml: true, sources: [], followUp };
+        let suggestedFollowUp = null;
+        const fwMatch = chatReply.match(/\n*FOLLOWUP:\s*(.+)$/i);
+        if (fwMatch) {
+            suggestedFollowUp = fwMatch[1].replace(/[?.!]+$/, '').trim();
+            chatReply = chatReply.replace(/\n*FOLLOWUP:\s*(.+)$/i, '').trim();
+        }
+        return {
+            text: formatCleanMarkdown(chatReply),
+            rawText: chatReply,
+            isHtml: true,
+            sources: [],
+            followUp: suggestedFollowUp
+        };
     }
 
     return {
-        text: `Try asking any math problem (<code>solve x+y=10, x-y=4</code>, <code>integrate x^2*sin(x)</code>), or generate scrubbable 2D/3D videos & audio (<code>3d video helicopter 20s</code>, <code>video car in city</code>, <code>audio rain 15s</code>).`,
+        text: `Ready when you are — try <code>3d video solar system 20s</code>, <code>video of a car in a city</code>, <code>solve 2x + y = 10, x - y = 2</code>, or <code>Integration of x^2 * sin(x)</code>!`,
         isHtml: true
     };
 }
 
 // ============================================================================
-// 5. CHAT SESSION & HISTORY
+// 6. CHAT SESSION & HISTORY
 // ============================================================================
 let chats = [];
 try { chats = JSON.parse(load('shinu_chats') || '[]'); } catch (e) { chats = []; }
@@ -1397,7 +1312,7 @@ function addBubble(role, content, isHtml = false, autoScroll = true, meta = {}) 
         if (followEl) {
             followEl.style.cursor = 'pointer';
             followEl.onclick = () => {
-                const isDirectCmd = /^(audio|video|3d|image|draw|animate|table of|integration|differentiation|differential|solve)\b/i.test(meta.followUp.trim());
+                const isDirectCmd = /^(3d|audio|video|image|draw|animate|table of|integration|differentiation|differential|solve)\b/i.test(meta.followUp.trim());
                 userInput.value = isDirectCmd ? meta.followUp.trim() : `Tell me about ${meta.followUp}`;
                 handleSend();
             };
@@ -1420,6 +1335,7 @@ function addBubble(role, content, isHtml = false, autoScroll = true, meta = {}) 
 window.regenerateImprovedReply = async function (userQuestion, previousAnswer, directive) {
     const chat = currentChat();
     const historySnapshot = chat ? [...chat.messages] : [];
+
     const typing = document.createElement('div');
     typing.className = 'message-bubble bot';
     typing.innerHTML = '<span class="typing"><i></i><i></i><i></i></span>';
@@ -1433,6 +1349,7 @@ window.regenerateImprovedReply = async function (userQuestion, previousAnswer, d
         chat.messages.push({ role: 'bot', text: replyObj.text, rawText: replyObj.rawText || replyObj.text, isHtml: replyObj.isHtml });
         saveChats();
     }
+
     addBubble('bot', replyObj.text, replyObj.isHtml, true, {
         sources: replyObj.sources,
         followUp: replyObj.followUp,
@@ -1442,7 +1359,10 @@ window.regenerateImprovedReply = async function (userQuestion, previousAnswer, d
     });
 };
 
-function closeDrawer() { sideDrawer.classList.remove('open'); drawerBackdrop.classList.remove('active'); }
+function closeDrawer() {
+    sideDrawer.classList.remove('open');
+    drawerBackdrop.classList.remove('active');
+}
 
 function renderHistory() {
     historyList.innerHTML = '';
@@ -1467,7 +1387,12 @@ function renderHistory() {
         item.onclick = () => {
             currentId = chat.id;
             chatContainer.innerHTML = '';
-            chat.messages.forEach(m => addBubble(m.role, m.text, m.isHtml, false, { sources: m.sources, followUp: m.followUp, animateUndissolve: false, rawText: m.rawText }));
+            chat.messages.forEach(m => addBubble(m.role, m.text, m.isHtml, false, {
+                sources: m.sources,
+                followUp: m.followUp,
+                animateUndissolve: false,
+                rawText: m.rawText
+            }));
             chatContainer.scrollTop = chatContainer.scrollHeight;
             centerStage.classList.add('dissolved');
             chatContainer.classList.add('active');
@@ -1498,4 +1423,74 @@ userInput.addEventListener('focus', () => {
 
 quickHelpBtn.onclick = () => {
     centerStage.classList.add('dissolved');
-    chatContainer.classList.
+    chatContainer.classList.add('active');
+    addBubble('bot', `
+        <strong>DESU 3D Studio, YouTube Scrubber & CAS Math Guide:</strong><br>
+        • <strong>3D Three.js & 2D Videos (with Scrubber):</strong> Try <code>3d video solar system 20s</code>, <code>3d video car</code>, or <code>video of a helicopter over mountains</code>. Hold & drag the timeline bar to scrub!<br>
+        • <strong>Custom-Length Audio:</strong> Try <code>audio rain 30s</code> or <code>audio cat 15s</code>.<br>
+        • <strong>Multivariable & Higher Math (Nerdamer CAS):</strong> Try <code>solve 2x + y = 10, x - y = 2</code>, <code>solve x^3 - 6x^2 + 11x - 6 = 0</code>, or <code>integrate x^2 * sin(x)</code>.
+    `, true, true, { animateUndissolve: true, showFeedback: false });
+};
+
+async function handleSend() {
+    const text = userInput.value.trim();
+    if (!text || busy) return;
+    busy = true;
+
+    try {
+        centerStage.classList.add('dissolved');
+        chatContainer.classList.add('active');
+
+        let chat = currentChat();
+        if (!chat) {
+            chat = { id: Date.now().toString(36), topic: Learn.makeTopic(text), messages: [] };
+            chats.push(chat);
+            currentId = chat.id;
+            chatContainer.innerHTML = '';
+        }
+        topicText.textContent = chat.topic;
+
+        const historySnapshot = [...chat.messages];
+        chat.messages.push({ role: 'user', text, rawText: text, isHtml: false });
+        addBubble('user', text, false);
+        saveChats();
+        renderHistory();
+
+        userInput.value = '';
+
+        const typing = document.createElement('div');
+        typing.className = 'message-bubble bot';
+        typing.innerHTML = '<span class="typing"><i></i><i></i><i></i></span>';
+        chatContainer.appendChild(typing);
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+
+        let replyObj;
+        try { replyObj = await shinuReply(text, historySnapshot); }
+        catch (e) { replyObj = { text: 'Something went wrong on my side. Please try again.', isHtml: false }; }
+        typing.remove();
+
+        chat.messages.push({
+            role: 'bot',
+            text: replyObj.text,
+            rawText: replyObj.rawText || replyObj.text,
+            isHtml: replyObj.isHtml,
+            sources: replyObj.sources || [],
+            followUp: replyObj.followUp || null
+        });
+        saveChats();
+        addBubble('bot', replyObj.text, replyObj.isHtml, true, {
+            sources: replyObj.sources,
+            followUp: replyObj.followUp,
+            animateUndissolve: true,
+            userQuestion: text,
+            rawText: replyObj.rawText || replyObj.text
+        });
+    } finally {
+        busy = false;
+    }
+}
+
+document.getElementById('sendBtn').onclick = handleSend;
+userInput.addEventListener('keydown', e => { if (e.key === 'Enter') handleSend(); });
+renderHistory();
+topicText.textContent = Learn.botName();
