@@ -1,4 +1,4 @@
-// engine.js — DESU Conversational AI, Omni-Search, AI Image & Video Generation + Neon Motifs
+// engine.js — DESU Coded Media Studio (Canvas Image, Rigged Video, Web Audio), Calculus Solver & AI Router
 const menuToggle = document.getElementById('menuToggle');
 const sideDrawer = document.getElementById('sideDrawer');
 const drawerBackdrop = document.getElementById('drawerBackdrop');
@@ -11,97 +11,34 @@ const topicText = document.getElementById('topicText');
 const quickHelpBtn = document.getElementById('quickHelpBtn');
 
 function store(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
-function load(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
+function load(k) { try { return localStorage.getItem(k); } catch (e) {} return null; }
 function escapeHtml(s) { return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;"); }
 function safeUrl(u) { return /^https?:\/\//i.test(String(u)) ? String(u) : '#'; }
 
-// Inject CSS for AI Image & Video Studio Cards + Add "Image" & "Video" Pills to Drawer
-(function injectMediaStudioEnhancements() {
-    const style = document.createElement('style');
-    style.textContent = `
-        .desu-media-card {
-            margin-top: 8px;
-            border-radius: 16px;
-            overflow: hidden;
-            border: 1px solid var(--panel-border);
-            background: rgba(10, 8, 18, 0.75);
-            max-width: 340px;
-            box-shadow: 0 12px 32px rgba(0, 0, 0, 0.6);
-        }
-        .desu-media-stage {
-            position: relative;
-            width: 100%;
-            min-height: 220px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: radial-gradient(circle at center, rgba(196,150,255,0.08), rgba(0,0,0,0.9));
-        }
-        .desu-media-stage img,
-        .desu-media-stage canvas {
-            width: 100%;
-            height: auto;
-            display: block;
-        }
-        .desu-media-loader {
-            padding: 36px 16px;
-            text-align: center;
-            font-size: 13px;
-            color: var(--accent-purple);
-            letter-spacing: 0.5px;
-        }
-        .desu-media-bar {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 8px;
-            padding: 10px 12px;
-            border-top: 1px solid var(--panel-border);
-            background: rgba(255, 255, 255, 0.02);
-        }
-        .desu-media-btn {
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid var(--panel-border);
-            color: var(--text-main);
-            padding: 5px 11px;
-            border-radius: 10px;
-            font-size: 12px;
-            font-weight: 600;
-            cursor: pointer;
-            text-decoration: none !important;
-            border-bottom: 1px solid var(--panel-border) !important;
-            transition: all 0.2s ease;
-        }
-        .desu-media-btn:hover {
-            border-color: var(--accent-purple) !important;
-            color: var(--accent-purple);
-            box-shadow: 0 0 12px var(--accent-glow);
-        }
-    `;
-    document.head.appendChild(style);
-
+// Add "Audio" Pill alongside Image & Video in Drawer
+(function ensureStudioPills() {
     const pillBox = document.querySelector('.platform-pills');
-    if (pillBox && !pillBox.querySelector('[data-prefix="image "]')) {
-        const imgPill = document.createElement('span');
-        imgPill.className = 'plat-pill';
-        imgPill.setAttribute('data-prefix', 'image ');
-        imgPill.textContent = '✨ Image';
-
-        const vidPill = document.createElement('span');
-        vidPill.className = 'plat-pill';
-        vidPill.setAttribute('data-prefix', 'video ');
-        vidPill.textContent = '🎬 Video';
-
-        [imgPill, vidPill].forEach(pill => {
-            pill.onclick = () => {
-                userInput.value = pill.getAttribute('data-prefix');
+    if (!pillBox) return;
+    const needed = [
+        { prefix: 'image ', label: '✨ Image' },
+        { prefix: 'video ', label: '🎬 Video' },
+        { prefix: 'audio ', label: '🎵 Audio' }
+    ];
+    needed.reverse().forEach(item => {
+        if (!pillBox.querySelector(`[data-prefix="${item.prefix}"]`)) {
+            const p = document.createElement('span');
+            p.className = 'plat-pill';
+            p.setAttribute('data-prefix', item.prefix);
+            p.textContent = item.label;
+            p.onclick = () => {
+                userInput.value = item.prefix;
                 sideDrawer.classList.remove('open');
                 drawerBackdrop.classList.remove('active');
                 userInput.focus();
             };
-        });
-        pillBox.prepend(imgPill, vidPill);
-    }
+            pillBox.prepend(p);
+        }
+    });
 })();
 
 function formatCleanMarkdown(raw) {
@@ -113,7 +50,6 @@ function formatCleanMarkdown(raw) {
     return safe;
 }
 
-// Smooth Word-by-Word Undissolve Effect
 function applyUndissolveEffect(containerEl) {
     let wordIndex = 0;
     const walk = (node) => {
@@ -128,7 +64,7 @@ function applyUndissolveEffect(containerEl) {
                 } else {
                     const span = document.createElement('span');
                     span.className = 'undissolve-word';
-                    const delay = Math.min(wordIndex * 0.025, 1.6).toFixed(3);
+                    const delay = Math.min(wordIndex * 0.024, 1.5).toFixed(3);
                     span.style.animationDelay = `${delay}s`;
                     span.textContent = part;
                     frag.appendChild(span);
@@ -145,7 +81,8 @@ function applyUndissolveEffect(containerEl) {
             node.tagName !== 'SCRIPT' &&
             node.tagName !== 'STYLE' &&
             node.tagName !== 'SVG' &&
-            node.tagName !== 'CANVAS'
+            node.tagName !== 'CANVAS' &&
+            node.tagName !== 'PRE'
         ) {
             Array.from(node.childNodes).forEach(walk);
         }
@@ -157,204 +94,609 @@ menuToggle.onclick = () => { sideDrawer.classList.toggle('open'); drawerBackdrop
 drawerBackdrop.onclick = () => { sideDrawer.classList.remove('open'); drawerBackdrop.classList.remove('active'); };
 
 // ============================================================================
-// 1. AI IMAGE & VIDEO GENERATION STUDIO (100% Free, Supports 9:16 Portrait)
+// 1. SYMBOLIC CALCULUS, ALGEBRA & MATHEMATICS ENGINE (Solves Integrals, Derivatives, Equations)
+// ============================================================================
+function formatTermCoef(c, pow) {
+    const rounded = Math.round(c * 10000) / 10000;
+    if (pow === 0) return `${rounded}`;
+    const v = pow === 1 ? 'x' : `x^${pow}`;
+    if (rounded === 1) return v;
+    if (rounded === -1) return `-${v}`;
+    return `${rounded}${v}`;
+}
+
+function integrateSingleTerm(termStr) {
+    const t = termStr.replace(/\s+/g, '').toLowerCase();
+    if (!t) return null;
+
+    // Constant: e.g. "5"
+    if (/^[+-]?\d+(\.\d+)?$/.test(t)) {
+        const c = parseFloat(t);
+        if (c === 0) return '0';
+        return c === 1 ? 'x' : c === -1 ? '-x' : `${c}x`;
+    }
+
+    // Reciprocal: 1/x or a/x
+    const recipMatch = t.match(/^([+-]?\d*(?:\.\d+)?)\/x$/);
+    if (recipMatch) {
+        const c = recipMatch[1] === '' || recipMatch[1] === '+' ? 1 : recipMatch[1] === '-' ? -1 : parseFloat(recipMatch[1]);
+        return c === 1 ? 'ln|x|' : `${c}·ln|x|`;
+    }
+
+    // Trig & Exponential functions
+    if (t === 'sin(x)' || t === 'sinx') return '-cos(x)';
+    if (t === 'cos(x)' || t === 'cosx') return 'sin(x)';
+    if (t === 'sec^2(x)' || t === 'sec^2x') return 'tan(x)';
+    if (t === 'e^x' || t === 'exp(x)') return 'e^x';
+    if (t === 'sqrt(x)') return '(2/3)x^(3/2)';
+
+    const sinKx = t.match(/^sin\((\d+)x\)$/);
+    if (sinKx) return `-(1/${sinKx[1]})cos(${sinKx[1]}x)`;
+    const cosKx = t.match(/^cos\((\d+)x\)$/);
+    if (cosKx) return `(1/${cosKx[1]})sin(${cosKx[1]}x)`;
+    const expKx = t.match(/^e\^\(?([+-]?\d+)x\)?$/);
+    if (expKx) return `(1/${expKx[1]})e^(${expKx[1]}x)`;
+
+    // Polynomial term: a*x^n or ax or x^n
+    const polyMatch = t.match(/^([+-]?\d*(?:\.\d+)?)\*?x(?:\^([+-]?\d+(?:\.\d+)?))?$/);
+    if (polyMatch) {
+        const rawC = polyMatch[1];
+        const c = (rawC === '' || rawC === '+') ? 1 : (rawC === '-') ? -1 : parseFloat(rawC);
+        const n = polyMatch[2] !== undefined ? parseFloat(polyMatch[2]) : 1;
+        if (n === -1) return c === 1 ? 'ln|x|' : `${c}·ln|x|`;
+        const newPow = n + 1;
+        const newCoef = c / newPow;
+        // Format cleanly as fraction if not exact decimal
+        if (Number.isInteger(c) && Number.isInteger(newPow) && c % newPow !== 0) {
+            const v = newPow === 1 ? 'x' : `x^${newPow}`;
+            return `(${c}/${newPow})${v}`;
+        }
+        return formatTermCoef(newCoef, newPow);
+    }
+    return null;
+}
+
+function differentiateSingleTerm(termStr) {
+    const t = termStr.replace(/\s+/g, '').toLowerCase();
+    if (!t) return null;
+    if (/^[+-]?\d+(\.\d+)?$/.test(t)) return '0';
+    if (t === 'sin(x)' || t === 'sinx') return 'cos(x)';
+    if (t === 'cos(x)' || t === 'cosx') return '-sin(x)';
+    if (t === 'tan(x)' || t === 'tanx') return 'sec^2(x)';
+    if (t === 'e^x' || t === 'exp(x)') return 'e^x';
+    if (t === 'ln(x)' || t === 'lnx' || t === 'log(x)') return '1/x';
+    if (t === 'sqrt(x)') return '1/(2√x)';
+
+    const polyMatch = t.match(/^([+-]?\d*(?:\.\d+)?)\*?x(?:\^([+-]?\d+(?:\.\d+)?))?$/);
+    if (polyMatch) {
+        const rawC = polyMatch[1];
+        const c = (rawC === '' || rawC === '+') ? 1 : (rawC === '-') ? -1 : parseFloat(rawC);
+        const n = polyMatch[2] !== undefined ? parseFloat(polyMatch[2]) : 1;
+        const newCoef = c * n;
+        const newPow = n - 1;
+        return formatTermCoef(newCoef, newPow);
+    }
+    return null;
+}
+
+function trySymbolicAndNumericalMath(raw) {
+    const q = raw.trim();
+    const lower = q.toLowerCase();
+
+    // 1. Multiplication Tables
+    const tableMatch = q.match(/^(?:write\s+|print\s+|show\s+|give\s+me\s+)?(?:the\s+)?table\s+of\s+(\d+)$/i);
+    if (tableMatch) {
+        const n = parseInt(tableMatch[1], 10);
+        let out = `Here is the multiplication table of <strong>${n}</strong>:<br><br>`;
+        for (let i = 1; i <= 10; i++) out += `${n} × ${i} = <strong>${n * i}</strong><br>`;
+        return { text: out, isHtml: true, followUp: `table of ${n + 1}` };
+    }
+
+    // 2. Indefinite & Definite Integration ("integration of 2x", "integrate 3x^2 + 4x", "∫ 2x dx")
+    const intMatch = q.match(/^(?:what\s+is\s+)?(?:the\s+)?(?:integration|integral|antiderivative|integrate)\s+(?:of\s+)?(.+?)(?:\s+dx)?(?:\s+from\s+([+-]?\d+(?:\.\d+)?)\s+to\s+([+-]?\d+(?:\.\d+)?))?[?.!]*$/i) ||
+                     q.match(/^∫\s*(.+?)(?:\s*dx)?$/i);
+    if (intMatch) {
+        const expr = intMatch[1].trim();
+        const limA = intMatch[2] !== undefined ? parseFloat(intMatch[2]) : null;
+        const limB = intMatch[3] !== undefined ? parseFloat(intMatch[3]) : null;
+
+        const rawTerms = expr.replace(/\s+/g, '').match(/[+-]?[^+-]+/g) || [expr];
+        const integratedTerms = rawTerms.map(integrateSingleTerm);
+
+        if (integratedTerms.every(Boolean)) {
+            const joined = integratedTerms.join(' + ').replace(/\+\s*-/g, '- ');
+            let html = `<strong>Symbolic Integration:</strong><br>`;
+            html += `∫ (${escapeHtml(expr)}) dx = <strong>${escapeHtml(joined)} + C</strong><br><br>`;
+            html += `<span style="color:var(--text-muted); font-size:13.5px;">• Applied the Power / Calculus Integration Rule: ∫ a·xⁿ dx = a·xⁿ⁺¹ / (n + 1) + C.</span>`;
+
+            if (limA !== null && limB !== null) {
+                try {
+                    const jsFn = new Function('x', `return (${expr.replace(/(\d)(x)/gi, '$1*$2').replace(/\^/g, '**').replace(/sin/g, 'Math.sin').replace(/cos/g, 'Math.cos').replace(/exp/g, 'Math.exp')});`);
+                    // Simpson's rule numerical evaluation
+                    const steps = 200;
+                    const h = (limB - limA) / steps;
+                    let sum = jsFn(limA) + jsFn(limB);
+                    for (let i = 1; i < steps; i++) {
+                        sum += jsFn(limA + i * h) * (i % 2 === 0 ? 2 : 4);
+                    }
+                    const defVal = Math.round(((h / 3) * sum) * 100000) / 100000;
+                    html += `<br>• <strong>Definite Integral [${limA} to ${limB}]:</strong> <strong>${defVal}</strong>`;
+                } catch (e) {}
+            }
+            return { text: html, isHtml: true };
+        }
+    }
+
+    // 3. Differentiation / Derivatives ("derivative of 2x", "differentiate x^3 + 4x", "d/dx sin(x)")
+    const derivMatch = q.match(/^(?:what\s+is\s+)?(?:the\s+)?(?:derivative|differentiation|differentiate|d\/dx)\s+(?:of\s+)?(.+?)[?.!]*$/i);
+    if (derivMatch) {
+        const expr = derivMatch[1].trim();
+        const rawTerms = expr.replace(/\s+/g, '').match(/[+-]?[^+-]+/g) || [expr];
+        const diffTerms = rawTerms.map(differentiateSingleTerm);
+        if (diffTerms.every(Boolean)) {
+            const nonZero = diffTerms.filter(t => t !== '0');
+            const joined = (nonZero.length ? nonZero.join(' + ') : '0').replace(/\+\s*-/g, '- ');
+            return {
+                text: `<strong>Symbolic Derivative:</strong><br>d/dx (${escapeHtml(expr)}) = <strong>${escapeHtml(joined)}</strong><br><br><span style="color:var(--text-muted); font-size:13.5px;">• Applied the Power / Differentiation Rule: d/dx (a·xⁿ) = a·n·xⁿ⁻¹.</span>`,
+                isHtml: true
+            };
+        }
+    }
+
+    // 4. Quadratic & Linear Equation Solver ("solve x^2 - 5x + 6 = 0", "solve 2x + 6 = 14")
+    const solveMatch = q.match(/^(?:solve\s+)?([+-]?\d*x\^2\s*[+-]\s*\d*x\s*[+-]\s*\d+)\s*=\s*0$/i);
+    if (solveMatch) {
+        const cleanEq = solveMatch[1].replace(/\s+/g, '');
+        const m = cleanEq.match(/^([+-]?\d*)x\^2([+-]\d*)x([+-]\d+)$/i);
+        if (m) {
+            const a = (m[1] === '' || m[1] === '+') ? 1 : m[1] === '-' ? -1 : parseFloat(m[1]);
+            const b = (m[2] === '+' || m[2] === '') ? 1 : m[2] === '-' ? -1 : parseFloat(m[2]);
+            const c = parseFloat(m[3]);
+            const disc = b * b - 4 * a * c;
+            if (disc >= 0) {
+                const r1 = Math.round(((-b + Math.sqrt(disc)) / (2 * a)) * 10000) / 10000;
+                const r2 = Math.round(((-b - Math.sqrt(disc)) / (2 * a)) * 10000) / 10000;
+                return {
+                    text: `<strong>Quadratic Equation Solution (${escapeHtml(cleanEq)} = 0):</strong><br>• Discriminant (Δ = b² - 4ac) = <strong>${disc}</strong><br>• Roots: <strong>x₁ = ${r1}</strong>, <strong>x₂ = ${r2}</strong>`,
+                    isHtml: true
+                };
+            }
+        }
+    }
+
+    // 5. Direct Arithmetic & Scientific Expressions
+    let mathStr = lower
+        .replace(/^(what is|calculate|compute|evaluate)\s+/i, '')
+        .replace(/divided by/g, '/')
+        .replace(/plus/g, '+')
+        .replace(/minus/g, '-')
+        .replace(/times|multiplied by/g, '*')
+        .replace(/sqrt\(([^)]+)\)/g, 'Math.sqrt($1)')
+        .replace(/\bpi\b/g, 'Math.PI')
+        .replace(/\^/g, '**')
+        .replace(/[?=]/g, '')
+        .trim();
+
+    if (/^[0-9+\-*/().%\s]+$/.test(mathStr) && /[0-9]/.test(mathStr) && /[+\-*/%]/.test(mathStr)) {
+        try {
+            const val = Function('"use strict"; return (' + mathStr + ')')();
+            if (typeof val === 'number' && isFinite(val)) {
+                return { text: `${escapeHtml(q.replace(/[?=]+$/, ''))} = <strong>${Math.round(val * 1000000) / 1000000}</strong>`, isHtml: true };
+            }
+        } catch (e) {}
+    }
+
+    return null;
+}
+
+// ============================================================================
+// 2. 100% CODED PROCEDURAL IMAGE, ANIMATED VIDEO & WEB AUDIO STUDIO (NO POLLINATIONS!)
 // ============================================================================
 function parseMediaCommand(raw) {
     const q = raw.trim();
-    const vidMatch = q.match(/^(?:generate\s+|create\s+|make\s+|render\s+)?(?:a\s+|an\s+)?(?:ai\s+)?(?:video|animation|motion|reel|clip)\s*(?:of|about|for|:)?\s+(.+)$/i) ||
+
+    // Audio / Sound / Music commands ("audio cat", "sound of rain", "music lofi", "play cat sound")
+    const audMatch = q.match(/^(?:generate\s+|create\s+|make\s+|play\s+|synthesize\s+)?(?:a\s+|an\s+)?(?:coded\s+)?(?:audio|sound|music|melody|voice|sfx|beat|tone)\s*(?:of|for|about|:)?\s+(.+)$/i);
+    if (audMatch) return { type: 'audio', prompt: audMatch[1].trim() };
+
+    // Video / Animation commands ("video cat playing", "animate solar system")
+    const vidMatch = q.match(/^(?:generate\s+|create\s+|make\s+|render\s+|code\s+)?(?:a\s+|an\s+)?(?:coded\s+|ai\s+)?(?:video|animation|motion|reel|clip)\s*(?:of|about|for|:)?\s+(.+)$/i) ||
                      q.match(/^(?:animate)\s*:?\s+(.+)$/i);
     if (vidMatch) return { type: 'video', prompt: vidMatch[1].trim() };
 
-    const imgMatch = q.match(/^(?:generate\s+|create\s+|make\s+|draw\s+|paint\s+|render\s+)?(?:a\s+|an\s+)?(?:ai\s+)?(?:image|picture|photo|art|illustration|wallpaper|poster)\s*(?:of|about|for|:)?\s+(.+)$/i) ||
+    // Image / Drawing commands ("image cat", "draw neon city")
+    const imgMatch = q.match(/^(?:generate\s+|create\s+|make\s+|draw\s+|paint\s+|render\s+|code\s+)?(?:a\s+|an\s+)?(?:coded\s+|ai\s+)?(?:image|picture|photo|art|illustration|drawing)\s*(?:of|for|about|:)?\s+(.+)$/i) ||
                      q.match(/^(?:draw|paint)\s*:?\s+(.+)$/i);
     if (imgMatch) return { type: 'image', prompt: imgMatch[1].trim() };
 
     return null;
 }
 
-function getDimensions(prompt) {
-    if (/\b(9:16|vertical|portrait|reel|shorts?|mobile|story)\b/i.test(prompt)) {
-        return { w: 720, h: 1280, label: '9:16 Portrait' };
+// Shared Procedural Character & Scene Primitives (100% Pure Canvas Code)
+function drawProceduralScene(ctx, w, h, prompt, t = 0, seed = 1) {
+    const p = prompt.toLowerCase();
+    const isCat = /\b(cat|kitten|feline|kitty|meow)\b/.test(p);
+    const isSpace = /\b(space|planet|solar|galaxy|star|cosmos|orbit|astrophysics)\b/.test(p);
+    const isCity = /\b(city|cyberpunk|street|building|neon|urban|car)\b/.test(p);
+    const isNature = /\b(tree|forest|mountain|sunset|ocean|flower|nature|rain)\b/.test(p);
+
+    // 1. Procedural Sky / Background Gradient
+    const bgGrad = ctx.createLinearGradient(0, 0, 0, h);
+    if (isSpace) {
+        bgGrad.addColorStop(0, '#04020c');
+        bgGrad.addColorStop(1, '#120828');
+    } else if (isCity) {
+        bgGrad.addColorStop(0, '#080318');
+        bgGrad.addColorStop(1, '#240b36');
+    } else if (isNature) {
+        bgGrad.addColorStop(0, '#0d1b2a');
+        bgGrad.addColorStop(0.6, '#415a77');
+        bgGrad.addColorStop(1, '#1b263b');
+    } else {
+        bgGrad.addColorStop(0, '#0c071d');
+        bgGrad.addColorStop(0.6, '#1c1136');
+        bgGrad.addColorStop(1, '#090612');
     }
-    if (/\b(16:9|landscape|widescreen|cinematic|youtube)\b/i.test(prompt)) {
-        return { w: 1280, h: 720, label: '16:9 Cinema' };
+    ctx.fillStyle = bgGrad;
+    ctx.fillRect(0, 0, w, h);
+
+    // 2. Twinkling Procedural Stars / Bokeh Particles
+    for (let i = 0; i < 40; i++) {
+        const sx = ((i * 137.5 * seed) % w);
+        const sy = ((i * 293.1 * seed) % (h * 0.72));
+        const twinkle = 0.35 + 0.65 * Math.abs(Math.sin(t * 2 + i));
+        ctx.fillStyle = `rgba(230, 210, 255, ${twinkle * 0.7})`;
+        ctx.beginPath();
+        ctx.arc(sx, sy, (i % 3) * 0.8 + 0.8, 0, Math.PI * 2);
+        ctx.fill();
     }
-    return { w: 1024, h: 1024, label: '1:1 Square' };
-}
 
-function buildImageReply(prompt) {
-    const dims = getDimensions(prompt);
-    const seed = Math.floor(Math.random() * 999999);
-    const imgUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=${dims.w}&height=${dims.h}&seed=${seed}&nologo=true&model=flux`;
-    const cardId = 'img_' + Date.now().toString(36);
+    if (isCat) {
+        // Floor / Carpet
+        ctx.fillStyle = '#150d2a';
+        ctx.fillRect(0, h * 0.73, w, h * 0.27);
+        ctx.strokeStyle = 'rgba(196, 150, 255, 0.25)';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(0, h * 0.73);
+        ctx.lineTo(w, h * 0.73);
+        ctx.stroke();
 
-    const html = `
-        <div>Generated <strong>${escapeHtml(prompt)}</strong> (${dims.label}):</div>
-        <div class="desu-media-card" id="${cardId}">
-            <div class="desu-media-stage">
-                <img src="${escapeHtml(imgUrl)}" alt="${escapeHtml(prompt)}" loading="lazy" />
-            </div>
-            <div class="desu-media-bar">
-                <span style="font-size:11.5px; color:var(--text-muted);">Flux · ${dims.label}</span>
-                <div style="display:flex; gap:6px;">
-                    <button class="desu-media-btn" onclick="window.regenerateDesuImage('${cardId}', '${escapeHtml(prompt).replace(/'/g, "\\'")}', ${dims.w}, ${dims.h})">↻ Remix</button>
-                    <a class="desu-media-btn" href="${escapeHtml(imgUrl)}" target="_blank" rel="noopener" download="desu-image.jpg">⬇ Save</a>
-                </div>
-            </div>
-        </div>`;
+        const cx = w * 0.45 + Math.sin(t * 2.2) * 18;
+        const cy = h * 0.62 + Math.abs(Math.sin(t * 4.4)) * -14;
 
-    return {
-        text: html,
-        rawText: `[Generated Image: ${prompt}]`,
-        isHtml: true,
-        followUp: `video of ${prompt}`
-    };
-}
-
-window.regenerateDesuImage = function (cardId, prompt, w, h) {
-    const card = document.getElementById(cardId);
-    if (!card) return;
-    const img = card.querySelector('img');
-    if (!img) return;
-    const newSeed = Math.floor(Math.random() * 9999999);
-    img.style.opacity = '0.4';
-    img.src = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=${w}&height=${h}&seed=${newSeed}&nologo=true&model=flux`;
-    img.onload = () => { img.style.opacity = '1'; };
-};
-
-// Builds an interactive 60fps AI Motion Video Canvas with 3D Parallax & .WebM Video Recording
-function buildVideoReply(prompt) {
-    const dims = /\b(16:9|landscape|widescreen)\b/i.test(prompt)
-        ? { w: 800, h: 450, label: '16:9 Motion' }
-        : { w: 540, h: 960, label: '9:16 Vertical Reel' }; // Defaults to vertical 9:16 for Reels!
-
-    const seed = Math.floor(Math.random() * 999999);
-    const bgUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt + ', cinematic lighting, high detail, masterpiece')}?width=${dims.w}&height=${dims.h}&seed=${seed}&nologo=true&model=flux`;
-    const canvasId = 'vid_canvas_' + Date.now().toString(36);
-    const statusId = 'vid_status_' + Date.now().toString(36);
-
-    const html = `
-        <div>Synthesized AI motion scene for <strong>${escapeHtml(prompt)}</strong> (${dims.label}):</div>
-        <div class="desu-media-card">
-            <div class="desu-media-stage">
-                <div class="desu-media-loader" id="${statusId}">⚡ Rendering AI keyframes & motion layers...</div>
-                <canvas id="${canvasId}" width="${dims.w}" height="${dims.h}" style="display:none;"></canvas>
-            </div>
-            <div class="desu-media-bar">
-                <span style="font-size:11.5px; color:var(--text-muted);">DESU Motion · ${dims.label}</span>
-                <div style="display:flex; gap:6px;">
-                    <button class="desu-media-btn" onclick="window.recordDesuVideo('${canvasId}', this)">⬇ Export .WebM</button>
-                </div>
-            </div>
-        </div>`;
-
-    setTimeout(() => mountMotionCanvas(canvasId, statusId, bgUrl, prompt, dims.w, dims.h), 80);
-
-    return {
-        text: html,
-        rawText: `[Generated Video: ${prompt}]`,
-        isHtml: true
-    };
-}
-
-function mountMotionCanvas(canvasId, statusId, bgUrl, prompt, w, h) {
-    const canvas = document.getElementById(canvasId);
-    const statusEl = document.getElementById(statusId);
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-
-    const isRain = /\b(rain|storm|cyberpunk|noir|water|ocean)\b/i.test(prompt);
-    const isFire = /\b(fire|flame|sunset|lava|ember|war|sun)\b/i.test(prompt);
-
-    const particles = Array.from({ length: 45 }, () => ({
-        x: Math.random() * w,
-        y: Math.random() * h,
-        r: Math.random() * 2.5 + 0.8,
-        vx: isRain ? -1.2 : (Math.random() - 0.5) * 0.8,
-        vy: isRain ? Math.random() * 9 + 7 : isFire ? -(Math.random() * 1.8 + 0.5) : (Math.random() - 0.5) * 0.6,
-        a: Math.random() * 0.65 + 0.2
-    }));
-
-    const img = new Image();
-    img.crossOrigin = 'anonymous';
-    let loaded = false;
-
-    img.onload = () => {
-        loaded = true;
-        if (statusEl) statusEl.style.display = 'none';
-        canvas.style.display = 'block';
-    };
-    img.onerror = () => {
-        if (statusEl) statusEl.style.display = 'none';
-        canvas.style.display = 'block';
-    };
-    img.src = bgUrl;
-
-    let t = 0;
-    function renderFrame() {
-        if (!document.body.contains(canvas)) return;
-        t += 0.015;
-        ctx.clearRect(0, 0, w, h);
-
-        // 1. Slow Ken Burns 3D Camera Pan & Zoom
-        const scale = 1.12 + Math.sin(t * 0.7) * 0.05;
-        const panX = Math.cos(t * 0.5) * (w * 0.035);
-        const panY = Math.sin(t * 0.4) * (h * 0.025);
-
+        // Animated Wagging Tail
         ctx.save();
-        ctx.translate(w / 2 + panX, h / 2 + panY);
-        ctx.scale(scale, scale);
-        if (loaded) {
-            ctx.drawImage(img, -w / 2, -h / 2, w, h);
-        } else {
-            const grad = ctx.createRadialGradient(0, 0, 20, 0, 0, w * 0.7);
-            grad.addColorStop(0, '#2a164d');
-            grad.addColorStop(1, '#05020a');
-            ctx.fillStyle = grad;
-            ctx.fillRect(-w / 2, -h / 2, w, h);
-        }
+        ctx.strokeStyle = '#d8b4f8';
+        ctx.lineWidth = 14;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(cx - 45, cy + 35);
+        const tailSwing = Math.sin(t * 5) * 35;
+        ctx.bezierCurveTo(cx - 95, cy + 10 + tailSwing, cx - 110, cy - 45 + tailSwing, cx - 75 + tailSwing * 0.5, cy - 65);
+        ctx.stroke();
         ctx.restore();
 
-        // 2. Dynamic Atmospheric Particles (Rain, Embers, or Neon Dust)
-        particles.forEach(p => {
-            p.x = (p.x + p.vx + w) % w;
-            p.y = (p.y + p.vy + h) % h;
-            if (isRain) {
-                ctx.strokeStyle = `rgba(180, 220, 255, ${p.a * 0.6})`;
-                ctx.lineWidth = 1.2;
+        // Cat Body
+        ctx.fillStyle = '#c496ff';
+        ctx.beginPath();
+        ctx.ellipse(cx - 10, cy + 25, 52, 40, -0.1, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Animated Paws (Swatting when t > 0)
+        const pawLift = Math.sin(t * 6) * 24;
+        ctx.fillStyle = '#e9d5ff';
+        // Back paw
+        ctx.beginPath();
+        ctx.ellipse(cx - 42, cy + 60, 14, 9, 0, 0, Math.PI * 2);
+        ctx.fill();
+        // Front reaching paw
+        ctx.beginPath();
+        ctx.ellipse(cx + 38 + Math.max(0, pawLift * 0.6), cy + 45 - Math.max(0, pawLift), 15, 10, -0.3, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Cat Head
+        ctx.fillStyle = '#d8b4f8';
+        ctx.beginPath();
+        ctx.arc(cx + 15, cy - 22, 40, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Left & Right Pointed Ears
+        ctx.fillStyle = '#c496ff';
+        ctx.beginPath();
+        ctx.moveTo(cx - 18, cy - 45);
+        ctx.lineTo(cx - 8, cy - 82);
+        ctx.lineTo(cx + 10, cy - 55);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.beginPath();
+        ctx.moveTo(cx + 22, cy - 55);
+        ctx.lineTo(cx + 46, cy - 82);
+        ctx.lineTo(cx + 50, cy - 42);
+        ctx.closePath();
+        ctx.fill();
+
+        // Inner Pink Ears
+        ctx.fillStyle = '#ff85c0';
+        ctx.beginPath();
+        ctx.moveTo(cx - 12, cy - 48);
+        ctx.lineTo(cx - 6, cy - 72);
+        ctx.lineTo(cx + 5, cy - 54);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.beginPath();
+        ctx.moveTo(cx + 26, cy - 54);
+        ctx.lineTo(cx + 42, cy - 72);
+        ctx.lineTo(cx + 44, cy - 45);
+        ctx.closePath();
+        ctx.fill();
+
+        // Glowing Emerald Eyes (with periodic blink)
+        const blink = (Math.sin(t * 1.7) > 0.96) ? 0.12 : 1;
+        const lookX = Math.cos(t * 3) * 4;
+        ctx.fillStyle = '#181028';
+        ctx.beginPath();
+        ctx.ellipse(cx + 2, cy - 24, 9, 10 * blink, 0, 0, Math.PI * 2);
+        ctx.ellipse(cx + 32, cy - 24, 9, 10 * blink, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        if (blink > 0.3) {
+            ctx.fillStyle = '#6ee7b7';
+            ctx.beginPath();
+            ctx.arc(cx + 2 + lookX * 0.5, cy - 24, 6.5, 0, Math.PI * 2);
+            ctx.arc(cx + 32 + lookX * 0.5, cy - 24, 6.5, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.fillStyle = '#05020a';
+            ctx.beginPath();
+            ctx.ellipse(cx + 2 + lookX * 0.6, cy - 24, 2.2, 5.5, 0, 0, Math.PI * 2);
+            ctx.ellipse(cx + 32 + lookX * 0.6, cy - 24, 2.2, 5.5, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.arc(cx + 4, cy - 27, 2, 0, Math.PI * 2);
+            ctx.arc(cx + 34, cy - 27, 2, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        // Pink Nose & Cute Mouth
+        ctx.fillStyle = '#ff69b4';
+        ctx.beginPath();
+        ctx.moveTo(cx + 14, cy - 12);
+        ctx.lineTo(cx + 21, cy - 12);
+        ctx.lineTo(cx + 17.5, cy - 7);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.strokeStyle = '#3b1d5e';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(cx + 13, cy - 5, 4.5, 0, Math.PI);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.arc(cx + 22, cy - 5, 4.5, 0, Math.PI);
+        ctx.stroke();
+
+        // Whiskers
+        ctx.strokeStyle = 'rgba(255,255,255,0.75)';
+        ctx.lineWidth = 1.5;
+        [-1, 1].forEach(dir => {
+            const bx = dir < 0 ? cx - 6 : cx + 38;
+            for (let k = -1; k <= 1; k++) {
                 ctx.beginPath();
-                ctx.moveTo(p.x, p.y);
-                ctx.lineTo(p.x + p.vx * 2, p.y + p.vy * 1.5);
+                ctx.moveTo(bx, cy - 10 + k * 4);
+                ctx.lineTo(bx + dir * 26, cy - 12 + k * 7 + Math.sin(t * 8) * 2);
                 ctx.stroke();
-            } else {
-                ctx.fillStyle = isFire
-                    ? `rgba(255, ${Math.floor(120 + Math.random() * 80)}, 50, ${p.a})`
-                    : `rgba(215, 180, 255, ${p.a})`;
-                ctx.beginPath();
-                ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-                ctx.fill();
             }
         });
 
-        // 3. Subtle Cinematic Vignette
-        const vig = ctx.createRadialGradient(w / 2, h / 2, w * 0.25, w / 2, h / 2, Math.max(w, h) * 0.65);
-        vig.addColorStop(0, 'rgba(0,0,0,0)');
-        vig.addColorStop(1, 'rgba(0,0,0,0.55)');
-        ctx.fillStyle = vig;
-        ctx.fillRect(0, 0, w, h);
+        // Bouncing Physics Yarn Ball for the Cat to Play With!
+        const ballX = w * 0.72 + Math.cos(t * 3.2) * 38;
+        const ballY = h * 0.70 - Math.abs(Math.sin(t * 5.2)) * 68;
+        ctx.fillStyle = '#ff69b4';
+        ctx.shadowColor = '#ff69b4';
+        ctx.shadowBlur = 15;
+        ctx.beginPath();
+        ctx.arc(ballX, ballY, 18, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.shadowBlur = 0;
 
-        requestAnimationFrame(renderFrame);
+        ctx.strokeStyle = '#ffd6eb';
+        ctx.lineWidth = 1.6;
+        ctx.beginPath();
+        ctx.arc(ballX, ballY, 12, t, t + Math.PI * 1.3);
+        ctx.stroke();
+    } else if (isSpace) {
+        // Orbiting Solar System / Astrophysics Simulation
+        const cx = w / 2, cy = h / 2;
+        ctx.fillStyle = '#ffaa50';
+        ctx.shadowColor = '#ffaa50';
+        ctx.shadowBlur = 30;
+        ctx.beginPath();
+        ctx.arc(cx, cy, 28 + Math.sin(t * 3) * 2, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+
+        const planets = [
+            { r: 65, size: 7, speed: 1.8, color: '#60a5fa' },
+            { r: 105, size: 11, speed: 1.1, color: '#c496ff' },
+            { r: 150, size: 9, speed: 0.65, color: '#f472b6' }
+        ];
+        planets.forEach((pl, idx) => {
+            ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+            ctx.beginPath();
+            ctx.arc(cx, cy, pl.r, 0, Math.PI * 2);
+            ctx.stroke();
+
+            const angle = t * pl.speed + idx * 2.1 + seed;
+            const px = cx + Math.cos(angle) * pl.r;
+            const py = cy + Math.sin(angle) * pl.r;
+            ctx.fillStyle = pl.color;
+            ctx.shadowColor = pl.color;
+            ctx.shadowBlur = 12;
+            ctx.beginPath();
+            ctx.arc(px, py, pl.size, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.shadowBlur = 0;
+        });
+    } else if (isCity) {
+        // Procedural Cyberpunk Neon Skyline & Moving Light Trails
+        for (let i = 0; i < 12; i++) {
+            const bw = w / 10;
+            const bx = i * (w / 12);
+            const bh = 90 + ((i * 73 + seed * 31) % 160);
+            ctx.fillStyle = i % 2 === 0 ? '#0d061a' : '#160b2c';
+            ctx.fillRect(bx, h * 0.78 - bh, bw, bh);
+
+            ctx.fillStyle = i % 3 === 0 ? 'rgba(255, 105, 180, 0.55)' : 'rgba(196, 150, 255, 0.45)';
+            for (let wy = h * 0.78 - bh + 10; wy < h * 0.76; wy += 16) {
+                for (let wx = bx + 6; wx < bx + bw - 8; wx += 10) {
+                    if ((wx + wy + Math.floor(t * 2)) % 5 !== 0) ctx.fillRect(wx, wy, 5, 8);
+                }
+            }
+        }
+        // Neon Highway Streaks
+        for (let k = 0; k < 6; k++) {
+            const lx = ((t * 140 * (k % 2 ? 1 : -1) + k * 90) % w + w) % w;
+            const ly = h * 0.82 + k * 8;
+            ctx.fillStyle = k % 2 ? '#ff69b4' : '#60a5fa';
+            ctx.shadowColor = ctx.fillStyle;
+            ctx.shadowBlur = 10;
+            ctx.fillRect(lx, ly, 36, 3);
+            ctx.shadowBlur = 0;
+        }
+    } else {
+        // Procedural Sacred Geometry / Harmonic Lissajous Art for General Prompts
+        const cx = w / 2, cy = h / 2;
+        ctx.save();
+        ctx.translate(cx, cy);
+        const petals = 6 + (seed % 7);
+        for (let layer = 0; layer < 3; layer++) {
+            ctx.strokeStyle = layer === 0 ? '#c496ff' : layer === 1 ? '#ff69b4' : '#60a5fa';
+            ctx.lineWidth = 2;
+            ctx.shadowColor = ctx.strokeStyle;
+            ctx.shadowBlur = 12;
+            ctx.beginPath();
+            for (let a = 0; a <= Math.PI * 2; a += 0.03) {
+                const rad = (65 + layer * 32) * (0.75 + 0.25 * Math.sin(petals * a + t * 2 + layer));
+                const x = Math.cos(a + t * 0.3) * rad;
+                const y = Math.sin(a + t * 0.3) * rad;
+                if (a === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.closePath();
+            ctx.stroke();
+        }
+        ctx.restore();
     }
-    renderFrame();
 }
 
-// Records 4 seconds of the live 60fps canvas animation and downloads a real .webm video file!
+// A. Coded Procedural Image Generator (100% Canvas Code, Zero Pollinations)
+function buildCodedImageReply(prompt) {
+    const canvasId = 'code_img_' + Date.now().toString(36);
+    const codeId = 'code_src_' + Date.now().toString(36);
+    const w = 520, h = 380;
+
+    const codeSnippet = `// DESU Procedural Canvas Generator — "${prompt}"
+const canvas = document.getElementById('${canvasId}');
+const ctx = canvas.getContext('2d');
+drawProceduralScene(ctx, ${w}, ${h}, "${prompt.replace(/"/g, '')}", 0.5, seed);`;
+
+    const html = `
+        <div>Rendered <strong>${escapeHtml(prompt)}</strong> directly from procedural HTML5 Canvas code:</div>
+        <div class="desu-media-card">
+            <div class="desu-media-stage">
+                <canvas id="${canvasId}" width="${w}" height="${h}"></canvas>
+            </div>
+            <pre id="${codeId}" class="desu-code-drawer" style="display:none;"><code>${escapeHtml(codeSnippet)}</code></pre>
+            <div class="desu-media-bar">
+                <span style="font-size:11.5px; color:var(--text-muted);">Coded Canvas · ${w}×${h}</span>
+                <div style="display:flex; gap:6px;">
+                    <button type="button" class="desu-media-btn" onclick="window.remixCodedCanvas('${canvasId}', '${escapeHtml(prompt).replace(/'/g, "\\'")}')">↻ Remix</button>
+                    <button type="button" class="desu-media-btn" onclick="const el=document.getElementById('${codeId}'); el.style.display=el.style.display==='none'?'block':'none';">&lt;/&gt; Code</button>
+                    <button type="button" class="desu-media-btn" onclick="window.downloadCodedCanvas('${canvasId}', 'desu-coded-art.png')">⬇ PNG</button>
+                </div>
+            </div>
+        </div>`;
+
+    setTimeout(() => {
+        const c = document.getElementById(canvasId);
+        if (c) drawProceduralScene(c.getContext('2d'), w, h, prompt, 0.8, 1);
+    }, 50);
+
+    return { text: html, rawText: `[Coded Canvas Image: ${prompt}]`, isHtml: true, followUp: `video ${prompt}` };
+}
+
+window.remixCodedCanvas = function (canvasId, prompt) {
+    const c = document.getElementById(canvasId);
+    if (!c) return;
+    const seed = Math.floor(Math.random() * 50) + 2;
+    drawProceduralScene(c.getContext('2d'), c.width, c.height, prompt, Math.random() * 10, seed);
+};
+
+window.downloadCodedCanvas = function (canvasId, filename) {
+    const c = document.getElementById(canvasId);
+    if (!c) return;
+    const a = document.createElement('a');
+    a.href = c.toDataURL('image/png');
+    a.download = filename;
+    a.click();
+};
+
+// B. Coded Multi-Actor Animated Video Generator (Real Rigged 60fps Canvas Animation, Zero Pollinations)
+function buildCodedVideoReply(prompt) {
+    const canvasId = 'code_vid_' + Date.now().toString(36);
+    const codeId = 'vid_src_' + Date.now().toString(36);
+    const w = 520, h = 420;
+
+    const codeSnippet = `// DESU 60fps Procedural Animation Loop — "${prompt}"
+let t = 0;
+function animate() {
+    t += 0.025;
+    drawProceduralScene(ctx, ${w}, ${h}, "${prompt.replace(/"/g, '')}", t, 1);
+    requestAnimationFrame(animate);
+}
+animate();`;
+
+    const html = `
+        <div>Synthesized real-time 60fps procedural animation for <strong>${escapeHtml(prompt)}</strong> from code:</div>
+        <div class="desu-media-card">
+            <div class="desu-media-stage">
+                <canvas id="${canvasId}" width="${w}" height="${h}"></canvas>
+            </div>
+            <pre id="${codeId}" class="desu-code-drawer" style="display:none;"><code>${escapeHtml(codeSnippet)}</code></pre>
+            <div class="desu-media-bar">
+                <span style="font-size:11.5px; color:var(--text-muted);">60fps Coded Motion</span>
+                <div style="display:flex; gap:6px;">
+                    <button type="button" class="desu-media-btn" onclick="const el=document.getElementById('${codeId}'); el.style.display=el.style.display==='none'?'block':'none';">&lt;/&gt; Code</button>
+                    <button type="button" class="desu-media-btn" onclick="window.recordDesuVideo('${canvasId}', this)">⬇ Export .WebM</button>
+                </div>
+            </div>
+        </div>`;
+
+    setTimeout(() => {
+        const c = document.getElementById(canvasId);
+        if (!c) return;
+        const ctx = c.getContext('2d');
+        let t = 0;
+        function loop() {
+            if (!document.body.contains(c)) return;
+            t += 0.025;
+            drawProceduralScene(ctx, w, h, prompt, t, 1);
+            requestAnimationFrame(loop);
+        }
+        loop();
+    }, 50);
+
+    return { text: html, rawText: `[Coded Animation Video: ${prompt}]`, isHtml: true, followUp: `audio ${prompt}` };
+}
+
 window.recordDesuVideo = function (canvasId, btnEl) {
     const canvas = document.getElementById(canvasId);
-    if (!canvas || !canvas.captureStream || typeof MediaRecorder === 'undefined') {
-        alert('Video export requires a modern Chrome/Edge/Firefox/Android browser.');
-        return;
-    }
+    if (!canvas || !canvas.captureStream || typeof MediaRecorder === 'undefined') return;
     const origText = btnEl.textContent;
     btnEl.textContent = '⏺ Recording 4s...';
     btnEl.disabled = true;
@@ -366,12 +708,10 @@ window.recordDesuVideo = function (canvasId, btnEl) {
         recorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
         recorder.onstop = () => {
             const blob = new Blob(chunks, { type: 'video/webm' });
-            const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
-            a.href = url;
-            a.download = `desu-motion-${Date.now().toString(36)}.webm`;
+            a.href = URL.createObjectURL(blob);
+            a.download = `desu-coded-video-${Date.now().toString(36)}.webm`;
             a.click();
-            URL.revokeObjectURL(url);
             btnEl.textContent = origText;
             btnEl.disabled = false;
         };
@@ -383,16 +723,204 @@ window.recordDesuVideo = function (canvasId, btnEl) {
     }
 };
 
+// C. Coded Web Audio API Sound & Music Synthesizer ("audio cat", "audio piano", "audio rain", etc.)
+function buildCodedAudioReply(prompt) {
+    const canvasId = 'aud_vis_' + Date.now().toString(36);
+    const codeId = 'aud_src_' + Date.now().toString(36);
+    const safePrompt = escapeHtml(prompt).replace(/'/g, "\\'");
+
+    const codeSnippet = `// DESU Web Audio API Procedural Synthesizer — "${prompt}"
+const ctx = new AudioContext();
+const osc = ctx.createOscillator();
+const filter = ctx.createBiquadFilter();
+const gain = ctx.createGain();
+osc.connect(filter); filter.connect(gain); gain.connect(ctx.destination);`;
+
+    const html = `
+        <div>Synthesized procedural Web Audio patch for <strong>${escapeHtml(prompt)}</strong>:</div>
+        <div class="desu-media-card">
+            <div class="desu-media-stage" style="min-height:130px;">
+                <canvas id="${canvasId}" width="480" height="130"></canvas>
+            </div>
+            <pre id="${codeId}" class="desu-code-drawer" style="display:none;"><code>${escapeHtml(codeSnippet)}</code></pre>
+            <div class="desu-media-bar">
+                <span style="font-size:11.5px; color:var(--text-muted);">Web Audio API Synth</span>
+                <div style="display:flex; gap:6px;">
+                    <button type="button" class="desu-media-btn" onclick="window.playCodedAudio('${canvasId}', '${safePrompt}', this)">▶ Play Audio</button>
+                    <button type="button" class="desu-media-btn" onclick="const el=document.getElementById('${codeId}'); el.style.display=el.style.display==='none'?'block':'none';">&lt;/&gt; Code</button>
+                    <button type="button" class="desu-media-btn" onclick="window.downloadCodedWav('${safePrompt}')">⬇ .WAV</button>
+                </div>
+            </div>
+        </div>`;
+
+    setTimeout(() => drawIdleWaveform(canvasId), 50);
+    return { text: html, rawText: `[Coded Web Audio: ${prompt}]`, isHtml: true };
+}
+
+function drawIdleWaveform(canvasId) {
+    const c = document.getElementById(canvasId);
+    if (!c) return;
+    const ctx = c.getContext('2d');
+    const w = c.width, h = c.height;
+    ctx.fillStyle = '#070410';
+    ctx.fillRect(0, 0, w, h);
+    ctx.strokeStyle = '#c496ff';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    for (let x = 0; x < w; x++) {
+        const y = h / 2 + Math.sin(x * 0.04) * Math.sin(x * 0.007) * 28;
+        if (x === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+}
+
+// Synthesizes audio buffer from pure math/DSP code (Cat Meow + Purr, Rain, or Musical Chords/Melody)
+function renderProceduralAudioBuffer(ctx, prompt, duration = 3.2) {
+    const sampleRate = ctx.sampleRate || 44100;
+    const length = Math.floor(sampleRate * duration);
+    const buffer = ctx.createBuffer(1, length, sampleRate);
+    const data = buffer.getChannelData(0);
+    const p = prompt.toLowerCase();
+
+    if (/\b(cat|kitten|meow|purr)\b/.test(p)) {
+        // Realistic Coded Cat Meow (Formant-filtered pitch contour: 520Hz -> 880Hz -> 410Hz) + Purr
+        let phase = 0;
+        for (let i = 0; i < length; i++) {
+            const t = i / sampleRate;
+            let sample = 0;
+            // Two meows at t=[0.1..1.1] and t=[1.5..2.6]
+            [[0.1, 1.05], [1.5, 2.55]].forEach(([start, end]) => {
+                if (t >= start && t <= end) {
+                    const local = (t - start) / (end - start);
+                    const env = Math.sin(Math.PI * local);
+                    const freq = 480 + 360 * Math.sin(Math.PI * Math.pow(local, 0.7)) - 140 * local + Math.sin(t * 32) * 8;
+                    phase += (2 * Math.PI * freq) / sampleRate;
+                    // Rich harmonic series for feline vocal tract
+                    sample += (Math.sin(phase) * 0.55 + Math.sin(phase * 2) * 0.3 + Math.sin(phase * 3) * 0.15) * env * 0.5;
+                }
+            });
+            // Subtle purr vibration
+            const purr = Math.sin(2 * Math.PI * 26 * t) * (0.5 + 0.5 * Math.sin(2 * Math.PI * 2.5 * t)) * 0.08;
+            data[i] = Math.max(-1, Math.min(1, sample + purr));
+        }
+    } else if (/\b(rain|storm|water|ocean|wind)\b/.test(p)) {
+        let lastOut = 0;
+        for (let i = 0; i < length; i++) {
+            const white = Math.random() * 2 - 1;
+            lastOut = (lastOut + (0.04 * white)) / 1.04;
+            const swell = 0.5 + 0.4 * Math.sin((i / sampleRate) * 1.5);
+            data[i] = lastOut * swell * 1.8;
+        }
+    } else {
+        // Procedural Arpeggiated Synth / Piano Melody
+        const notes = [261.63, 329.63, 392.00, 523.25, 440.00, 392.00, 329.63, 293.66];
+        for (let i = 0; i < length; i++) {
+            const t = i / sampleRate;
+            const step = Math.floor(t * 2.5) % notes.length;
+            const noteTime = (t * 2.5) % 1;
+            const freq = notes[step];
+            const env = Math.exp(-noteTime * 3.8) * Math.min(1, noteTime * 40);
+            const tone = Math.sin(2 * Math.PI * freq * t) * 0.5 + Math.sin(2 * Math.PI * (freq * 0.5) * t) * 0.25 + Math.sin(2 * Math.PI * (freq * 2) * t) * 0.12;
+            data[i] = tone * env * 0.65;
+        }
+    }
+    return buffer;
+}
+
+window.playCodedAudio = function (canvasId, prompt, btnEl) {
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtx) return;
+    const ctx = new AudioCtx();
+    const buffer = renderProceduralAudioBuffer(ctx, prompt, 3.2);
+    const source = ctx.createBufferSource();
+    const analyser = ctx.createAnalyser();
+    analyser.fftSize = 128;
+
+    source.buffer = buffer;
+    source.connect(analyser);
+    analyser.connect(ctx.destination);
+    source.start();
+
+    const orig = btnEl.textContent;
+    btnEl.textContent = '🔊 Playing...';
+
+    const c = document.getElementById(canvasId);
+    const cCtx = c ? c.getContext('2d') : null;
+    const freqData = new Uint8Array(analyser.frequencyBinCount);
+    let playing = true;
+
+    function drawSpectrum() {
+        if (!playing || !cCtx) return;
+        analyser.getByteFrequencyData(freqData);
+        cCtx.fillStyle = '#070410';
+        cCtx.fillRect(0, 0, c.width, c.height);
+        const barW = (c.width / freqData.length) * 1.6;
+        for (let i = 0; i < freqData.length; i++) {
+            const bh = (freqData[i] / 255) * (c.height - 16);
+            cCtx.fillStyle = i % 2 === 0 ? '#c496ff' : '#ff69b4';
+            cCtx.fillRect(i * (barW + 2), c.height - bh - 4, barW, bh + 2);
+        }
+        requestAnimationFrame(drawSpectrum);
+    }
+    drawSpectrum();
+
+    source.onended = () => {
+        playing = false;
+        btnEl.textContent = orig;
+        drawIdleWaveform(canvasId);
+        ctx.close();
+    };
+};
+
+window.downloadCodedWav = function (prompt) {
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    const ctx = new AudioCtx();
+    const buffer = renderProceduralAudioBuffer(ctx, prompt, 3.2);
+    const samples = buffer.getChannelData(0);
+    const wavBuffer = new ArrayBuffer(44 + samples.length * 2);
+    const view = new DataView(wavBuffer);
+    const writeStr = (off, s) => { for (let i = 0; i < s.length; i++) view.setUint8(off + i, s.charCodeAt(i)); };
+
+    writeStr(0, 'RIFF');
+    view.setUint32(4, 36 + samples.length * 2, true);
+    writeStr(8, 'WAVE');
+    writeStr(12, 'fmt ');
+    view.setUint32(16, 16, true);
+    view.setUint16(20, 1, true);
+    view.setUint16(22, 1, true);
+    view.setUint32(24, buffer.sampleRate, true);
+    view.setUint32(28, buffer.sampleRate * 2, true);
+    view.setUint16(32, 2, true);
+    view.setUint16(34, 16, true);
+    writeStr(36, 'data');
+    view.setUint32(40, samples.length * 2, true);
+
+    let offset = 44;
+    for (let i = 0; i < samples.length; i++, offset += 2) {
+        const s = Math.max(-1, Math.min(1, samples[i]));
+        view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+    }
+    const blob = new Blob([view], { type: 'audio/wav' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `desu-audio-${Date.now().toString(36)}.wav`;
+    a.click();
+    ctx.close();
+};
+
 // ============================================================================
-// 2. INTENT CLASSIFIER: Conversational vs. Multi-Platform Topic Search
+// 3. INTENT CLASSIFIER: Never Send Math, Media, or Personal Chat to Omni-Search!
 // ============================================================================
 function shouldRunOmniSearch(raw) {
     const q = raw.trim();
     const lower = q.toLowerCase();
 
-    if (/\b(i|im|i'm|my|me|you|your|we|us|sad|happy|tired|bored|angry|lonely|depressed|feeling|feel|good|bad|wrong|right|code|coding|program|script|html|css|js|python|java|weather|temperature|joke|story|poem|song|advice|help me|how are you|can you|do you|will you|should i|remember)\b/i.test(lower)) {
+    // Never run OmniSearch on math, calculus, media generation, personal chat, or coding
+    if (/\b(integrate|integration|integral|derivative|differentiate|calculus|solve|equation|limit|matrix|sin|cos|tan|log|ln|sqrt|audio|video|image|draw|animate|sound|music|i|im|i'm|my|me|you|your|we|us|sad|happy|tired|bored|feeling|feel|good|bad|wrong|right|code|coding|program|script|weather|temperature|how are you|can you|do you|remember)\b/i.test(lower)) {
         return false;
     }
+    if (/[0-9+\-*/^=]/.test(lower)) return false;
     if (/^(and|so|but|also|then|why|how come|what about|how about|not\b)/i.test(lower)) {
         return false;
     }
@@ -407,7 +935,7 @@ function shouldRunOmniSearch(raw) {
 }
 
 // ============================================================================
-// 3. INDIVIDUAL PLATFORM CONNECTORS
+// 4. PLATFORM CONNECTORS & CONVERSATIONAL AI ENGINE
 // ============================================================================
 async function searchSocialPlatform(platformCode, rawQuery) {
     const clean = rawQuery
@@ -477,10 +1005,7 @@ async function searchArchive(rawQuery) {
     } catch (e) { return { text: `Unable to reach Internet Archive.`, isHtml: false }; }
 }
 
-// ============================================================================
-// 4. CONVERSATIONAL AI ENGINE
-// ============================================================================
-async function queryDirectBrowserAI(raw, chatHistory, profile, multiData) {
+async function queryDirectBrowserAI(raw, chatHistory, profile, multiData, extraDirective = '') {
     const modeMap = {
         conversational: 'Use a warm, natural, human-like conversational tone. Be concise, supportive, and clear.',
         educational: 'Use an Educational Mode: explain step-by-step with clear structure and examples.',
@@ -502,9 +1027,10 @@ async function queryDirectBrowserAI(raw, chatHistory, profile, multiData) {
     const systemPrompt = `You are ${profile.botName || 'Desu'}, a self-improving, empathetic, independent AI assistant.
 ${modeMap[profile.mode] || modeMap.conversational}
 Rules:
-- Adapt to the user's preferences and self-trained insights: ${profile.text || 'Be clear and natural.'}
+- Adapt to the user's preferences and trained quality directives: ${profile.text || 'Be clear and natural.'}
+${extraDirective ? `- CRITICAL QUALITY OVERRIDE: ${extraDirective}` : ''}
+- Solve math, calculus, physics, and coding questions accurately step-by-step.
 - Maintain full conversation context across messages.
-- If the user shares a personal feeling (e.g. "I am sad"), respond with genuine warmth and empathy.
 - Optionally append a final line "FOLLOWUP: [short 3-5 word topic]" if deeper exploration is relevant.
 Today is ${new Date().toDateString()}.${groundingContext}`;
 
@@ -587,42 +1113,21 @@ function buildOmniPulseHtml(multiData, aiSynthesisHtml) {
 // ============================================================================
 // 5. MASTER ROUTER
 // ============================================================================
-async function shinuReply(inputMessage, chatHistory) {
+async function shinuReply(inputMessage, chatHistory, extraDirective = '') {
     const raw = inputMessage.trim();
     const lower = raw.toLowerCase();
 
-    // 1. AI Image & Video Generation Intercept
+    // 1. Coded Image, Video & Audio Generation (100% Procedural Code, No Pollinations!)
     const mediaCmd = parseMediaCommand(raw);
     if (mediaCmd) {
-        if (mediaCmd.type === 'video') return buildVideoReply(mediaCmd.prompt);
-        return buildImageReply(mediaCmd.prompt);
+        if (mediaCmd.type === 'audio') return buildCodedAudioReply(mediaCmd.prompt);
+        if (mediaCmd.type === 'video') return buildCodedVideoReply(mediaCmd.prompt);
+        return buildCodedImageReply(mediaCmd.prompt);
     }
 
-    // 2. Multiplication Tables & Math Expressions
-    const tableMatch = raw.match(/^(?:write\s+|print\s+|show\s+|give\s+me\s+)?(?:the\s+)?table\s+of\s+(\d+)$/i);
-    if (tableMatch) {
-        const n = parseInt(tableMatch[1], 10);
-        let out = `Here is the multiplication table of <strong>${n}</strong>:<br><br>`;
-        for (let i = 1; i <= 10; i++) out += `${n} × ${i} = <strong>${n * i}</strong><br>`;
-        return { text: out, isHtml: true, followUp: `table of ${n + 1}` };
-    }
-
-    let mathStr = lower
-        .replace(/^(what is|calculate|solve)\s+/i, '')
-        .replace(/divided by/g, '/')
-        .replace(/plus/g, '+')
-        .replace(/minus/g, '-')
-        .replace(/times|multiplied by/g, '*')
-        .replace(/x/g, '*')
-        .replace(/\^/g, '**')
-        .replace(/[?=]/g, '');
-
-    if (/^[0-9+\-*/().%\s]+$/.test(mathStr) && /[0-9]/.test(mathStr) && /[+\-*/%]/.test(mathStr)) {
-        try {
-            const val = Function('"use strict"; return (' + mathStr + ')')();
-            if (typeof val === 'number' && isFinite(val)) return { text: `${raw.replace(/[?=]+$/, '')} = <strong>${val}</strong>`, isHtml: true };
-        } catch (e) {}
-    }
+    // 2. Symbolic Calculus, Algebra & Mathematics Solver (Fixes "Integration of 2x", derivatives, etc.)
+    const mathReply = trySymbolicAndNumericalMath(raw);
+    if (mathReply) return mathReply;
 
     // 3. Repetition Command
     const repeatMatch = raw.match(/^(?:write|say|repeat|type|print)\s+(.+?)\s+(\d+)[\s.]*times?\b/i);
@@ -636,13 +1141,21 @@ async function shinuReply(inputMessage, chatHistory) {
     const prof = Learn.observe(raw);
     if (prof) return prof;
 
-    // 5. Greetings
+    // 5. Check Thumbs-Up Verified Golden Memory (unless regenerating via Thumbs-Down)
+    if (!extraDirective) {
+        const golden = Learn.getGoldenReply(raw);
+        if (golden) {
+            return { text: formatCleanMarkdown(golden), rawText: golden, isHtml: true };
+        }
+    }
+
+    // 6. Greetings
     if (/^(hi+|hey+|hello+|yo|sup|hi bro|hey bro|hello bro)\b[\s!.,?]*$|^hi$/i.test(lower)) {
         const who = Learn.userName() ? ' ' + Learn.userName() : '';
         return { text: `Hey${who}! What are we exploring or building today?`, isHtml: false };
     }
 
-    // 6. Explicit Single-Platform Prefixes
+    // 7. Explicit Single-Platform Prefixes
     if (/^(search\s+)?(instagram|insta|ig)\b/i.test(lower)) return await searchSocialPlatform('insta', raw);
     if (/^(search\s+)?(facebook|fb)\b/i.test(lower)) return await searchSocialPlatform('fb', raw);
     if (/^(search\s+)?(reddit|r\/)\b/i.test(lower)) return await searchReddit(raw);
@@ -650,8 +1163,8 @@ async function shinuReply(inputMessage, chatHistory) {
 
     const profile = Learn.context();
 
-    // 7. AUTOMATIC OMNI-SEARCH (Google + Wikipedia + Reddit + Instagram simultaneously on topic queries)
-    if (shouldRunOmniSearch(raw)) {
+    // 8. AUTOMATIC OMNI-SEARCH (Google + Wikipedia + Reddit + Instagram simultaneously on genuine topic queries)
+    if (shouldRunOmniSearch(raw) && !extraDirective) {
         const coreTopic = Learn.core(raw);
         Learn.noteTopic(coreTopic);
 
@@ -686,8 +1199,8 @@ async function shinuReply(inputMessage, chatHistory) {
         }
     }
 
-    // 8. PURE CONVERSATIONAL AI
-    let chatReply = await queryDirectBrowserAI(raw, chatHistory, profile, null);
+    // 9. PURE CONVERSATIONAL AI
+    let chatReply = await queryDirectBrowserAI(raw, chatHistory, profile, null, extraDirective);
     if (chatReply) {
         let suggestedFollowUp = null;
         const fwMatch = chatReply.match(/\n*FOLLOWUP:\s*(.+)$/i);
@@ -705,13 +1218,13 @@ async function shinuReply(inputMessage, chatHistory) {
     }
 
     return {
-        text: `I'm right here with you — tell me a bit more about what you're thinking or what topic we should dive into.`,
+        text: `I'm right here with you — tell me a bit more about what you're thinking or what we should build.`,
         isHtml: false
     };
 }
 
 // ============================================================================
-// 6. CHAT SESSION, UNDISSOLVE RENDERER & ALWAYS-VISIBLE NEON MOTIFS
+// 6. CHAT SESSION, UNDISSOLVE RENDERER & ACTIVE QUALITY REGENERATION
 // ============================================================================
 let chats = [];
 try { chats = JSON.parse(load('shinu_chats') || '[]'); } catch (e) { chats = []; }
@@ -748,7 +1261,8 @@ function addBubble(role, content, isHtml = false, autoScroll = true, meta = {}) 
         }
     }
 
-    if (role === 'bot' && window.Learn && meta.showFeedback !== false) {
+    // Attach Neon Thumbs Up / Thumbs Down Quality Trainer on every bot reply
+    if (role === 'bot' && typeof Learn !== 'undefined' && meta.showFeedback !== false) {
         Learn.attachFeedback(div, meta.userQuestion || '', meta.rawText || content);
     }
 
@@ -759,6 +1273,39 @@ function addBubble(role, content, isHtml = false, autoScroll = true, meta = {}) 
     }
     return div;
 }
+
+// Triggered when the user clicks Thumbs Down -> picks an improvement chip
+window.regenerateImprovedReply = async function (userQuestion, previousAnswer, directive) {
+    const chat = currentChat();
+    const historySnapshot = chat ? [...chat.messages] : [];
+
+    const typing = document.createElement('div');
+    typing.className = 'message-bubble bot';
+    typing.innerHTML = '<span class="typing"><i></i><i></i><i></i></span>';
+    chatContainer.appendChild(typing);
+    chatContainer.scrollTop = chatContainer.scrollHeight;
+
+    const replyObj = await shinuReply(userQuestion, historySnapshot, directive);
+    typing.remove();
+
+    if (chat) {
+        chat.messages.push({
+            role: 'bot',
+            text: replyObj.text,
+            rawText: replyObj.rawText || replyObj.text,
+            isHtml: replyObj.isHtml
+        });
+        saveChats();
+    }
+
+    addBubble('bot', replyObj.text, replyObj.isHtml, true, {
+        sources: replyObj.sources,
+        followUp: replyObj.followUp,
+        animateUndissolve: true,
+        userQuestion,
+        rawText: replyObj.rawText || replyObj.text
+    });
+};
 
 function closeDrawer() {
     sideDrawer.classList.remove('open');
@@ -826,11 +1373,12 @@ quickHelpBtn.onclick = () => {
     centerStage.classList.add('dissolved');
     chatContainer.classList.add('active');
     addBubble('bot', `
-        <strong>DESU Creative Studio & Omni-Search Guide:</strong><br>
-        • <strong>AI Image Generation:</strong> Type <code>image [prompt]</code> or <code>draw [prompt]</code> (add <code>vertical</code> or <code>9:16</code> for portrait Reels).<br>
-        • <strong>AI Video Generation:</strong> Type <code>video [prompt]</code> or <code>animate [prompt]</code> to synthesize a 60fps motion scene with <code>.webm</code> export.<br>
-        • <strong>Auto Multi-Search:</strong> Ask about any topic to pull Google, Wikipedia, Reddit & Instagram together.<br>
-        • <strong>Google Self-Training:</strong> Tap the <code>✦ Self-Trained</code> pill in the top bar to see what DESU learned from Google.
+        <strong>DESU Coded Studio, Calculus & Quality Trainer:</strong><br>
+        • <strong>Coded Image:</strong> Type <code>image cat</code> or <code>draw neon city</code>.<br>
+        • <strong>Coded 60fps Video:</strong> Type <code>video cat playing</code> or <code>video solar system</code>.<br>
+        • <strong>Coded Web Audio:</strong> Type <code>audio cat</code>, <code>audio rain</code>, or <code>audio synth</code>.<br>
+        • <strong>Calculus & Math:</strong> Type <code>Integration of 2x</code>, <code>derivative of x^3</code>, or <code>solve x^2 - 5x + 6 = 0</code>.<br>
+        • <strong>Neon Quality Trainer:</strong> Tap <strong>Good</strong> or <strong>Improve</strong> below any answer to train DESU's reply depth and accuracy.
     `, true, true, { animateUndissolve: true, showFeedback: false });
 };
 
