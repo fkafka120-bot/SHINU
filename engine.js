@@ -1,4 +1,4 @@
-// engine.js — DESU Coded Media Studio (Canvas Image, Rigged Video, Web Audio), Calculus Solver & AI Router
+// engine.js — DESU Coded Media Studio (Water, House, Cat, Space, City, Fire + Web Audio), Full Math/Calculus Solver & Smart Fallback
 const menuToggle = document.getElementById('menuToggle');
 const sideDrawer = document.getElementById('sideDrawer');
 const drawerBackdrop = document.getElementById('drawerBackdrop');
@@ -15,7 +15,6 @@ function load(k) { try { return localStorage.getItem(k); } catch (e) {} return n
 function escapeHtml(s) { return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;"); }
 function safeUrl(u) { return /^https?:\/\//i.test(String(u)) ? String(u) : '#'; }
 
-// Add "Audio" Pill alongside Image & Video in Drawer
 (function ensureStudioPills() {
     const pillBox = document.querySelector('.platform-pills');
     if (!pillBox) return;
@@ -94,7 +93,8 @@ menuToggle.onclick = () => { sideDrawer.classList.toggle('open'); drawerBackdrop
 drawerBackdrop.onclick = () => { sideDrawer.classList.remove('open'); drawerBackdrop.classList.remove('active'); };
 
 // ============================================================================
-// 1. SYMBOLIC CALCULUS, ALGEBRA & MATHEMATICS ENGINE (Solves Integrals, Derivatives, Equations)
+// 1. COMPLETE MATHEMATICS, CALCULUS & ALGEBRA ENGINE
+// Solves Integrals, Differentials, Derivatives, Linear/Quadratic Equations & Word Math
 // ============================================================================
 function formatTermCoef(c, pow) {
     const rounded = Math.round(c * 10000) / 10000;
@@ -109,21 +109,18 @@ function integrateSingleTerm(termStr) {
     const t = termStr.replace(/\s+/g, '').toLowerCase();
     if (!t) return null;
 
-    // Constant: e.g. "5"
     if (/^[+-]?\d+(\.\d+)?$/.test(t)) {
         const c = parseFloat(t);
         if (c === 0) return '0';
         return c === 1 ? 'x' : c === -1 ? '-x' : `${c}x`;
     }
 
-    // Reciprocal: 1/x or a/x
     const recipMatch = t.match(/^([+-]?\d*(?:\.\d+)?)\/x$/);
     if (recipMatch) {
         const c = recipMatch[1] === '' || recipMatch[1] === '+' ? 1 : recipMatch[1] === '-' ? -1 : parseFloat(recipMatch[1]);
         return c === 1 ? 'ln|x|' : `${c}·ln|x|`;
     }
 
-    // Trig & Exponential functions
     if (t === 'sin(x)' || t === 'sinx') return '-cos(x)';
     if (t === 'cos(x)' || t === 'cosx') return 'sin(x)';
     if (t === 'sec^2(x)' || t === 'sec^2x') return 'tan(x)';
@@ -137,7 +134,6 @@ function integrateSingleTerm(termStr) {
     const expKx = t.match(/^e\^\(?([+-]?\d+)x\)?$/);
     if (expKx) return `(1/${expKx[1]})e^(${expKx[1]}x)`;
 
-    // Polynomial term: a*x^n or ax or x^n
     const polyMatch = t.match(/^([+-]?\d*(?:\.\d+)?)\*?x(?:\^([+-]?\d+(?:\.\d+)?))?$/);
     if (polyMatch) {
         const rawC = polyMatch[1];
@@ -146,7 +142,6 @@ function integrateSingleTerm(termStr) {
         if (n === -1) return c === 1 ? 'ln|x|' : `${c}·ln|x|`;
         const newPow = n + 1;
         const newCoef = c / newPow;
-        // Format cleanly as fraction if not exact decimal
         if (Number.isInteger(c) && Number.isInteger(newPow) && c % newPow !== 0) {
             const v = newPow === 1 ? 'x' : `x^${newPow}`;
             return `(${c}/${newPow})${v}`;
@@ -179,6 +174,82 @@ function differentiateSingleTerm(termStr) {
     return null;
 }
 
+// Universal Algebraic Solver for ANY Linear or Quadratic Equation (e.g. "Solve 2x=6", "3x + 5 = 20", "x^2 - 5x + 6 = 0")
+function solveAlgebraicEquation(eqRaw) {
+    const cleaned = eqRaw.replace(/^(?:solve|find\s+x\s+in|calculate)\s*:?\s*/i, '').replace(/[?!.]+$/, '').trim();
+    if (!cleaned.includes('=') || !/[a-z]/i.test(cleaned)) return null;
+
+    const parts = cleaned.split('=');
+    if (parts.length !== 2) return null;
+
+    const varMatch = cleaned.match(/[a-z]/i);
+    const v = varMatch ? varMatch[0].toLowerCase() : 'x';
+
+    const toJs = (str) => str
+        .toLowerCase()
+        .replace(new RegExp(v, 'g'), '(x)')
+        .replace(/(\d)\s*\(/g, '$1*(')
+        .replace(/\)\s*(\d)/g, ')*$1')
+        .replace(/\)\s*\(/g, ')*(')
+        .replace(/\^/g, '**');
+
+    try {
+        const fn = new Function('x', `"use strict"; return (${toJs(parts[0])}) - (${toJs(parts[1])});`);
+        const f0 = fn(0);
+        const f1 = fn(1);
+        const fm1 = fn(-1);
+        const f2 = fn(2);
+
+        if ([f0, f1, fm1, f2].some(val => typeof val !== 'number' || !isFinite(val))) return null;
+
+        // Determine polynomial coefficients f(x) = a*x^2 + b*x + c
+        const c = f0;
+        const a = (f1 + fm1) / 2 - c;
+        const b = (f1 - fm1) / 2;
+
+        // Verify degree <= 2 using f(2)
+        if (Math.abs((4 * a + 2 * b + c) - f2) > 1e-6) return null;
+
+        // Case 1: Linear Equation (a ≈ 0, b ≠ 0), e.g., "2x = 6"
+        if (Math.abs(a) < 1e-9 && Math.abs(b) > 1e-9) {
+            const root = Math.round((-c / b) * 100000) / 100000;
+            return {
+                text: `<strong>Linear Equation Solution (${escapeHtml(cleaned)}):</strong><br>` +
+                      `• Standard form: <code>${Math.round(b * 1000) / 1000}${v} + (${Math.round(c * 1000) / 1000}) = 0</code><br>` +
+                      `• Divide by coefficient (${Math.round(b * 1000) / 1000}):<br>` +
+                      `• <strong>${v} = ${root}</strong>`,
+                isHtml: true
+            };
+        }
+
+        // Case 2: Quadratic Equation (a ≠ 0)
+        if (Math.abs(a) >= 1e-9) {
+            const disc = b * b - 4 * a * c;
+            if (disc >= 0) {
+                const r1 = Math.round(((-b + Math.sqrt(disc)) / (2 * a)) * 10000) / 10000;
+                const r2 = Math.round(((-b - Math.sqrt(disc)) / (2 * a)) * 10000) / 10000;
+                const rootsText = r1 === r2 ? `<strong>${v} = ${r1}</strong> (double root)` : `<strong>${v}₁ = ${r1}</strong>, <strong>${v}₂ = ${r2}</strong>`;
+                return {
+                    text: `<strong>Quadratic Equation Solution (${escapeHtml(cleaned)}):</strong><br>` +
+                          `• Discriminant (Δ = b² - 4ac) = <strong>${Math.round(disc * 1000) / 1000}</strong><br>` +
+                          `• Solution: ${rootsText}`,
+                    isHtml: true
+                };
+            } else {
+                const realPart = Math.round((-b / (2 * a)) * 10000) / 10000;
+                const imagPart = Math.round((Math.sqrt(-disc) / Math.abs(2 * a)) * 10000) / 10000;
+                return {
+                    text: `<strong>Complex Quadratic Solution (${escapeHtml(cleaned)}):</strong><br>` +
+                          `• Discriminant (Δ) = <strong>${Math.round(disc * 1000) / 1000} &lt; 0</strong><br>` +
+                          `• Roots: <strong>${v} = ${realPart} ± ${imagPart}i</strong>`,
+                    isHtml: true
+                };
+            }
+        }
+    } catch (e) {}
+    return null;
+}
+
 function trySymbolicAndNumericalMath(raw) {
     const q = raw.trim();
     const lower = q.toLowerCase();
@@ -192,7 +263,38 @@ function trySymbolicAndNumericalMath(raw) {
         return { text: out, isHtml: true, followUp: `table of ${n + 1}` };
     }
 
-    // 2. Indefinite & Definite Integration ("integration of 2x", "integrate 3x^2 + 4x", "∫ 2x dx")
+    // 2. Natural-Language Word Math ("Difference between 5 and 7", "Sum of 12 and 8", "Product of 6 and 9", "20% of 150")
+    const diffMatch = q.match(/^(?:what\s+is\s+)?(?:the\s+)?difference\s+between\s+([+-]?\d+(?:\.\d+)?)\s+and\s+([+-]?\d+(?:\.\d+)?)[?.!]*$/i);
+    if (diffMatch) {
+        const a = parseFloat(diffMatch[1]), b = parseFloat(diffMatch[2]);
+        const absDiff = Math.round(Math.abs(a - b) * 100000) / 100000;
+        const signedDiff = Math.round((a - b) * 100000) / 100000;
+        return {
+            text: `The absolute difference between <strong>${a}</strong> and <strong>${b}</strong> is <strong>|${a} - ${b}| = ${absDiff}</strong> (and the directed subtraction is <code>${a} - ${b} = ${signedDiff}</code>).`,
+            isHtml: true
+        };
+    }
+
+    const sumMatch = q.match(/^(?:what\s+is\s+)?(?:the\s+)?sum\s+of\s+([+-]?\d+(?:\.\d+)?)\s+and\s+([+-]?\d+(?:\.\d+)?)[?.!]*$/i);
+    if (sumMatch) {
+        const a = parseFloat(sumMatch[1]), b = parseFloat(sumMatch[2]);
+        return { text: `The sum of <strong>${a}</strong> and <strong>${b}</strong> is <strong>${a + b}</strong>.`, isHtml: true };
+    }
+
+    const prodMatch = q.match(/^(?:what\s+is\s+)?(?:the\s+)?product\s+of\s+([+-]?\d+(?:\.\d+)?)\s+and\s+([+-]?\d+(?:\.\d+)?)[?.!]*$/i);
+    if (prodMatch) {
+        const a = parseFloat(prodMatch[1]), b = parseFloat(prodMatch[2]);
+        return { text: `The product of <strong>${a}</strong> and <strong>${b}</strong> is <strong>${a * b}</strong>.`, isHtml: true };
+    }
+
+    const pctMatch = q.match(/^(?:what\s+is\s+)?(\d+(?:\.\d+)?)\s*%\s+of\s+(\d+(?:\.\d+)?)[?.!]*$/i);
+    if (pctMatch) {
+        const p = parseFloat(pctMatch[1]), total = parseFloat(pctMatch[2]);
+        const res = Math.round(((p / 100) * total) * 100000) / 100000;
+        return { text: `<strong>${p}%</strong> of <strong>${total}</strong> = <strong>${res}</strong>`, isHtml: true };
+    }
+
+    // 3. Indefinite & Definite Integration ("integration of 2x", "integrate 3x+6", "∫ 2x dx")
     const intMatch = q.match(/^(?:what\s+is\s+)?(?:the\s+)?(?:integration|integral|antiderivative|integrate)\s+(?:of\s+)?(.+?)(?:\s+dx)?(?:\s+from\s+([+-]?\d+(?:\.\d+)?)\s+to\s+([+-]?\d+(?:\.\d+)?))?[?.!]*$/i) ||
                      q.match(/^∫\s*(.+?)(?:\s*dx)?$/i);
     if (intMatch) {
@@ -212,59 +314,46 @@ function trySymbolicAndNumericalMath(raw) {
             if (limA !== null && limB !== null) {
                 try {
                     const jsFn = new Function('x', `return (${expr.replace(/(\d)(x)/gi, '$1*$2').replace(/\^/g, '**').replace(/sin/g, 'Math.sin').replace(/cos/g, 'Math.cos').replace(/exp/g, 'Math.exp')});`);
-                    // Simpson's rule numerical evaluation
                     const steps = 200;
                     const h = (limB - limA) / steps;
                     let sum = jsFn(limA) + jsFn(limB);
-                    for (let i = 1; i < steps; i++) {
-                        sum += jsFn(limA + i * h) * (i % 2 === 0 ? 2 : 4);
-                    }
+                    for (let i = 1; i < steps; i++) sum += jsFn(limA + i * h) * (i % 2 === 0 ? 2 : 4);
                     const defVal = Math.round(((h / 3) * sum) * 100000) / 100000;
                     html += `<br>• <strong>Definite Integral [${limA} to ${limB}]:</strong> <strong>${defVal}</strong>`;
                 } catch (e) {}
             }
-            return { text: html, isHtml: true };
+            return { text: html, isHtml: true, followUp: `differentiation of ${expr}` };
         }
     }
 
-    // 3. Differentiation / Derivatives ("derivative of 2x", "differentiate x^3 + 4x", "d/dx sin(x)")
-    const derivMatch = q.match(/^(?:what\s+is\s+)?(?:the\s+)?(?:derivative|differentiation|differentiate|d\/dx)\s+(?:of\s+)?(.+?)[?.!]*$/i);
+    // 4. Differentiation, Derivatives & Differentials ("Differential of 2x", "Differentiation of 2x", "derivative of x^3")
+    const derivMatch = q.match(/^(?:what\s+is\s+)?(?:the\s+)?(?:differential|derivative|differentiation|differentiate|d\/dx)\s+(?:of\s+)?(.+?)[?.!]*$/i);
     if (derivMatch) {
         const expr = derivMatch[1].trim();
+        const isDifferentialWord = /\bdifferential\b/i.test(q);
         const rawTerms = expr.replace(/\s+/g, '').match(/[+-]?[^+-]+/g) || [expr];
         const diffTerms = rawTerms.map(differentiateSingleTerm);
         if (diffTerms.every(Boolean)) {
             const nonZero = diffTerms.filter(t => t !== '0');
             const joined = (nonZero.length ? nonZero.join(' + ') : '0').replace(/\+\s*-/g, '- ');
+            const diffLine = isDifferentialWord
+                ? `• Total Differential: <strong>dy = (${escapeHtml(joined)}) dx</strong><br>• Derivative: <strong>d/dx (${escapeHtml(expr)}) = ${escapeHtml(joined)}</strong>`
+                : `d/dx (${escapeHtml(expr)}) = <strong>${escapeHtml(joined)}</strong>`;
             return {
-                text: `<strong>Symbolic Derivative:</strong><br>d/dx (${escapeHtml(expr)}) = <strong>${escapeHtml(joined)}</strong><br><br><span style="color:var(--text-muted); font-size:13.5px;">• Applied the Power / Differentiation Rule: d/dx (a·xⁿ) = a·n·xⁿ⁻¹.</span>`,
-                isHtml: true
+                text: `<strong>Symbolic ${isDifferentialWord ? 'Differential & Derivative' : 'Derivative'}:</strong><br>${diffLine}<br><br><span style="color:var(--text-muted); font-size:13.5px;">• Applied the Power / Differentiation Rule: d/dx (a·xⁿ) = a·n·xⁿ⁻¹.</span>`,
+                isHtml: true,
+                followUp: `integration of ${expr}`
             };
         }
     }
 
-    // 4. Quadratic & Linear Equation Solver ("solve x^2 - 5x + 6 = 0", "solve 2x + 6 = 14")
-    const solveMatch = q.match(/^(?:solve\s+)?([+-]?\d*x\^2\s*[+-]\s*\d*x\s*[+-]\s*\d+)\s*=\s*0$/i);
-    if (solveMatch) {
-        const cleanEq = solveMatch[1].replace(/\s+/g, '');
-        const m = cleanEq.match(/^([+-]?\d*)x\^2([+-]\d*)x([+-]\d+)$/i);
-        if (m) {
-            const a = (m[1] === '' || m[1] === '+') ? 1 : m[1] === '-' ? -1 : parseFloat(m[1]);
-            const b = (m[2] === '+' || m[2] === '') ? 1 : m[2] === '-' ? -1 : parseFloat(m[2]);
-            const c = parseFloat(m[3]);
-            const disc = b * b - 4 * a * c;
-            if (disc >= 0) {
-                const r1 = Math.round(((-b + Math.sqrt(disc)) / (2 * a)) * 10000) / 10000;
-                const r2 = Math.round(((-b - Math.sqrt(disc)) / (2 * a)) * 10000) / 10000;
-                return {
-                    text: `<strong>Quadratic Equation Solution (${escapeHtml(cleanEq)} = 0):</strong><br>• Discriminant (Δ = b² - 4ac) = <strong>${disc}</strong><br>• Roots: <strong>x₁ = ${r1}</strong>, <strong>x₂ = ${r2}</strong>`,
-                    isHtml: true
-                };
-            }
-        }
+    // 5. Universal Linear & Quadratic Equation Solver ("Solve 2x=6", "2x + 4 = 10", "solve x^2 - 5x + 6 = 0")
+    if (/^(?:solve|find\s+x)\b/i.test(q) || (/^[0-9a-z+\-*/^().\s]+=+[0-9a-z+\-*/^().\s]+$/i.test(q) && /[a-z]/i.test(q))) {
+        const eqResult = solveAlgebraicEquation(q);
+        if (eqResult) return eqResult;
     }
 
-    // 5. Direct Arithmetic & Scientific Expressions
+    // 6. Direct Arithmetic & Scientific Expressions
     let mathStr = lower
         .replace(/^(what is|calculate|compute|evaluate)\s+/i, '')
         .replace(/divided by/g, '/')
@@ -290,21 +379,20 @@ function trySymbolicAndNumericalMath(raw) {
 }
 
 // ============================================================================
-// 2. 100% CODED PROCEDURAL IMAGE, ANIMATED VIDEO & WEB AUDIO STUDIO (NO POLLINATIONS!)
+// 2. 100% CODED PROCEDURAL IMAGE, ANIMATED VIDEO & WEB AUDIO STUDIO
+// Supports Water/Ocean, House/Room Interiors, Cat, Fire, Space, City, Nature & Synth
 // ============================================================================
 function parseMediaCommand(raw) {
-    const q = raw.trim();
+    // Strip leading "tell me about" or "explore" so clicking follow-up chips triggers media directly!
+    const q = raw.trim().replace(/^(?:tell\s+me\s+about|would\s+you\s+like\s+to\s+explore|explore|show\s+me)\s+/i, '').trim();
 
-    // Audio / Sound / Music commands ("audio cat", "sound of rain", "music lofi", "play cat sound")
     const audMatch = q.match(/^(?:generate\s+|create\s+|make\s+|play\s+|synthesize\s+)?(?:a\s+|an\s+)?(?:coded\s+)?(?:audio|sound|music|melody|voice|sfx|beat|tone)\s*(?:of|for|about|:)?\s+(.+)$/i);
     if (audMatch) return { type: 'audio', prompt: audMatch[1].trim() };
 
-    // Video / Animation commands ("video cat playing", "animate solar system")
     const vidMatch = q.match(/^(?:generate\s+|create\s+|make\s+|render\s+|code\s+)?(?:a\s+|an\s+)?(?:coded\s+|ai\s+)?(?:video|animation|motion|reel|clip)\s*(?:of|about|for|:)?\s+(.+)$/i) ||
                      q.match(/^(?:animate)\s*:?\s+(.+)$/i);
     if (vidMatch) return { type: 'video', prompt: vidMatch[1].trim() };
 
-    // Image / Drawing commands ("image cat", "draw neon city")
     const imgMatch = q.match(/^(?:generate\s+|create\s+|make\s+|draw\s+|paint\s+|render\s+|code\s+)?(?:a\s+|an\s+)?(?:coded\s+|ai\s+)?(?:image|picture|photo|art|illustration|drawing)\s*(?:of|for|about|:)?\s+(.+)$/i) ||
                      q.match(/^(?:draw|paint)\s*:?\s+(.+)$/i);
     if (imgMatch) return { type: 'image', prompt: imgMatch[1].trim() };
@@ -312,58 +400,166 @@ function parseMediaCommand(raw) {
     return null;
 }
 
-// Shared Procedural Character & Scene Primitives (100% Pure Canvas Code)
 function drawProceduralScene(ctx, w, h, prompt, t = 0, seed = 1) {
     const p = prompt.toLowerCase();
     const isCat = /\b(cat|kitten|feline|kitty|meow)\b/.test(p);
+    const isHouse = /\b(house|home|room|living|indoors|inside|sofa|couch|window)\b/.test(p);
+    const isWater = /\b(water|ocean|sea|wave|waves|river|lake|rain|underwater|fish|aqua)\b/.test(p);
+    const isFire = /\b(fire|flame|lava|campfire|bonfire|ember|burn)\b/.test(p);
     const isSpace = /\b(space|planet|solar|galaxy|star|cosmos|orbit|astrophysics)\b/.test(p);
     const isCity = /\b(city|cyberpunk|street|building|neon|urban|car)\b/.test(p);
-    const isNature = /\b(tree|forest|mountain|sunset|ocean|flower|nature|rain)\b/.test(p);
 
-    // 1. Procedural Sky / Background Gradient
-    const bgGrad = ctx.createLinearGradient(0, 0, 0, h);
-    if (isSpace) {
-        bgGrad.addColorStop(0, '#04020c');
-        bgGrad.addColorStop(1, '#120828');
-    } else if (isCity) {
-        bgGrad.addColorStop(0, '#080318');
-        bgGrad.addColorStop(1, '#240b36');
-    } else if (isNature) {
-        bgGrad.addColorStop(0, '#0d1b2a');
-        bgGrad.addColorStop(0.6, '#415a77');
-        bgGrad.addColorStop(1, '#1b263b');
-    } else {
-        bgGrad.addColorStop(0, '#0c071d');
-        bgGrad.addColorStop(0.6, '#1c1136');
-        bgGrad.addColorStop(1, '#090612');
-    }
-    ctx.fillStyle = bgGrad;
-    ctx.fillRect(0, 0, w, h);
+    // 1. BACKGROUND ENVIRONMENT LAYER
+    if (isHouse) {
+        // Cozy House Interior: Warm wall, wooden floorboards, glowing window with night sky, curtains & rug
+        const wallGrad = ctx.createLinearGradient(0, 0, 0, h * 0.72);
+        wallGrad.addColorStop(0, '#1e1533');
+        wallGrad.addColorStop(1, '#2d1f4a');
+        ctx.fillStyle = wallGrad;
+        ctx.fillRect(0, 0, w, h * 0.72);
 
-    // 2. Twinkling Procedural Stars / Bokeh Particles
-    for (let i = 0; i < 40; i++) {
-        const sx = ((i * 137.5 * seed) % w);
-        const sy = ((i * 293.1 * seed) % (h * 0.72));
-        const twinkle = 0.35 + 0.65 * Math.abs(Math.sin(t * 2 + i));
-        ctx.fillStyle = `rgba(230, 210, 255, ${twinkle * 0.7})`;
-        ctx.beginPath();
-        ctx.arc(sx, sy, (i % 3) * 0.8 + 0.8, 0, Math.PI * 2);
-        ctx.fill();
-    }
-
-    if (isCat) {
-        // Floor / Carpet
-        ctx.fillStyle = '#150d2a';
-        ctx.fillRect(0, h * 0.73, w, h * 0.27);
-        ctx.strokeStyle = 'rgba(196, 150, 255, 0.25)';
+        // Wooden Floor
+        ctx.fillStyle = '#26152b';
+        ctx.fillRect(0, h * 0.72, w, h * 0.28);
+        ctx.strokeStyle = 'rgba(255, 190, 150, 0.12)';
         ctx.lineWidth = 2;
+        for (let fy = h * 0.72; fy < h; fy += 18) {
+            ctx.beginPath(); ctx.moveTo(0, fy); ctx.lineTo(w, fy); ctx.stroke();
+        }
+
+        // Window with Moon & Stars outside
+        const wx = w * 0.62, wy = h * 0.12, ww = 120, wh = 135;
+        ctx.fillStyle = '#090619';
+        ctx.fillRect(wx, wy, ww, wh);
+        // Moon outside window
+        ctx.fillStyle = '#fef08a';
+        ctx.shadowColor = '#fef08a';
+        ctx.shadowBlur = 15;
+        ctx.beginPath(); ctx.arc(wx + 82, wy + 38, 16, 0, Math.PI * 2); ctx.fill();
+        ctx.shadowBlur = 0;
+        // Window Frame Crossbars
+        ctx.strokeStyle = '#6b4c9a';
+        ctx.lineWidth = 5;
+        ctx.strokeRect(wx, wy, ww, wh);
         ctx.beginPath();
-        ctx.moveTo(0, h * 0.73);
-        ctx.lineTo(w, h * 0.73);
+        ctx.moveTo(wx + ww / 2, wy); ctx.lineTo(wx + ww / 2, wy + wh);
+        ctx.moveTo(wx, wy + wh / 2); ctx.lineTo(wx + ww, wy + wh / 2);
         ctx.stroke();
 
-        const cx = w * 0.45 + Math.sin(t * 2.2) * 18;
-        const cy = h * 0.62 + Math.abs(Math.sin(t * 4.4)) * -14;
+        // Cozy Living Room Rug
+        ctx.fillStyle = 'rgba(196, 150, 255, 0.18)';
+        ctx.beginPath();
+        ctx.ellipse(w * 0.48, h * 0.83, 165, 34, 0, 0, Math.PI * 2);
+        ctx.fill();
+    } else if (isWater) {
+        // Deep Ocean & Shimmering Moonlit Sky
+        const skyGrad = ctx.createLinearGradient(0, 0, 0, h);
+        skyGrad.addColorStop(0, '#040d1a');
+        skyGrad.addColorStop(0.42, '#0a2246');
+        skyGrad.addColorStop(1, '#031026');
+        ctx.fillStyle = skyGrad;
+        ctx.fillRect(0, 0, w, h);
+
+        // Glowing Moon & Shimmering Water Reflections
+        ctx.fillStyle = '#e0f2fe';
+        ctx.shadowColor = '#38bdf8';
+        ctx.shadowBlur = 35;
+        ctx.beginPath();
+        ctx.arc(w * 0.5, h * 0.22, 32, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+
+        // Multi-Layered Animated Sine / Gerstner Ocean Waves
+        const waveColors = [
+            'rgba(14, 116, 144, 0.55)',
+            'rgba(2, 132, 199, 0.65)',
+            'rgba(56, 189, 248, 0.50)',
+            'rgba(3, 105, 161, 0.85)'
+        ];
+        waveColors.forEach((col, layer) => {
+            const baseY = h * (0.46 + layer * 0.11);
+            const amp = 14 + layer * 4;
+            const freq = 0.014 - layer * 0.002;
+            const speed = (layer % 2 === 0 ? 1 : -1) * (2.2 + layer * 0.5);
+
+            ctx.fillStyle = col;
+            ctx.beginPath();
+            ctx.moveTo(0, h);
+            for (let x = 0; x <= w; x += 6) {
+                const y = baseY + Math.sin(x * freq + t * speed + layer) * amp + Math.cos(x * freq * 1.8 - t * 1.5) * (amp * 0.4);
+                ctx.lineTo(x, y);
+            }
+            ctx.lineTo(w, h);
+            ctx.closePath();
+            ctx.fill();
+
+            // Glowing Wave Crest Highlight
+            ctx.strokeStyle = 'rgba(186, 230, 253, 0.55)';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            for (let x = 0; x <= w; x += 6) {
+                const y = baseY + Math.sin(x * freq + t * speed + layer) * amp + Math.cos(x * freq * 1.8 - t * 1.5) * (amp * 0.4);
+                if (x === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.stroke();
+        });
+
+        // Rising Water Bubbles & Shimmering Ripples
+        for (let i = 0; i < 28; i++) {
+            const bx = ((i * 97 * seed) + Math.sin(t * 2 + i) * 18) % w;
+            const by = h - (((t * 45 + i * 53) % (h * 0.52)));
+            ctx.strokeStyle = 'rgba(224, 242, 254, 0.65)';
+            ctx.lineWidth = 1.4;
+            ctx.beginPath();
+            ctx.arc(bx, by, (i % 4) + 2, 0, Math.PI * 2);
+            ctx.stroke();
+        }
+    } else if (isFire) {
+        // Procedural Dynamic Fire & Rising Embers
+        ctx.fillStyle = '#090204';
+        ctx.fillRect(0, 0, w, h);
+        for (let i = 0; i < 35; i++) {
+            const fx = w * 0.5 + Math.sin(i * 1.7 + t * 3) * (110 - (i % 20) * 3);
+            const fy = h * 0.82 - ((t * 110 + i * 25) % (h * 0.65));
+            const radius = Math.max(4, 38 - ((h * 0.82 - fy) * 0.14));
+            const hue = 15 + ((h * 0.82 - fy) * 0.18);
+            ctx.fillStyle = `hsla(${hue}, 100%, 55%, 0.55)`;
+            ctx.shadowColor = `hsla(${hue}, 100%, 50%, 0.8)`;
+            ctx.shadowBlur = 20;
+            ctx.beginPath();
+            ctx.arc(fx, fy, radius, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        ctx.shadowBlur = 0;
+    } else {
+        // Starry Night / Cosmic Background
+        const bgGrad = ctx.createLinearGradient(0, 0, 0, h);
+        bgGrad.addColorStop(0, '#060312');
+        bgGrad.addColorStop(1, '#180d30');
+        ctx.fillStyle = bgGrad;
+        ctx.fillRect(0, 0, w, h);
+
+        for (let i = 0; i < 36; i++) {
+            const sx = ((i * 137.5 * seed) % w);
+            const sy = ((i * 293.1 * seed) % (h * 0.72));
+            const twinkle = 0.35 + 0.65 * Math.abs(Math.sin(t * 2 + i));
+            ctx.fillStyle = `rgba(230, 210, 255, ${twinkle * 0.7})`;
+            ctx.beginPath();
+            ctx.arc(sx, sy, (i % 3) * 0.8 + 0.8, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    }
+
+    // 2. FOREGROUND CHARACTER / SUBJECT LAYER
+    if (isCat) {
+        if (!isHouse && !isWater) {
+            ctx.fillStyle = '#150d2a';
+            ctx.fillRect(0, h * 0.73, w, h * 0.27);
+        }
+
+        const cx = w * 0.42 + Math.sin(t * 2.2) * 18;
+        const cy = h * 0.63 + Math.abs(Math.sin(t * 4.4)) * -14;
 
         // Animated Wagging Tail
         ctx.save();
@@ -383,14 +579,12 @@ function drawProceduralScene(ctx, w, h, prompt, t = 0, seed = 1) {
         ctx.ellipse(cx - 10, cy + 25, 52, 40, -0.1, 0, Math.PI * 2);
         ctx.fill();
 
-        // Animated Paws (Swatting when t > 0)
+        // Animated Paws
         const pawLift = Math.sin(t * 6) * 24;
         ctx.fillStyle = '#e9d5ff';
-        // Back paw
         ctx.beginPath();
         ctx.ellipse(cx - 42, cy + 60, 14, 9, 0, 0, Math.PI * 2);
         ctx.fill();
-        // Front reaching paw
         ctx.beginPath();
         ctx.ellipse(cx + 38 + Math.max(0, pawLift * 0.6), cy + 45 - Math.max(0, pawLift), 15, 10, -0.3, 0, Math.PI * 2);
         ctx.fill();
@@ -401,40 +595,28 @@ function drawProceduralScene(ctx, w, h, prompt, t = 0, seed = 1) {
         ctx.arc(cx + 15, cy - 22, 40, 0, Math.PI * 2);
         ctx.fill();
 
-        // Left & Right Pointed Ears
+        // Ears
         ctx.fillStyle = '#c496ff';
         ctx.beginPath();
-        ctx.moveTo(cx - 18, cy - 45);
-        ctx.lineTo(cx - 8, cy - 82);
-        ctx.lineTo(cx + 10, cy - 55);
-        ctx.closePath();
-        ctx.fill();
+        ctx.moveTo(cx - 18, cy - 45); ctx.lineTo(cx - 8, cy - 82); ctx.lineTo(cx + 10, cy - 55);
+        ctx.closePath(); ctx.fill();
 
         ctx.beginPath();
-        ctx.moveTo(cx + 22, cy - 55);
-        ctx.lineTo(cx + 46, cy - 82);
-        ctx.lineTo(cx + 50, cy - 42);
-        ctx.closePath();
-        ctx.fill();
+        ctx.moveTo(cx + 22, cy - 55); ctx.lineTo(cx + 46, cy - 82); ctx.lineTo(cx + 50, cy - 42);
+        ctx.closePath(); ctx.fill();
 
         // Inner Pink Ears
         ctx.fillStyle = '#ff85c0';
         ctx.beginPath();
-        ctx.moveTo(cx - 12, cy - 48);
-        ctx.lineTo(cx - 6, cy - 72);
-        ctx.lineTo(cx + 5, cy - 54);
-        ctx.closePath();
-        ctx.fill();
+        ctx.moveTo(cx - 12, cy - 48); ctx.lineTo(cx - 6, cy - 72); ctx.lineTo(cx + 5, cy - 54);
+        ctx.closePath(); ctx.fill();
 
         ctx.beginPath();
-        ctx.moveTo(cx + 26, cy - 54);
-        ctx.lineTo(cx + 42, cy - 72);
-        ctx.lineTo(cx + 44, cy - 45);
-        ctx.closePath();
-        ctx.fill();
+        ctx.moveTo(cx + 26, cy - 54); ctx.lineTo(cx + 42, cy - 72); ctx.lineTo(cx + 44, cy - 45);
+        ctx.closePath(); ctx.fill();
 
-        // Glowing Emerald Eyes (with periodic blink)
-        const blink = (Math.sin(t * 1.7) > 0.96) ? 0.12 : 1;
+        // Blinking Eyes
+        const blink = (Math.sin(t * 1.7) > 0.94) ? 0.12 : 1;
         const lookX = Math.cos(t * 3) * 4;
         ctx.fillStyle = '#181028';
         ctx.beginPath();
@@ -454,31 +636,18 @@ function drawProceduralScene(ctx, w, h, prompt, t = 0, seed = 1) {
             ctx.ellipse(cx + 2 + lookX * 0.6, cy - 24, 2.2, 5.5, 0, 0, Math.PI * 2);
             ctx.ellipse(cx + 32 + lookX * 0.6, cy - 24, 2.2, 5.5, 0, 0, Math.PI * 2);
             ctx.fill();
-
-            ctx.fillStyle = '#ffffff';
-            ctx.beginPath();
-            ctx.arc(cx + 4, cy - 27, 2, 0, Math.PI * 2);
-            ctx.arc(cx + 34, cy - 27, 2, 0, Math.PI * 2);
-            ctx.fill();
         }
 
-        // Pink Nose & Cute Mouth
+        // Nose & Mouth
         ctx.fillStyle = '#ff69b4';
         ctx.beginPath();
-        ctx.moveTo(cx + 14, cy - 12);
-        ctx.lineTo(cx + 21, cy - 12);
-        ctx.lineTo(cx + 17.5, cy - 7);
-        ctx.closePath();
-        ctx.fill();
+        ctx.moveTo(cx + 14, cy - 12); ctx.lineTo(cx + 21, cy - 12); ctx.lineTo(cx + 17.5, cy - 7);
+        ctx.closePath(); ctx.fill();
 
         ctx.strokeStyle = '#3b1d5e';
         ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.arc(cx + 13, cy - 5, 4.5, 0, Math.PI);
-        ctx.stroke();
-        ctx.beginPath();
-        ctx.arc(cx + 22, cy - 5, 4.5, 0, Math.PI);
-        ctx.stroke();
+        ctx.beginPath(); ctx.arc(cx + 13, cy - 5, 4.5, 0, Math.PI); ctx.stroke();
+        ctx.beginPath(); ctx.arc(cx + 22, cy - 5, 4.5, 0, Math.PI); ctx.stroke();
 
         // Whiskers
         ctx.strokeStyle = 'rgba(255,255,255,0.75)';
@@ -493,9 +662,9 @@ function drawProceduralScene(ctx, w, h, prompt, t = 0, seed = 1) {
             }
         });
 
-        // Bouncing Physics Yarn Ball for the Cat to Play With!
+        // Bouncing Yarn Ball
         const ballX = w * 0.72 + Math.cos(t * 3.2) * 38;
-        const ballY = h * 0.70 - Math.abs(Math.sin(t * 5.2)) * 68;
+        const ballY = h * 0.71 - Math.abs(Math.sin(t * 5.2)) * 68;
         ctx.fillStyle = '#ff69b4';
         ctx.shadowColor = '#ff69b4';
         ctx.shadowBlur = 15;
@@ -503,14 +672,7 @@ function drawProceduralScene(ctx, w, h, prompt, t = 0, seed = 1) {
         ctx.arc(ballX, ballY, 18, 0, Math.PI * 2);
         ctx.fill();
         ctx.shadowBlur = 0;
-
-        ctx.strokeStyle = '#ffd6eb';
-        ctx.lineWidth = 1.6;
-        ctx.beginPath();
-        ctx.arc(ballX, ballY, 12, t, t + Math.PI * 1.3);
-        ctx.stroke();
     } else if (isSpace) {
-        // Orbiting Solar System / Astrophysics Simulation
         const cx = w / 2, cy = h / 2;
         ctx.fillStyle = '#ffaa50';
         ctx.shadowColor = '#ffaa50';
@@ -527,30 +689,23 @@ function drawProceduralScene(ctx, w, h, prompt, t = 0, seed = 1) {
         ];
         planets.forEach((pl, idx) => {
             ctx.strokeStyle = 'rgba(255,255,255,0.12)';
-            ctx.beginPath();
-            ctx.arc(cx, cy, pl.r, 0, Math.PI * 2);
-            ctx.stroke();
-
+            ctx.beginPath(); ctx.arc(cx, cy, pl.r, 0, Math.PI * 2); ctx.stroke();
             const angle = t * pl.speed + idx * 2.1 + seed;
             const px = cx + Math.cos(angle) * pl.r;
             const py = cy + Math.sin(angle) * pl.r;
             ctx.fillStyle = pl.color;
             ctx.shadowColor = pl.color;
             ctx.shadowBlur = 12;
-            ctx.beginPath();
-            ctx.arc(px, py, pl.size, 0, Math.PI * 2);
-            ctx.fill();
+            ctx.beginPath(); ctx.arc(px, py, pl.size, 0, Math.PI * 2); ctx.fill();
             ctx.shadowBlur = 0;
         });
     } else if (isCity) {
-        // Procedural Cyberpunk Neon Skyline & Moving Light Trails
         for (let i = 0; i < 12; i++) {
             const bw = w / 10;
             const bx = i * (w / 12);
             const bh = 90 + ((i * 73 + seed * 31) % 160);
             ctx.fillStyle = i % 2 === 0 ? '#0d061a' : '#160b2c';
             ctx.fillRect(bx, h * 0.78 - bh, bw, bh);
-
             ctx.fillStyle = i % 3 === 0 ? 'rgba(255, 105, 180, 0.55)' : 'rgba(196, 150, 255, 0.45)';
             for (let wy = h * 0.78 - bh + 10; wy < h * 0.76; wy += 16) {
                 for (let wx = bx + 6; wx < bx + bw - 8; wx += 10) {
@@ -558,7 +713,6 @@ function drawProceduralScene(ctx, w, h, prompt, t = 0, seed = 1) {
                 }
             }
         }
-        // Neon Highway Streaks
         for (let k = 0; k < 6; k++) {
             const lx = ((t * 140 * (k % 2 ? 1 : -1) + k * 90) % w + w) % w;
             const ly = h * 0.82 + k * 8;
@@ -568,8 +722,8 @@ function drawProceduralScene(ctx, w, h, prompt, t = 0, seed = 1) {
             ctx.fillRect(lx, ly, 36, 3);
             ctx.shadowBlur = 0;
         }
-    } else {
-        // Procedural Sacred Geometry / Harmonic Lissajous Art for General Prompts
+    } else if (!isWater && !isFire && !isHouse) {
+        // Harmonic Wave / Lissajous Visualizer for abstract prompts
         const cx = w / 2, cy = h / 2;
         ctx.save();
         ctx.translate(cx, cy);
@@ -594,7 +748,6 @@ function drawProceduralScene(ctx, w, h, prompt, t = 0, seed = 1) {
     }
 }
 
-// A. Coded Procedural Image Generator (100% Canvas Code, Zero Pollinations)
 function buildCodedImageReply(prompt) {
     const canvasId = 'code_img_' + Date.now().toString(36);
     const codeId = 'code_src_' + Date.now().toString(36);
@@ -646,7 +799,6 @@ window.downloadCodedCanvas = function (canvasId, filename) {
     a.click();
 };
 
-// B. Coded Multi-Actor Animated Video Generator (Real Rigged 60fps Canvas Animation, Zero Pollinations)
 function buildCodedVideoReply(prompt) {
     const canvasId = 'code_vid_' + Date.now().toString(36);
     const codeId = 'vid_src_' + Date.now().toString(36);
@@ -723,7 +875,6 @@ window.recordDesuVideo = function (canvasId, btnEl) {
     }
 };
 
-// C. Coded Web Audio API Sound & Music Synthesizer ("audio cat", "audio piano", "audio rain", etc.)
 function buildCodedAudioReply(prompt) {
     const canvasId = 'aud_vis_' + Date.now().toString(36);
     const codeId = 'aud_src_' + Date.now().toString(36);
@@ -731,10 +882,9 @@ function buildCodedAudioReply(prompt) {
 
     const codeSnippet = `// DESU Web Audio API Procedural Synthesizer — "${prompt}"
 const ctx = new AudioContext();
-const osc = ctx.createOscillator();
-const filter = ctx.createBiquadFilter();
-const gain = ctx.createGain();
-osc.connect(filter); filter.connect(gain); gain.connect(ctx.destination);`;
+const buffer = renderProceduralAudioBuffer(ctx, "${prompt.replace(/"/g, '')}", 3.2);
+const source = ctx.createBufferSource();
+source.buffer = buffer; source.connect(ctx.destination); source.start();`;
 
     const html = `
         <div>Synthesized procedural Web Audio patch for <strong>${escapeHtml(prompt)}</strong>:</div>
@@ -775,7 +925,6 @@ function drawIdleWaveform(canvasId) {
     ctx.stroke();
 }
 
-// Synthesizes audio buffer from pure math/DSP code (Cat Meow + Purr, Rain, or Musical Chords/Melody)
 function renderProceduralAudioBuffer(ctx, prompt, duration = 3.2) {
     const sampleRate = ctx.sampleRate || 44100;
     const length = Math.floor(sampleRate * duration);
@@ -784,36 +933,32 @@ function renderProceduralAudioBuffer(ctx, prompt, duration = 3.2) {
     const p = prompt.toLowerCase();
 
     if (/\b(cat|kitten|meow|purr)\b/.test(p)) {
-        // Realistic Coded Cat Meow (Formant-filtered pitch contour: 520Hz -> 880Hz -> 410Hz) + Purr
         let phase = 0;
         for (let i = 0; i < length; i++) {
             const t = i / sampleRate;
             let sample = 0;
-            // Two meows at t=[0.1..1.1] and t=[1.5..2.6]
             [[0.1, 1.05], [1.5, 2.55]].forEach(([start, end]) => {
                 if (t >= start && t <= end) {
                     const local = (t - start) / (end - start);
                     const env = Math.sin(Math.PI * local);
                     const freq = 480 + 360 * Math.sin(Math.PI * Math.pow(local, 0.7)) - 140 * local + Math.sin(t * 32) * 8;
                     phase += (2 * Math.PI * freq) / sampleRate;
-                    // Rich harmonic series for feline vocal tract
                     sample += (Math.sin(phase) * 0.55 + Math.sin(phase * 2) * 0.3 + Math.sin(phase * 3) * 0.15) * env * 0.5;
                 }
             });
-            // Subtle purr vibration
             const purr = Math.sin(2 * Math.PI * 26 * t) * (0.5 + 0.5 * Math.sin(2 * Math.PI * 2.5 * t)) * 0.08;
             data[i] = Math.max(-1, Math.min(1, sample + purr));
         }
-    } else if (/\b(rain|storm|water|ocean|wind)\b/.test(p)) {
+    } else if (/\b(rain|storm|water|ocean|wave|waves|river|sea|wind)\b/.test(p)) {
         let lastOut = 0;
         for (let i = 0; i < length; i++) {
+            const t = i / sampleRate;
             const white = Math.random() * 2 - 1;
-            lastOut = (lastOut + (0.04 * white)) / 1.04;
-            const swell = 0.5 + 0.4 * Math.sin((i / sampleRate) * 1.5);
-            data[i] = lastOut * swell * 1.8;
+            lastOut = (lastOut + (0.035 * white)) / 1.035;
+            const waveSwell = 0.35 + 0.55 * Math.sin(t * 2.1) * Math.sin(t * 0.9);
+            data[i] = Math.max(-1, Math.min(1, lastOut * waveSwell * 2.2));
         }
     } else {
-        // Procedural Arpeggiated Synth / Piano Melody
         const notes = [261.63, 329.63, 392.00, 523.25, 440.00, 392.00, 329.63, 293.66];
         for (let i = 0; i < length; i++) {
             const t = i / sampleRate;
@@ -910,14 +1055,13 @@ window.downloadCodedWav = function (prompt) {
 };
 
 // ============================================================================
-// 3. INTENT CLASSIFIER: Never Send Math, Media, or Personal Chat to Omni-Search!
+// 3. INTENT CLASSIFIER & PLATFORM CONNECTORS
 // ============================================================================
 function shouldRunOmniSearch(raw) {
     const q = raw.trim();
     const lower = q.toLowerCase();
 
-    // Never run OmniSearch on math, calculus, media generation, personal chat, or coding
-    if (/\b(integrate|integration|integral|derivative|differentiate|calculus|solve|equation|limit|matrix|sin|cos|tan|log|ln|sqrt|audio|video|image|draw|animate|sound|music|i|im|i'm|my|me|you|your|we|us|sad|happy|tired|bored|feeling|feel|good|bad|wrong|right|code|coding|program|script|weather|temperature|how are you|can you|do you|remember)\b/i.test(lower)) {
+    if (/\b(integrate|integration|integral|derivative|differentiation|differential|differentiate|calculus|solve|equation|limit|matrix|sin|cos|tan|log|ln|sqrt|audio|video|image|draw|animate|sound|music|i|im|i'm|my|me|you|your|we|us|sad|happy|tired|bored|feeling|feel|good|bad|wrong|right|code|coding|program|script|weather|temperature|how are you|can you|do you|remember)\b/i.test(lower)) {
         return false;
     }
     if (/[0-9+\-*/^=]/.test(lower)) return false;
@@ -934,9 +1078,6 @@ function shouldRunOmniSearch(raw) {
     return false;
 }
 
-// ============================================================================
-// 4. PLATFORM CONNECTORS & CONVERSATIONAL AI ENGINE
-// ============================================================================
 async function searchSocialPlatform(platformCode, rawQuery) {
     const clean = rawQuery
         .replace(/^(search\s+)?(instagram|insta|ig|facebook|fb)\s*:?\s*/i, '')
@@ -1005,6 +1146,9 @@ async function searchArchive(rawQuery) {
     } catch (e) { return { text: `Unable to reach Internet Archive.`, isHtml: false }; }
 }
 
+// ============================================================================
+// 4. CONVERSATIONAL AI ENGINE + MULTI-SOURCE FALLBACK (Zero Dead-End Replies!)
+// ============================================================================
 async function queryDirectBrowserAI(raw, chatHistory, profile, multiData, extraDirective = '') {
     const modeMap = {
         conversational: 'Use a warm, natural, human-like conversational tone. Be concise, supportive, and clear.',
@@ -1043,12 +1187,12 @@ Today is ${new Date().toDateString()}.${groundingContext}`;
         { role: 'user', content: raw }
     ];
 
-    const isBad = t => !t || t.length < 2 || t.includes('Free limit reached') || t.includes('enter.pollinations.ai') || t.includes('45 seconds');
+    const isBad = t => !t || t.length < 2 || t.includes('Free limit reached') || t.includes('enter.pollinations.ai') || t.includes('45 seconds') || t.startsWith('<!DOCTYPE');
 
     for (const model of ['openai', 'mistral']) {
         try {
             const controller = new AbortController();
-            const timer = setTimeout(() => controller.abort(), 5200);
+            const timer = setTimeout(() => controller.abort(), 5000);
             const r = await fetch('https://text.pollinations.ai/openai', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -1067,7 +1211,7 @@ Today is ${new Date().toDateString()}.${groundingContext}`;
     try {
         const lastTurns = (chatHistory || []).slice(-4).map(m => `${m.role === 'user' ? 'User' : 'Desu'}: ${String(m.rawText || m.text).replace(/<[^>]+>/g, '').slice(0, 180)}`).join('\n');
         const fullPrompt = lastTurns ? `Context:\n${lastTurns}\n\nUser: ${raw}` : raw;
-        const url = `https://text.pollinations.ai/${encodeURIComponent(fullPrompt)}?model=openai&seed=${Math.floor(Math.random() * 99999)}&system=${encodeURIComponent(systemPrompt.slice(0, 500))}`;
+        const url = `https://text.pollinations.ai/${encodeURIComponent(fullPrompt)}?model=openai&seed=${Math.floor(Math.random() * 99999)}&system=${encodeURIComponent(systemPrompt.slice(0, 450))}`;
         const r = await fetch(url);
         if (r.ok) {
             const reply = (await r.text()).trim();
@@ -1117,7 +1261,7 @@ async function shinuReply(inputMessage, chatHistory, extraDirective = '') {
     const raw = inputMessage.trim();
     const lower = raw.toLowerCase();
 
-    // 1. Coded Image, Video & Audio Generation (100% Procedural Code, No Pollinations!)
+    // 1. Coded Image, Video & Audio Generation (Also catches "Tell me about audio cat"!)
     const mediaCmd = parseMediaCommand(raw);
     if (mediaCmd) {
         if (mediaCmd.type === 'audio') return buildCodedAudioReply(mediaCmd.prompt);
@@ -1125,7 +1269,7 @@ async function shinuReply(inputMessage, chatHistory, extraDirective = '') {
         return buildCodedImageReply(mediaCmd.prompt);
     }
 
-    // 2. Symbolic Calculus, Algebra & Mathematics Solver (Fixes "Integration of 2x", derivatives, etc.)
+    // 2. Complete Symbolic Calculus, Algebra & Word Math Solver
     const mathReply = trySymbolicAndNumericalMath(raw);
     if (mathReply) return mathReply;
 
@@ -1141,7 +1285,7 @@ async function shinuReply(inputMessage, chatHistory, extraDirective = '') {
     const prof = Learn.observe(raw);
     if (prof) return prof;
 
-    // 5. Check Thumbs-Up Verified Golden Memory (unless regenerating via Thumbs-Down)
+    // 5. Check Thumbs-Up Verified Golden Memory
     if (!extraDirective) {
         const golden = Learn.getGoldenReply(raw);
         if (golden) {
@@ -1217,14 +1361,29 @@ async function shinuReply(inputMessage, chatHistory, extraDirective = '') {
         };
     }
 
+    // 10. Active Knowledge Fallback (If AI provider is busy, research via Omni-Search so DESU NEVER gives a dead-end reply!)
+    try {
+        const coreTopic = Learn.core(raw);
+        const mRes = await fetch(`/api/web?source=multisearch&q=${encodeURIComponent(coreTopic)}`);
+        const mData = await mRes.json();
+        if (mData && (mData.wiki || mData.google?.length || mData.reddit?.length)) {
+            return {
+                text: buildOmniPulseHtml(mData, null),
+                rawText: mData?.wiki?.extract || coreTopic,
+                isHtml: true,
+                sources: mData.sources || []
+            };
+        }
+    } catch (e) {}
+
     return {
-        text: `I'm right here with you — tell me a bit more about what you're thinking or what we should build.`,
-        isHtml: false
+        text: `Here to help — you can ask me math/calculus (like <code>Differential of 2x</code> or <code>Solve 2x=6</code>), generate coded media (<code>video water</code>, <code>video of cat in a house</code>, <code>audio water</code>), or teach me a custom rule with <code>teach: question = answer</code>.`,
+        isHtml: true
     };
 }
 
 // ============================================================================
-// 6. CHAT SESSION, UNDISSOLVE RENDERER & ACTIVE QUALITY REGENERATION
+// 6. CHAT SESSION, SMART FOLLOW-UP ROUTING & QUALITY REGENERATION
 // ============================================================================
 let chats = [];
 try { chats = JSON.parse(load('shinu_chats') || '[]'); } catch (e) { chats = []; }
@@ -1254,14 +1413,15 @@ function addBubble(role, content, isHtml = false, autoScroll = true, meta = {}) 
         if (followEl) {
             followEl.style.cursor = 'pointer';
             followEl.onclick = () => {
-                userInput.value = `Tell me about ${meta.followUp}`;
+                // Send direct commands (like "audio cat", "video water", "integration of 2x") directly without "Tell me about"!
+                const isDirectCmd = /^(audio|video|image|draw|animate|table of|integration|differentiation|differential|solve)\b/i.test(meta.followUp.trim());
+                userInput.value = isDirectCmd ? meta.followUp.trim() : `Tell me about ${meta.followUp}`;
                 handleSend();
             };
             div.appendChild(followEl);
         }
     }
 
-    // Attach Neon Thumbs Up / Thumbs Down Quality Trainer on every bot reply
     if (role === 'bot' && typeof Learn !== 'undefined' && meta.showFeedback !== false) {
         Learn.attachFeedback(div, meta.userQuestion || '', meta.rawText || content);
     }
@@ -1274,7 +1434,6 @@ function addBubble(role, content, isHtml = false, autoScroll = true, meta = {}) 
     return div;
 }
 
-// Triggered when the user clicks Thumbs Down -> picks an improvement chip
 window.regenerateImprovedReply = async function (userQuestion, previousAnswer, directive) {
     const chat = currentChat();
     const historySnapshot = chat ? [...chat.messages] : [];
@@ -1373,12 +1532,10 @@ quickHelpBtn.onclick = () => {
     centerStage.classList.add('dissolved');
     chatContainer.classList.add('active');
     addBubble('bot', `
-        <strong>DESU Coded Studio, Calculus & Quality Trainer:</strong><br>
-        • <strong>Coded Image:</strong> Type <code>image cat</code> or <code>draw neon city</code>.<br>
-        • <strong>Coded 60fps Video:</strong> Type <code>video cat playing</code> or <code>video solar system</code>.<br>
-        • <strong>Coded Web Audio:</strong> Type <code>audio cat</code>, <code>audio rain</code>, or <code>audio synth</code>.<br>
-        • <strong>Calculus & Math:</strong> Type <code>Integration of 2x</code>, <code>derivative of x^3</code>, or <code>solve x^2 - 5x + 6 = 0</code>.<br>
-        • <strong>Neon Quality Trainer:</strong> Tap <strong>Good</strong> or <strong>Improve</strong> below any answer to train DESU's reply depth and accuracy.
+        <strong>DESU Coded Studio, Calculus & Algebra Guide:</strong><br>
+        • <strong>Coded 60fps Video:</strong> Try <code>video water</code>, <code>video of cat in a house</code>, or <code>video fire</code>.<br>
+        • <strong>Coded Web Audio:</strong> Try <code>audio water</code>, <code>audio cat</code>, or <code>audio synth</code>.<br>
+        • <strong>Calculus & Algebra:</strong> Try <code>Differential of 2x</code>, <code>Integration of 3x+6</code>, <code>Solve 2x=6</code>, or <code>Difference between 5 and 7</code>.
     `, true, true, { animateUndissolve: true, showFeedback: false });
 };
 
