@@ -1,23 +1,33 @@
-// learn.js — DESU Identity, Custom Neon Thumb Motifs & Google Self-Questioning Trainer
+// learn.js — DESU Profile, Neon Feedback Motifs & Active Quality Retraining Engine
 const Learn = (() => {
-    const KEY = 'desu_profile_v4';
+    // Remove any legacy header pills or modals
+    ['headerBrainPill', 'selfTrainPill', 'trainModal'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.remove();
+    });
+    const oldDrawerBtn = document.getElementById('openTrainModalBtn');
+    if (oldDrawerBtn && oldDrawerBtn.parentElement) oldDrawerBtn.parentElement.remove();
+
+    const KEY = 'desu_profile_v5';
     let p = {
         botName: 'Desu',
         name: '',
         facts: [],
         interests: [],
-        likedPatterns: [],
-        selfInsights: [],
+        goldenReplies: {},
+        corrections: [],
+        qualityWeights: { depth: 1, structure: 1, examples: 1 },
         style: '',
         mode: 'conversational'
     };
     try {
-        const prev = JSON.parse(localStorage.getItem('desu_profile_v3') || '{}');
+        const prev = JSON.parse(localStorage.getItem('desu_profile_v4') || '{}');
         const curr = JSON.parse(localStorage.getItem(KEY) || '{}');
         Object.assign(p, prev, curr);
         if (!Array.isArray(p.interests)) p.interests = [];
-        if (!Array.isArray(p.likedPatterns)) p.likedPatterns = [];
-        if (!Array.isArray(p.selfInsights)) p.selfInsights = [];
+        if (!Array.isArray(p.corrections)) p.corrections = [];
+        if (!p.goldenReplies || typeof p.goldenReplies !== 'object') p.goldenReplies = {};
+        if (!p.qualityWeights) p.qualityWeights = { depth: 1, structure: 1, examples: 1 };
     } catch (e) {}
 
     const save = () => { try { localStorage.setItem(KEY, JSON.stringify(p)); } catch (e) {} };
@@ -27,48 +37,24 @@ const Learn = (() => {
     const esc = s => (window.DESUCore ? window.DESUCore.escapeHTML(s) : String(s));
     const say = html => ({ text: html, isHtml: true });
 
-    // Custom Neon Geometric Sigil Motifs for Thumbs Up & Thumbs Down
+    // Inline-styled Neon Vector Motifs so they are 100% visible on every mobile browser
     const NEON_THUMB_UP = `
-        <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true">
-            <rect class="neon-path" x="2.5" y="10.5" width="4.5" height="10.5" rx="1.2"/>
-            <circle class="neon-core" cx="4.75" cy="18.5" r="1"/>
-            <path class="neon-path" d="M7 11l4.2-7.2a1.8 1.8 0 0 1 3.3 1.1L13.8 9.5h5.7a2 2 0 0 1 1.95 2.45l-1.6 7.5A2 2 0 0 1 17.9 21H7"/>
-            <path class="neon-path" d="M18.5 4.5l1-1.5M21 7l1.5-.5" stroke-width="1.4"/>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:block; filter:drop-shadow(0 0 5px var(--accent-purple));">
+            <rect x="2" y="10" width="4.5" height="11" rx="1.2"/>
+            <path d="M6.5 11l4.3-7.4a1.8 1.8 0 0 1 3.3 1.1L13.4 9.5h5.8a2 2 0 0 1 1.95 2.45l-1.6 7.5A2 2 0 0 1 17.6 21H6.5"/>
         </svg>`;
 
     const NEON_THUMB_DOWN = `
-        <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true">
-            <rect class="neon-path" x="17" y="3" width="4.5" height="10.5" rx="1.2"/>
-            <circle class="neon-core" cx="19.25" cy="5.5" r="1"/>
-            <path class="neon-path" d="M17 13l-4.2 7.2a1.8 1.8 0 0 1-3.3-1.1l.7-4.6H4.5a2 2 0 0 1-1.95-2.45l1.6-7.5A2 2 0 0 1 6.1 3H17"/>
-            <path class="neon-path" d="M5.5 19.5l-1 1.5M3 17l-1.5.5" stroke-width="1.4"/>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:block; filter:drop-shadow(0 0 5px var(--accent-purple));">
+            <rect x="17.5" y="3" width="4.5" height="11" rx="1.2"/>
+            <path d="M17.5 13l-4.3 7.4a1.8 1.8 0 0 1-3.3-1.1l.7-4.8H4.8a2 2 0 0 1-1.95-2.45l1.6-7.5A2 2 0 0 1 6.4 3h11.1"/>
         </svg>`;
-
-    // Inject Live Self-Training Status Pill into the Top Bar
-    let statusPill = document.getElementById('selfTrainPill');
-    if (!statusPill) {
-        const topicBar = document.getElementById('topicBar');
-        if (topicBar) {
-            statusPill = document.createElement('span');
-            statusPill.id = 'selfTrainPill';
-            statusPill.className = 'self-train-pill';
-            statusPill.title = 'Tap to see what DESU self-learned from Google';
-            statusPill.textContent = `✦ Self-Trained (${p.selfInsights.length})`;
-            topicBar.appendChild(statusPill);
-        }
-    }
-
-    function updateStatusPill(text, isLearning = false) {
-        if (!statusPill) return;
-        statusPill.textContent = text;
-        statusPill.classList.toggle('active-learning', isLearning);
-    }
 
     const core = s => norm(s).replace(/^(what is|what are|what was|what were|what's|who is|who are|who was|who's|tell me about|tell me|explain|define|describe|meaning of|information about|info on|search for|search)\s+(an?\s+|the\s+)?/, '');
 
     function makeTopic(raw) {
         let t = raw.trim().replace(/\s+/g, ' ');
-        if (/^[0-9+\-*/().%\s]+$/.test(t) || /\btable of \d+/i.test(t)) return 'Mathematics';
+        if (/^[0-9+\-*/().%\s]+$/.test(t) || /\b(table of|integrate|integration|derivative|solve)\b/i.test(t)) return 'Mathematics';
         if (/^(hello|hi+|hey+|yo|sup)\b[\s!.,?]*$/i.test(t)) return 'Conversation';
         const lead = /^(please\s+|can you\s+|could you\s+|tell me\s+(about\s+)?|(who|what)\s+(is|are|was|were)\s+(an?\s+|the\s+)?|what'?s\s+|who'?s\s+|how\s+(do|can|to|does)\s+(i\s+|you\s+)?|why\s+(is|are|do|does)\s+|explain\s+|define\s+|describe\s+|show me\s+|give me\s+)/i;
         let prev;
@@ -99,15 +85,18 @@ const Learn = (() => {
             return say(`Switched to <strong>${cap(p.mode)} Mode</strong>.`);
         }
 
-        // 2. Inspect Self-Training Log Command
-        if (/^(?:what have you learned|show training|self training|training log)$/i.test(lower)) {
-            return say(getTrainingReportHtml());
+        // 2. Direct Teaching Command ("teach: question = answer")
+        if ((m = q.match(/^(?:teach|learn|train)\s*:?\s*(.+?)\s*=\s*(.+)$/i))) {
+            const k = core(m[1]);
+            p.goldenReplies[k] = m[2].trim();
+            save();
+            return say(`Trained! I've locked that response for <strong>"${esc(k)}"</strong> into my verified memory.`);
         }
 
         // 3. Identity Queries
         if (/^(?:hi\s+|hey\s+|hello\s+)?(?:what(?:'s|\s+is)\s+your\s+name|who\s+are\s+you)$/i.test(lower)) {
             const userGreeting = p.name ? `, ${esc(p.name)}` : '';
-            return say(`I'm <strong>${esc(p.botName)}</strong>${userGreeting} — your self-improving AI collaborator, currently in <strong>${esc(p.mode)}</strong> mode.`);
+            return say(`I'm <strong>${esc(p.botName)}</strong>${userGreeting} — your AI collaborator, running in <strong>${esc(p.mode)}</strong> mode.`);
         }
 
         // 4. User Name Queries
@@ -139,11 +128,11 @@ const Learn = (() => {
             return say(`Nice to meet you, <strong>${esc(p.name)}</strong>! I'll remember that.`);
         }
         if (/^forget (my name|everything about me)/i.test(q)) {
-            p.name = ''; p.facts = []; p.interests = []; p.likedPatterns = []; save();
+            p.name = ''; p.facts = []; p.interests = []; p.goldenReplies = {}; p.corrections = []; save();
             return say("Done, I've cleared your profile details.");
         }
 
-        const asking = /\b(explain|tell me|how|what|why|write|show|give|can you|could you|please)\b/i.test(q);
+        const asking = /\b(explain|tell me|how|what|why|write|show|give|can you|could you|please|image|video|audio|draw|animate|integrate|derivative|solve)\b/i.test(q);
         if (!asking) {
             const rules = [
                 [/^i (?:live|stay) in\s+(.+)/i, 'live in'],
@@ -160,9 +149,7 @@ const Learn = (() => {
                     if (!p.facts.includes(fact)) p.facts = [...p.facts, fact].slice(-15);
                     noteTopic(item);
                     save();
-                    // Immediately trigger a self-training cycle on the new interest!
-                    setTimeout(() => runGoogleSelfTraining(item), 500);
-                    return say(`Noted! I'll remember that you ${esc(fact)} — I'm also self-studying <strong>${esc(item)}</strong> on Google in the background to tailor my replies for you.`);
+                    return say(`Noted! I'll remember that you ${esc(fact)}.`);
                 }
             }
         }
@@ -186,187 +173,145 @@ const Learn = (() => {
         }
     }
 
+    function getGoldenReply(rawQuery) {
+        const k = core(rawQuery);
+        return p.goldenReplies[k] || null;
+    }
+
     function context() {
         const bits = [];
         if (p.name) bits.push(`The user's name is ${p.name}.`);
         if (p.facts.length) bits.push('User profile: ' + p.facts.join('; ') + '.');
         if (p.style) bits.push(`Preferred answer style: ${p.style}.`);
-        if (p.likedPatterns.length) {
-            bits.push('What the user likes in replies: ' + p.likedPatterns.slice(-4).join('; ') + '.');
-        }
-        if (p.selfInsights.length) {
-            bits.push('Self-trained Google knowledge & reply strategies: ' + p.selfInsights.slice(-5).map(i => `[Q: ${i.q} -> Strategy/Fact: ${i.a}]`).join(' '));
+
+        // Inject learned quality rules from Thumbs Up / Thumbs Down training
+        const qRules = [];
+        if (p.qualityWeights.depth >= 2) qRules.push('Provide thorough, insightful explanations with strong depth.');
+        if (p.qualityWeights.depth <= 0) qRules.push('Keep answers tight, punchy, and under 3 sentences.');
+        if (p.qualityWeights.structure >= 2) qRules.push('Use clean bullet points and bold key terms.');
+        if (p.qualityWeights.examples >= 2) qRules.push('Include a concrete example or step-by-step walkthrough.');
+        if (qRules.length) bits.push('Trained Quality Directives: ' + qRules.join(' '));
+
+        if (p.corrections.length) {
+            bits.push('Past user corrections to strictly follow: ' + p.corrections.slice(-5).join(' | '));
         }
         return { botName: p.botName, mode: p.mode || 'conversational', text: bits.join(' ') };
     }
 
-    // Attaches the custom Neon Sigil Thumbs-Up & Thumbs-Down Motifs to every reply
+    // Usable Neon Thumbs Up / Down that actively trains DESU and regenerates better answers
     function attachFeedback(div, userQuestion = '', botAnswer = '') {
         const row = document.createElement('div');
         row.className = 'feedback-row';
 
-        const note = document.createElement('span');
-        note.className = 'fb-note';
-
         const up = document.createElement('button');
+        up.type = 'button';
         up.className = 'fb-btn';
-        up.setAttribute('aria-label', 'Helpful');
-        up.title = 'I like this reply style';
-        up.innerHTML = NEON_THUMB_UP;
+        up.title = 'Good reply — train DESU to reply like this more often';
+        up.innerHTML = `${NEON_THUMB_UP}<span>Good</span>`;
 
         const down = document.createElement('button');
+        down.type = 'button';
         down.className = 'fb-btn';
-        down.setAttribute('aria-label', 'Not helpful');
-        down.title = 'Re-learn this from Google';
-        down.innerHTML = NEON_THUMB_DOWN;
+        down.title = 'Improve reply — retrain & regenerate a better answer';
+        down.innerHTML = `${NEON_THUMB_DOWN}<span>Improve</span>`;
+
+        const note = document.createElement('span');
+        note.className = 'fb-note';
 
         up.onclick = () => {
             up.classList.add('selected');
             down.remove();
-            // Learn what the user liked about this reply (length, structure, topic)
-            const wordLen = String(botAnswer).split(/\s+/).length;
-            const styleNote = wordLen < 45 ? 'concise, direct answers' : 'thorough, structured explanations';
-            const topicKey = core(userQuestion) || 'general conversation';
-            const pattern = `Liked ${styleNote} on "${topicKey}"`;
-            if (!p.likedPatterns.includes(pattern)) {
-                p.likedPatterns = [...p.likedPatterns, pattern].slice(-10);
-                save();
+
+            const k = core(userQuestion);
+            const cleanAns = String(botAnswer).replace(/<[^>]+>/g, '').trim();
+            if (k && k.length > 2 && cleanAns.length > 10 && !cleanAns.startsWith('[Generated')) {
+                p.goldenReplies[k] = cleanAns;
             }
-            note.textContent = '✦ Learned your preference';
+            if (cleanAns.length > 180) p.qualityWeights.depth = Math.min(3, (p.qualityWeights.depth || 1) + 1);
+            if (cleanAns.includes('•') || cleanAns.includes('1.')) p.qualityWeights.structure = Math.min(3, (p.qualityWeights.structure || 1) + 1);
+            save();
+
+            note.textContent = '✦ Trained: Style reinforced & saved to verified memory';
         };
 
-        down.onclick = async () => {
+        down.onclick = () => {
             down.classList.add('selected');
             up.remove();
-            note.textContent = '✦ Researching Google to improve this...';
-            const topicKey = core(userQuestion);
-            if (topicKey) {
-                await runGoogleSelfTraining(topicKey);
-                note.textContent = `✦ Self-trained on "${topicKey}" via Google`;
-            } else {
-                p.style = p.style === 'brief' ? 'detailed' : 'brief';
+
+            const k = core(userQuestion);
+            if (k && p.goldenReplies[k]) {
+                delete p.goldenReplies[k];
                 save();
-                note.textContent = `✦ Adjusted reply style to ${p.style}`;
             }
+
+            // Show interactive 1-tap Quality Retrainer chips
+            const trainerBar = document.createElement('div');
+            trainerBar.className = 'retrain-bar';
+            trainerBar.innerHTML = `
+                <div class="retrain-title">How should I improve this reply? (Trains future answers + regenerates now):</div>
+                <div class="retrain-chips">
+                    <button type="button" class="retrain-chip" data-mode="deeper">⚡ Deeper & More Detailed</button>
+                    <button type="button" class="retrain-chip" data-mode="shorter">🎯 Shorter & Direct</button>
+                    <button type="button" class="retrain-chip" data-mode="steps">🧠 Step-by-Step Logic</button>
+                    <button type="button" class="retrain-chip" data-mode="custom">✏️ Teach Exact Answer</button>
+                </div>
+            `;
+
+            trainerBar.querySelectorAll('.retrain-chip').forEach(chip => {
+                chip.onclick = () => {
+                    const action = chip.getAttribute('data-mode');
+                    if (action === 'custom') {
+                        const inp = document.getElementById('userInput');
+                        if (inp) {
+                            inp.value = `teach: ${userQuestion || 'topic'} = `;
+                            inp.focus();
+                        }
+                        trainerBar.remove();
+                        note.textContent = '✦ Type the exact answer below to lock it in';
+                        return;
+                    }
+
+                    let directive = '';
+                    if (action === 'deeper') {
+                        p.qualityWeights.depth = 3;
+                        p.style = 'detailed';
+                        directive = 'Provide a much deeper, more comprehensive explanation with concrete examples.';
+                    } else if (action === 'shorter') {
+                        p.qualityWeights.depth = 0;
+                        p.style = 'brief';
+                        directive = 'Be ultra-concise, direct, and answer in 2 crisp sentences.';
+                    } else if (action === 'steps') {
+                        p.qualityWeights.structure = 3;
+                        p.qualityWeights.examples = 3;
+                        directive = 'Break the answer down into clear, numbered step-by-step logic.';
+                    }
+
+                    p.corrections = [...p.corrections, `For "${userQuestion}": ${directive}`].slice(-10);
+                    save();
+                    trainerBar.remove();
+                    note.textContent = '✦ Retraining & regenerating improved reply...';
+
+                    if (typeof window.regenerateImprovedReply === 'function' && userQuestion) {
+                        window.regenerateImprovedReply(userQuestion, botAnswer, directive);
+                    }
+                };
+            });
+
+            div.appendChild(trainerBar);
         };
 
         row.append(up, down, note);
         div.appendChild(row);
     }
 
-    // ========================================================================
-    // GOOGLE SELF-QUESTIONING & REPLY-STYLE TRAINER
-    // Asks itself questions, searches Google/Wiki/Reddit, and learns how to reply
-    // ========================================================================
-    const SELF_CURRICULUM = [
-        'how to explain complex physics intuitively',
-        'empathetic conversational AI communication',
-        'clean modern JavaScript patterns',
-        'calculus and rates of change real world examples',
-        'cognitive psychology and human decision making',
-        'astrophysics and spacetime curvature',
-        'quantum computing fundamentals',
-        'creative storytelling and visual direction'
-    ];
-
-    async function runGoogleSelfTraining(forcedTopic = null) {
-        if (document.hidden && !forcedTopic) return;
-        try {
-            const pool = [...p.interests, ...SELF_CURRICULUM];
-            const topic = forcedTopic || pool[Math.floor(Math.random() * pool.length)];
-            const selfQuestion = `How should I explain "${topic}" clearly and engagingly for ${p.name || 'the user'}?`;
-
-            updateStatusPill(`✦ Asking self: ${topic.slice(0, 16)}…`, true);
-
-            // 1. Fetch real Google + Wikipedia + Reddit context via our backend
-            let webSnippets = '';
-            try {
-                const mRes = await fetch(`/api/web?source=multisearch&q=${encodeURIComponent(topic)}`);
-                const mData = await mRes.json();
-                const parts = [];
-                if (mData?.wiki?.extract) parts.push(mData.wiki.extract.slice(0, 300));
-                if (mData?.google?.length) parts.push(mData.google.map(g => g.snippet).join(' | ').slice(0, 300));
-                if (mData?.reddit?.length) parts.push(`Community interest: ${mData.reddit[0].title}`);
-                webSnippets = parts.join(' ');
-            } catch (e) {}
-
-            // 2. Synthesize a self-taught insight on how to answer & what the user likes
-            const userPrefs = p.likedPatterns.length ? `User likes: ${p.likedPatterns.slice(-3).join(', ')}.` : '';
-            const synthPrompt = `Self-Training Task: Based on this Google/Web data (${webSnippets || topic}), write a 1-sentence strategy + core fact on how to best answer questions about "${topic}". ${userPrefs}`;
-
-            let learnedInsight = '';
-            try {
-                const url = `https://text.pollinations.ai/${encodeURIComponent(synthPrompt)}?model=openai&seed=${Math.floor(Math.random() * 99999)}&system=${encodeURIComponent('Output one concise sentence only.')}`;
-                const r = await fetch(url);
-                if (r.ok) {
-                    const txt = (await r.text()).trim();
-                    if (txt && txt.length > 15 && !txt.includes('Free limit reached') && !txt.includes('pollinations')) {
-                        learnedInsight = txt;
-                    }
-                }
-            } catch (e) {}
-
-            if (!learnedInsight && webSnippets) {
-                learnedInsight = webSnippets.split(/(?<=[.!?])\s+/).slice(0, 2).join(' ');
-            }
-
-            if (learnedInsight) {
-                p.selfInsights = [
-                    ...p.selfInsights.filter(i => i.topic !== topic),
-                    { topic, q: selfQuestion, a: learnedInsight, t: Date.now() }
-                ].slice(-25);
-                save();
-            }
-        } catch (e) {} finally {
-            setTimeout(() => {
-                updateStatusPill(`✦ Self-Trained (${p.selfInsights.length})`, false);
-            }, 1400);
-        }
-    }
-
-    function getTrainingReportHtml() {
-        let html = `<strong>✦ DESU Autonomous Google Self-Training Log</strong><br>`;
-        if (p.likedPatterns.length) {
-            html += `<div style="margin:6px 0; font-size:13px; color:var(--accent-purple);"><strong>Learned User Preferences:</strong> ${esc(p.likedPatterns.join(' • '))}</div>`;
-        }
-        if (!p.selfInsights.length) {
-            html += `<div class="result-meta">Self-training cycle is initializing in the background...</div>`;
-        } else {
-            p.selfInsights.slice(-5).reverse().forEach(item => {
-                html += `<div class="result-item"><strong>Self-Question:</strong> <em>${esc(item.q)}</em><div class="result-meta"><strong>Google-Trained Insight:</strong> ${esc(item.a)}</div></div>`;
-            });
-        }
-        return html;
-    }
-
-    // Tap the top-right "✦ Self-Trained" pill anytime to see what DESU learned from Google
-    if (statusPill) {
-        statusPill.onclick = () => {
-            const centerStage = document.getElementById('centerStage');
-            const chatContainer = document.getElementById('chatContainer');
-            if (centerStage && chatContainer) {
-                centerStage.classList.add('dissolved');
-                chatContainer.classList.add('active');
-                const div = document.createElement('div');
-                div.className = 'message-bubble bot';
-                div.innerHTML = getTrainingReportHtml();
-                chatContainer.appendChild(div);
-                chatContainer.scrollTop = chatContainer.scrollHeight;
-            }
-            runGoogleSelfTraining();
-        };
-    }
-
-    // Run Google self-questioning loop every 45 seconds in the background
-    setInterval(() => runGoogleSelfTraining(), 45000);
-    setTimeout(() => runGoogleSelfTraining(), 5000);
-
     applyBotName();
 
-    return {
-        core, makeTopic, observe, noteTopic, context, attachFeedback, applyBotName, runGoogleSelfTraining,
+    const api = {
+        core, makeTopic, observe, noteTopic, getGoldenReply, context, attachFeedback, applyBotName,
         botName: () => p.botName,
         userName: () => p.name,
         mode: () => p.mode
     };
+    window.Learn = api;
+    return api;
 })();
